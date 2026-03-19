@@ -1,0 +1,15 @@
+akshare
+easyquotation
+yfinance
+duckdb
+pandas
+
+fastapi
+uvicorn
+
+streamlit
+
+python-dotenv
+loguru
+
+websockets
