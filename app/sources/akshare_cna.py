@@ -79,7 +79,7 @@ class AKshareTencentCNASource:
 
         code = symbol.split(".")[-1].lower()  + symbol.split(".")[0]
 
-        # 🥇 尝试腾讯
+        # 尝试腾讯
         try:
             df = ak.stock_zh_a_hist_tx(
                 symbol=code,
@@ -126,7 +126,7 @@ class AKshareEastMoneyCNASource:
     def fetch_daily(self, symbol, start) -> pd.DataFrame:
         code = symbol.split(".")[0]
         
-        # 🥈 fallback 东财
+        # 东财
         try:
             df = ak.stock_zh_a_hist(
                 symbol=code,

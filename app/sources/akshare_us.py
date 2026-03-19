@@ -77,7 +77,7 @@ class AKshareYFinanceSource:
     def fetch_daily(self, symbol, start) -> pd.DataFrame:
         code = symbol.split(".")[0]
         
-        # 🥈 fallback 东财
+        # 🥈 尝试YFinance
         try:
             ticker = yf.Ticker(code)
     

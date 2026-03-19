@@ -77,7 +77,7 @@ class AKshareEastQuotationHKSource:
 
         code = symbol.split(".")[0]
 
-        # 🥇 尝试腾讯
+        # 尝试EastQuotation(腾讯)
         try:
             # 使用港股日K线数据源
             quotation = eq.use("daykline")
@@ -139,7 +139,7 @@ class AKshareEastMoneyHKSource:
     def fetch_daily(self, symbol, start) -> pd.DataFrame:
         code = symbol.split(".")[0]
         
-        # 🥈 fallback 东财
+        # 东财
         try:
             df = ak.stock_hk_hist(
                 symbol=code,
