@@ -60,7 +60,7 @@ def finish_task(id, status, message=""):
     ).fetchone()[0]
 
     duration = con.execute(
-        "SELECT epoch(?) - epoch(?)",
+        "SELECT epoch(CAST(? AS DATE)) - epoch(CAST(? AS DATE))",
         (end_time, start_time)
     ).fetchone()[0]
 
