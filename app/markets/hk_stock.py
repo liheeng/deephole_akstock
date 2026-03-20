@@ -8,7 +8,7 @@ class HongKongStockMarket:
 
     def get_symbol_list(self):
 
-        stock_hk_df = ak.ak.stock_hk_spot()
+        stock_hk_df = ak.stock_hk_spot()
         df = [
             f"{code}.HK" for code in stock_hk_df["代码"]
         ]

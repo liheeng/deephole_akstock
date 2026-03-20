@@ -29,7 +29,7 @@ class AKshareSinaCNASource:
             "symbol", "date", "open", "high", "low", "close", "volume", "amount", "turnover"
         ]]
 
-    def fetch_daily(self, symbol, start):
+    def fetch_daily(self, symbol, start) -> pd.DataFrame | None:
 
         code = symbol.split(".")[-1].lower()  + symbol.split(".")[0]
 
@@ -75,7 +75,7 @@ class AKshareTencentCNASource:
             "symbol", "date", "open", "high", "low", "close", "amount"
         ]]
 
-    def fetch_daily(self, symbol, start):
+    def fetch_daily(self, symbol, start) -> pd.DataFrame | None:
 
         code = symbol.split(".")[-1].lower()  + symbol.split(".")[0]
 
@@ -123,7 +123,7 @@ class AKshareEastMoneyCNASource:
             "symbol", "date", "open", "high", "low", "close", "volume", "amount", "turnover"
         ]]
 
-    def fetch_daily(self, symbol, start) -> pd.DataFrame:
+    def fetch_daily(self, symbol, start) -> pd.DataFrame | None:
         code = symbol.split(".")[0]
         
         # 东财

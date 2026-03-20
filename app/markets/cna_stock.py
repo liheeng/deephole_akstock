@@ -1,5 +1,5 @@
 import akshare as ak
-from app.sources.akshare_cna import AkshareCNAStockSource
+from sources.akshare_cna import AkshareCNAStockSource
 from utils.log_manager import get_task_logger
 
 class CNAStockMarket:

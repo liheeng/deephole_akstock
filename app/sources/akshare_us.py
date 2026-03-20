@@ -1,10 +1,9 @@
 import akshare as ak
+import yfinance as yf
 import pandas as pd
 from sources.akshare_stock_source import StockSource
 from utils.log_manager import get_task_logger
-import easyquotation as eq
-import yfinance as yf
-
+from utils.symbol import fix_preferred_symbol
 class AKshareSinaUSSource:
     SOURCE: StockSource = StockSource.SINA
     
@@ -29,9 +28,10 @@ class AKshareSinaUSSource:
             "symbol", "date", "open", "high", "low", "close", "volume"
         ]]
 
-    def fetch_daily(self, symbol, start):
+    def fetch_daily(self, symbol, start) -> pd.DataFrame | None:
 
         code = symbol.split(".")[0]
+        code = fix_preferred_symbol(code)
 
         # 🥇 尝试新浪
         try:
@@ -74,8 +74,9 @@ class AKshareYFinanceSource:
             "symbol", "date", "open", "high", "low", "close", "volume"
         ]]
 
-    def fetch_daily(self, symbol, start) -> pd.DataFrame:
+    def fetch_daily(self, symbol, start) -> pd.DataFrame | None:
         code = symbol.split(".")[0]
+        code = fix_preferred_symbol(code)
         
         # 🥈 尝试YFinance
         try:

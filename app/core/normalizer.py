@@ -26,6 +26,8 @@ def normalize(df, symbol, market):
         df["turnover"] = None
     if "volume" not in df.columns: # 腾讯没有成交量数据
         df["volume"] = None
+    if "amount" not in df.columns: # 腾讯没有成交额数据
+        df["amount"] = None
 
     return df[
         ["symbol", "market", "date",

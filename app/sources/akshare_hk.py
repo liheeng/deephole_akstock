@@ -28,7 +28,7 @@ class AKshareSinaHKSource:
             "symbol", "date", "open", "high", "low", "close", "volume"
         ]]
 
-    def fetch_daily(self, symbol, start):
+    def fetch_daily(self, symbol, start) -> pd.DataFrame | None:
 
         code = symbol.split(".")[0]
 
@@ -73,7 +73,7 @@ class AKshareEastQuotationHKSource:
             "symbol", "date", "open", "high", "low", "close", "amount"
         ]]
 
-    def fetch_daily(self, symbol, start):
+    def fetch_daily(self, symbol, start) -> pd.DataFrame | None:
 
         code = symbol.split(".")[0]
 
@@ -136,7 +136,7 @@ class AKshareEastMoneyHKSource:
             "symbol", "date", "open", "high", "low", "close", "volume", "amount", "turnover"
         ]]
 
-    def fetch_daily(self, symbol, start) -> pd.DataFrame:
+    def fetch_daily(self, symbol, start) -> pd.DataFrame | None:
         code = symbol.split(".")[0]
         
         # 东财
