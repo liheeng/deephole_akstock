@@ -1,14 +1,20 @@
 # app/utils/task_manager.py
 
+import enum
 import time
 import threading
 
+class TaskStatus(enum.Enum):
+    IDLE = "IDLE"
+    RUNNING = "RUNNING"
+    SUCCESS = "SUCCESS"
+    FAILED = "FAILED"
 class TaskManager:
 
     def __init__(self):
         self.lock = threading.Lock()
 
-        self.status = "IDLE"
+        self.status = TaskStatus.IDLE
         self.running = False
 
         self.source = None   # 👈 新增：谁触发的（cron / api）
@@ -23,7 +29,7 @@ class TaskManager:
                 return False
 
             self.running = True
-            self.status = "RUNNING"
+            self.status = TaskStatus.RUNNING
             self.source = source   # 👈 记录来源
             self.task_id = task_id  # 👈 记录 task_id（可选 ）
             self.last_run = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -34,13 +40,13 @@ class TaskManager:
     def success(self):
         with self.lock:
             self.running = False
-            self.status = "SUCCESS"
+            self.status = TaskStatus.SUCCESS
             self.last_finish = time.strftime("%Y-%m-%d %H:%M:%S")
 
     def fail(self, msg):
         with self.lock:
             self.running = False
-            self.status = "FAILED"
+            self.status = TaskStatus.FAILED
             self.message = str(msg)
             self.last_finish = time.strftime("%Y-%m-%d %H:%M:%S")
 
