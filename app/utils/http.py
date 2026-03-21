@@ -163,4 +163,5 @@ def patched_request(self, method, url, **kwargs):
 
 
 def patch_requests():
-    requests.sessions.Session.request = patched_request
+    if requests.sessions.Session.request != patched_request:
+        requests.sessions.Session.request = patched_request

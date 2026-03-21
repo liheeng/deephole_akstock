@@ -11,7 +11,12 @@ DB_PATH = DB
 def generate_task_id():
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     uid = uuid.uuid4().hex[:6]
-    return f"{ts}_{uid}"
+    return f"_task_{ts}_{uid}"
+
+def generate_job_id():
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    uid = uuid.uuid4().hex[:6]
+    return f"_job_{ts}_{uid}"
 
 def get_conn():
     return duckdb.connect(DB_PATH)

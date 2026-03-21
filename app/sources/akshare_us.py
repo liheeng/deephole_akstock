@@ -2,7 +2,7 @@ import akshare as ak
 import yfinance as yf
 import pandas as pd
 from sources.akshare_stock_source import StockSource
-from utils.log_manager import get_task_logger
+from utils.log_manager import get_default_logger
 from utils.symbol import fix_preferred_symbol
 class AKshareSinaUSSource:
     SOURCE: StockSource = StockSource.SINA
@@ -42,12 +42,12 @@ class AKshareSinaUSSource:
 
             if df is not None and not df.empty:
                 print(f"[SINA] success: {symbol}")
-                get_task_logger().info(f"[SINA] success: {symbol}")
+                get_default_logger().info(f"[SINA] success: {symbol}")
                 return self.normalize(df, symbol)
 
         except Exception as e:
             print(f"[SINA] failed: {symbol}, error={e}")
-            get_task_logger().error(f"[SINA] failed: {symbol}, error={e}")  
+            get_default_logger().error(f"[SINA] failed: {symbol}, error={e}")  
             raise e  # 上层重试
 
 class AKshareYFinanceSource:
@@ -92,12 +92,12 @@ class AKshareYFinanceSource:
 
             if df is not None and not df.empty:
                 print(f"[YFINANCE] success: {symbol}")
-                get_task_logger().info(f"[YFINANCE] success: {symbol}")
+                get_default_logger().info(f"[YFINANCE] success: {symbol}")
                 return self.normalize(df, symbol)
 
         except Exception as e:
             print(f"[YFINANCE] failed: {symbol}, error={e}")
-            get_task_logger().error(f"[YFINANCE] failed: {symbol}, error={e}")
+            get_default_logger().error(f"[YFINANCE] failed: {symbol}, error={e}")
             raise e  # 上层重试
         
 class AkshareUSStockSource:
@@ -106,18 +106,18 @@ class AkshareUSStockSource:
 
         # 先尝试新浪，失败重试一次，再失败尝试EASTQUOTATION(腾讯), 最后失败尝试东财
         try: 
-            get_task_logger().info(f"Trying SINA for {symbol} daily data since {start}")
+            get_default_logger().info(f"Trying SINA for {symbol} daily data since {start}")
             return AKshareSinaUSSource().fetch_daily(symbol, start)
         except:
             pass
         try:
-            get_task_logger().info(f"Trying YFINANCE for {symbol} daily data since {start}")
+            get_default_logger().info(f"Trying YFINANCE for {symbol} daily data since {start}")
             return AKshareYFinanceSource().fetch_daily(symbol, start)
         except:
             pass
         
         # ❌ 全失败
-        get_task_logger().error(f"[FAIL] no data: {symbol}")
+        get_default_logger().error(f"[FAIL] no data: {symbol}")
 
         return pd.DataFrame(columns=[
             "symbol", "date", "open", "high", "low", "close", "volume", "amount"

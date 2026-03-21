@@ -6,7 +6,7 @@ import pandas as pd
 # ==============================
 # 【多进程/多线程安全 DuckDB 工具】
 # ==============================
-class DuckDBSafe:
+class DuckDBController:
     _instance = None
     _lock = threading.Lock()  # 全局写入锁（关键！）
 
@@ -23,8 +23,10 @@ class DuckDBSafe:
 
     def write(
         self,
-        df: pd.DataFrame,
-        table_name: str,
+        df: Optional[pd.DataFrame] = None,
+        sql: Optional[str] = None,
+        view_name: str = "temp_df",
+        table_name: Optional[str] = None,
         if_exists: str = "append"  # append / replace
     ):
         """
@@ -34,12 +36,24 @@ class DuckDBSafe:
         with self._lock:  # 🔥 核心：写入加锁，排队执行
             con = self._get_connection()
             try:
-                con.register("tmp_df", df)
+                if df is not None:
+                    con.register(view_name, df)
+                    
                 if if_exists == "replace":
                     con.execute(f"DROP TABLE IF EXISTS {table_name}")
-                    con.execute(f"CREATE TABLE {table_name} AS SELECT * FROM tmp_df")
+                    if sql:
+                        return con.execute(sql)  # 允许自定义建表语句
+                    elif table_name:
+                        return con.execute(f"CREATE TABLE {table_name} AS SELECT * FROM {view_name}")
+                    else:
+                        raise ValueError("必须提供 table_name 或 sql 来创建表")
                 else:
-                    con.execute(f"INSERT INTO {table_name} SELECT * FROM tmp_df")
+                    if sql:
+                        return con.execute(sql)  # 允许自定义建表语句（如果表不存在）
+                    elif table_name:
+                        return con.execute(f"CREATE TABLE IF NOT EXISTS {table_name} AS SELECT * FROM {view_name} WHERE 1=0")  # 先创建空表
+                    else:
+                        raise ValueError("必须提供 table_name 或 sql 来创建表")
             finally:
                 con.close()
 
@@ -53,14 +67,18 @@ class DuckDBSafe:
         finally:
             con.close()
 
-    def execute(self, sql: str, params: Optional[list] = None):
+    def execute(self, sql: str, params: Optional[list] = None, callback: Optional[callable] = None):
         """
         安全执行任意 SQL（create/delete/update 等）
         """
         with self._lock:
             con = self._get_connection()
             try:
-                con.execute(sql, params)
+                if callback:
+                    result = con.execute(sql, params)
+                    return callback(result)
+                else:
+                    return con.execute(sql, params)
             finally:
                 con.close()
 
@@ -69,7 +87,7 @@ class DuckDBSafe:
 # ==============================
 if __name__ == "__main__":
     # 初始化（全局单例，多次调用也安全）
-    db = DuckDBSafe(db_path="stock_data.duckdb")
+    db = DuckDBController(db_path="stock_data.duckdb")
 
     # 1. 写入数据（安全）
     # db.write(df, table_name="us_stock_daily", if_exists="append")

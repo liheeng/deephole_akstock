@@ -1,7 +1,7 @@
 import akshare as ak
 import pandas as pd
 from sources.akshare_stock_source import StockSource
-from utils.log_manager import get_task_logger
+from utils.log_manager import get_default_logger
 import easyquotation as eq
 
 class AKshareSinaHKSource:
@@ -41,12 +41,12 @@ class AKshareSinaHKSource:
 
             if df is not None and not df.empty:
                 print(f"[SINA] success: {symbol}")
-                get_task_logger().info(f"[SINA] success: {symbol}")
+                get_default_logger().info(f"[SINA] success: {symbol}")
                 return self.normalize(df, symbol)
 
         except Exception as e:
             print(f"[SINA] failed: {symbol}, error={e}")
-            get_task_logger().error(f"[SINA] failed: {symbol}, error={e}")  
+            get_default_logger().error(f"[SINA] failed: {symbol}, error={e}")  
             raise e  # 上层重试
 
 class AKshareEastQuotationHKSource:
@@ -102,12 +102,12 @@ class AKshareEastQuotationHKSource:
 
             if df is not None and not df.empty:
                 print(f"[EASTQUOTATION] success: {symbol}")
-                get_task_logger().info(f"[EASTQUOTATION] success: {symbol}")
+                get_default_logger().info(f"[EASTQUOTATION] success: {symbol}")
                 return self.normalize(df, symbol)
 
         except Exception as e:
             print(f"[EASTQUOTATION] failed: {symbol}, error={e}")
-            get_task_logger().error(f"[EASTQUOTATION] failed: {symbol}, error={e}")
+            get_default_logger().error(f"[EASTQUOTATION] failed: {symbol}, error={e}")
             raise e  # 上层重试
         
 class AKshareEastMoneyHKSource:
@@ -150,12 +150,12 @@ class AKshareEastMoneyHKSource:
 
             if df is not None and not df.empty:
                 print(f"[EASTMONEY] success: {symbol}")
-                get_task_logger().info(f"[EASTMONEY] success: {symbol}")
+                get_default_logger().info(f"[EASTMONEY] success: {symbol}")
                 return self.normalize(df, symbol)
 
         except Exception as e:
             print(f"[EASTMONEY] failed: {symbol}, error={e}")
-            get_task_logger().error(f"[EASTMONEY] failed: {symbol}, error={e}")
+            get_default_logger().error(f"[EASTMONEY] failed: {symbol}, error={e}")
             raise e  # 上层重试
 
         
@@ -165,23 +165,23 @@ class AkshareHKStockSource:
 
         # 先尝试新浪，失败重试一次，再失败尝试EASTQUOTATION(腾讯), 最后失败尝试东财
         try: 
-            get_task_logger().info(f"Trying SINA for {symbol} daily data since {start}")
+            get_default_logger().info(f"Trying SINA for {symbol} daily data since {start}")
             return AKshareSinaHKSource().fetch_daily(symbol, start)
         except:
             pass
         try:
-            get_task_logger().info(f"Trying EASTQUOTATION for {symbol} daily data since {start}")
+            get_default_logger().info(f"Trying EASTQUOTATION for {symbol} daily data since {start}")
             return AKshareEastQuotationHKSource().fetch_daily(symbol, start)
         except:
             pass
         try:
-            get_task_logger().info(f"Trying EASTMONEY for {symbol} daily data since {start}")       
+            get_default_logger().info(f"Trying EASTMONEY for {symbol} daily data since {start}")       
             return AKshareEastMoneyHKSource().fetch_daily(symbol, start)
         except:
             pass
         
         # ❌ 全失败
-        get_task_logger().error(f"[FAIL] no data: {symbol}")
+        get_default_logger().error(f"[FAIL] no data: {symbol}")
 
         return pd.DataFrame(columns=[
             "symbol", "date", "open", "high", "low", "close", "volume", "amount"

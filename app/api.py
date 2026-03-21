@@ -1,6 +1,7 @@
 # app/api.py
 
 import os
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket
 from fastapi.staticfiles import StaticFiles
 import subprocess
@@ -12,10 +13,44 @@ from task_runner import run_fetch
 from utils.task_manager import task_manager
 from db.db_common import DB
 from utils.common import is_running_in_docker
+from utils.log_manager import get_default_logger, get_task_logger
+from core.task import Task, Job, TaskStatus
+from core.scheduler import run_task
+from core.worker import start_workers
+from db.duckdb import DuckDBController
+from db.db_common import DB
 
-app = FastAPI()
+# !!! Register executors, any new executor needs to be import here, it is very important, 
+# otherwise the API won't know how to handle the incoming jobs !!!
+import executors.cn_daily_sync_executor
+import executors.hk_daily_sync_executor
+import executors.us_daily_sync_exectuor
+import executors.download_executor
+import executors.duckdb_executor
 
-app.mount("/terminal", StaticFiles(directory="terminal", html=True), name="terminal")
+logger = get_default_logger()
+
+def init():
+    logger.info("API service is starting up")
+    
+    # Init DuckDB 
+    DuckDBController(db_path=DB)
+    logger.info("DuckDB initialized")
+
+    # 启动工作线程池
+    start_workers(n=4)   # 👈 在这里启动
+    logger.info("Worker threads started")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init()
+    yield
+    get_default_logger().error("API servide is shutting down")
+
+app = FastAPI(lifespan=lifespan)
+
+if is_running_in_docker():
+    app.mount("/terminal", StaticFiles(directory="terminal", html=True), name="terminal")
 
 @app.get("/status")
 def status():
@@ -36,6 +71,14 @@ def trigger_fetch():
 
     return {"status": "started"}
 
+@app.post("/call_task")
+def call_task(task: Task):
+    # jobs = [Job(**j) for j in task["jobs"]]
+    # t = Task(id=task["id"], jobs=jobs)
+
+    run_task(task)
+    task.status = TaskStatus.SUBMITTED
+    return {"task_id": task.id, "status": TaskStatus.SUBMITTED}
 
 @app.get("/tasks")
 def list_tasks(limit: int = 20):
@@ -69,29 +112,29 @@ def get_task(task_id: int):
 
     return row
 
-@app.get("/logs/{task_id}")
-def get_logs(task_id: str):
+# @app.get("/logs/{task_id}")
+# def get_logs(task_id: str):
 
-    path = f"/logs/{task_id}.log" if is_running_in_docker() else f"./logs/{task_id}.log"
+#     path = f"/logs/{task_id}.log" if is_running_in_docker() else f"./logs/{task_id}.log"
 
-    if not os.path.exists(path):
-        return {"logs": []}
+#     if not os.path.exists(path):
+#         return {"logs": []}
 
-    with open(path) as f:
-        return {"logs": f.readlines()}
+#     with open(path) as f:
+#         return {"logs": f.readlines()}
     
-@app.get("/logs/{task_id}/tail")
-def tail_logs(task_id: str, n: int = 50):
+# @app.get("/logs/{task_id}/tail")
+# def tail_logs(task_id: str, n: int = 50):
 
-    path = f"/logs/{task_id}.log" if is_running_in_docker() else f"./logs/{task_id}.log"
+#     path = f"/logs/{task_id}.log" if is_running_in_docker() else f"./logs/{task_id}.log"
 
-    if not os.path.exists(path):
-        return {"logs": []}
+#     if not os.path.exists(path):
+#         return {"logs": []}
 
-    with open(path) as f:
-        lines = f.readlines()
+#     with open(path) as f:
+#         lines = f.readlines()
 
-    return {"logs": lines[-n:]}
+#     return {"logs": lines[-n:]}
 
 @app.websocket("/ws/terminal/{container}")
 async def terminal_ws(websocket: WebSocket, container: str):

@@ -2,7 +2,7 @@ import requests
 import pandas as pd
 import akshare as ak
 from sources.akshare_us import AkshareUSStockSource
-from utils.log_manager import get_task_logger
+from utils.log_manager import get_default_logger
 
 NYSE_LIST_FILE = "https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/nyse/nyse_full_tickers.json"
 NASDAQ_LIST_URL = "https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/nasdaq/nasdaq_full_tickers.json"
@@ -21,7 +21,7 @@ class USStockMarket:
         df = [
             f"{code}.NYSE" for code in nyse_symbol_df["symbol"]
         ]
-        get_task_logger().info(f"Fetched {len(df)} symbols from NYSE")
+        get_default_logger().info(f"Fetched {len(df)} symbols from NYSE")
 
         return df
 
@@ -34,7 +34,7 @@ class USStockMarket:
         df = [
             f"{code}.NASDAQ" for code in nasdaq_symbol_df["symbol"]
         ]
-        get_task_logger().info(f"Fetched {len(df)} symbols from NASDAQ")
+        get_default_logger().info(f"Fetched {len(df)} symbols from NASDAQ")
 
         return df
 
@@ -47,7 +47,7 @@ class USStockMarket:
         df = [
             f"{code}.AMEX" for code in amex_symbol_df["symbol"]
         ]
-        get_task_logger().info(f"Fetched {len(df)} symbols from AMEX")
+        get_default_logger().info(f"Fetched {len(df)} symbols from AMEX")
 
         return df
 
