@@ -16,8 +16,9 @@ class Updater:
         r = self.dbc.execute(
             "SELECT max(date) FROM stock_daily WHERE symbol=?", 
             [symbol],
-            callback= lambda res: res.fetchone()[0] if res else None)
-        return r if r else None
+            fetch="one")
+            # callback= lambda res: res.fetchone()[0] if res else None)
+        return r[0] if r else None
 
     @retry(3)
     def fetch(self, source, symbol, start):

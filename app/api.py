@@ -10,7 +10,7 @@ import threading
 import duckdb
 
 from task_runner import run_fetch
-from utils.task_manager import task_manager
+from app.utils.task_manager_old import task_manager
 from db.db_common import DB
 from utils.common import is_running_in_docker
 from utils.log_manager import get_default_logger, get_task_logger
@@ -75,10 +75,16 @@ def trigger_fetch():
 def call_task(task: Task):
     # jobs = [Job(**j) for j in task["jobs"]]
     # t = Task(id=task["id"], jobs=jobs)
-
-    run_task(task)
-    task.status = TaskStatus.SUBMITTED
-    return {"task_id": task.id, "status": TaskStatus.SUBMITTED}
+    
+    try:
+        if run_task(task):
+            task.status = TaskStatus.SUBMITTED
+            return {"task_id": task.id, "status": TaskStatus.SUBMITTED}
+        else:
+            return {"task_id": task.id, "status": TaskStatus.SUSPENDED}
+    except Exception as e:
+        return {"task_id": task.id, "status": TaskStatus.FAILED, "message": e}
+    
 
 @app.get("/tasks")
 def list_tasks(limit: int = 20):

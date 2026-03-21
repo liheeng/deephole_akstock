@@ -1,7 +1,7 @@
 # app/task_runner.py
 
-from utils.log_manager import get_default_logger
-from utils.task_manager import task_manager
+from utils.log_manager import get_default_logger, get_task_logger
+from app.utils.task_manager_old import task_manager
 from utils.task_db import generate_task_id, insert_task, finish_task
 
 

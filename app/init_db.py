@@ -92,6 +92,64 @@ def init_db():
     message TEXT)
     """)
     
+    con.execute("""
+    CREATE TABLE IF NOT EXISTS tasks (
+    id VARCHAR PRIMARY KEY,
+    desc VARCHAR,
+    status VARCHAR,
+    mode VARCHAR,
+
+    start_time TIMESTAMP,
+    execute_time TIMESTAMP,
+    stop_time TIMESTAMP,
+
+    message TEXT,
+
+    create_time TIMESTAMP DEFAULT now(),            
+    update_time TIMESTAMP DEFAULT now())
+    """)
+
+    con.execute("""
+    CREATE TABLE IF NOT EXISTS jobs (
+    id VARCHAR PRIMARY KEY,
+    type VARCHAR,
+    status VARCHAR,
+    task_id VARCHAR,
+                
+    params JSON,
+    depends_on VARCHAR,   -- JSON string
+                
+    retries INTEGER,
+    retry_count INTEGER,
+
+    execute_time TIMESTAMP,
+    stop_time TIMESTAMP,
+
+    message TEXT,
+    error TEXT,
+                
+    create_time TIMESTAMP DEFAULT now(),            
+    update_time TIMESTAMP DEFAULT now())
+    """)
+
+    con.execute("""
+    CREATE TABLE IF NOT EXISTS running_jobs (
+        job_id TEXT PRIMARY KEY,
+        task_id TEXT,
+        type TEXT,
+        concurrency_key TEXT,
+        start_time TIMESTAMP
+                
+        create_time TIMESTAMP DEFAULT now(),            
+        update_time TIMESTAMP DEFAULT now())
+    )
+    """)
+
+    con.execute("""
+    CREATE UNIQUE INDEX idx_running_unique
+    ON running_jobs(concurrency_key, job_id)
+    """)
+
     con.close()
 
     print("Database initialized!")

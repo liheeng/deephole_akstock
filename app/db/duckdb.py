@@ -67,18 +67,28 @@ class DuckDBController:
         finally:
             con.close()
 
-    def execute(self, sql: str, params: Optional[list] = None, callback: Optional[callable] = None):
+    def execute(self, sql: str, params: Optional[list] = None, fetch: str|None = None, callback: Optional[callable] = None):
         """
         安全执行任意 SQL（create/delete/update 等）
         """
         with self._lock:
             con = self._get_connection()
             try:
+                result = con.execute(sql, params)
+                if fetch is not None:
+                    if fetch == "one":
+                        result = result.fetchone()
+                    elif fetch == "all":
+                        result = result.fetchall()
+                    elif fetch == "df":
+                        result = result.df()
+                    else:
+                        pass
+                    
                 if callback:
-                    result = con.execute(sql, params)
                     return callback(result)
                 else:
-                    return con.execute(sql, params)
+                    return result
             finally:
                 con.close()
 
