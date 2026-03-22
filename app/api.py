@@ -10,7 +10,7 @@ import threading
 import duckdb
 
 from task_runner import run_fetch
-from app.utils.task_manager_old import task_manager
+from utils.task_manager_old import task_manager
 from db.db_common import DB
 from utils.common import is_running_in_docker
 from utils.log_manager import get_default_logger, get_task_logger

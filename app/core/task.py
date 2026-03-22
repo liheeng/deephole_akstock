@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 import enum
 from typing import Dict, List
 from core.job import Job, JobType, JobStatus
+from datetime import datetime
 class TaskStatus(enum.Enum):
     CREATED = "CREATED" # indicates that the task has been created but not yet started
     SUBMITTED = "SUBMITTED" # indicates that the task has been submitted for execution, usually is in queue waiting for resources or dependencies to be resolved
@@ -25,7 +26,7 @@ class Task:
     status: TaskStatus = TaskStatus.CREATED
     jobs: List[Job] = field(default_factory=list)
     mode: TaskMode = TaskMode.DAG   # sequential / parallel / dag
-    create_time: str = ""
+    create_time: str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     start_time: str = ""
     execute_time: str = ""
     stop_time: str = ""

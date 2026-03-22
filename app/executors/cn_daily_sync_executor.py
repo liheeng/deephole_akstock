@@ -1,6 +1,6 @@
 # app/executors/cn_daily_sync_executor.py
 
-from jobs.job import JobType
+from core.job import JobType, Job
 from markets.cna_stock import CNAStockMarket
 from executors.base import register_executor
 from utils.http import patch_requests
@@ -9,7 +9,7 @@ from core.updater import Updater
 @register_executor(JobType.CN_DAILY_SYNC.value)
 class CNDailySyncExecutor:
 
-    def execute(self, job):
+    def execute(self, job: Job):
         patch_requests()
         
         Updater().run(CNAStockMarket())

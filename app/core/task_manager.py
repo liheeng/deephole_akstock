@@ -1,9 +1,9 @@
 # app/core/task_manager.py
 
 import duckdb
-from datetime import datetime, time, time
-from app.api import status
-from app.utils.log_manager import get_default_logger
+from datetime import datetime
+from api import status
+from utils.log_manager import get_default_logger
 from core.task import Task, TaskMode, TaskStatus
 from core.job import JOB_DEFINITIONS, Job, JobStatus, JobType, JobDefinition
 from db.db_common import DB
