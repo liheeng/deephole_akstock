@@ -17,7 +17,7 @@ sync_cn_daily_url = "http://akstock_api_service:8000/sync_daily/" + JobType.CN_D
 sync_hk_daily_url = "http://akstock_api_service:8000/sync_daily/" + JobType.HK_DAILY_SYNC.value
 sync_us_daily_url = "http://akstock_api_service:8000/sync_daily/" + JobType.US_DAILY_SYNC.value
 
-logger.warning(f"cros task started, but do nothing now!")
+logger.warning(f"cros task is disabled in version 1.1, will be enabled in version 1.2!")
 
 # response = requests.get(sync_cn_daily_url)
 # # 查看结果

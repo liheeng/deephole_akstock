@@ -74,7 +74,13 @@ if is_running_in_docker():
 def call_task(sync_type: str):
     task = create_sync_daily_task(sync_type)
     if task:
-        run_task(task)
+        try:
+         if run_task(task):
+            return {"message": "started sync task-" + sync_type}
+         else:
+            return {"message": "failed to start sync task-" + sync_type}        
+        except Exception as e:
+            return {"error": str(e)}
     else:
         return {"error":"wrong sync type!"}
     

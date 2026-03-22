@@ -1,0 +1,3 @@
+docker stop akstock_dashboard
+docker stop akstock_api_service
+docker stop akstock_stock_fetcher
