@@ -17,24 +17,26 @@ sync_cn_daily_url = "http://akstock_api_service:8000/sync_daily/" + JobType.CN_D
 sync_hk_daily_url = "http://akstock_api_service:8000/sync_daily/" + JobType.HK_DAILY_SYNC.value
 sync_us_daily_url = "http://akstock_api_service:8000/sync_daily/" + JobType.US_DAILY_SYNC.value
 
-response = requests.get(sync_cn_daily_url)
-# 查看结果
-print(response.status_code)  # 200 = 成功
-print(response.text)         # 返回文本
-print(response.json())       # 如果是接口 JSON，直接转字典
-logger.info(f"cron task sync_cn_daily_url result: {response.status_code} - {response.text} - {response.json()}")
+logger.warning(f"cros task started, but do nothing now!")
+
+# response = requests.get(sync_cn_daily_url)
+# # 查看结果
+# print(response.status_code)  # 200 = 成功
+# print(response.text)         # 返回文本
+# print(response.json())       # 如果是接口 JSON，直接转字典
+# logger.info(f"cron task sync_cn_daily_url result: {response.status_code} - {response.text} - {response.json()}")
 
 
-response = requests.get(sync_hk_daily_url)
-# 查看结果
-print(response.status_code)  # 200 = 成功
-print(response.text)         # 返回文本
-print(response.json())       # 如果是接口 JSON，直接转字典
-logger.info(f"cron task sync_hk_daily_url result: {response.status_code} - {response.text} - {response.json()}")
+# response = requests.get(sync_hk_daily_url)
+# # 查看结果
+# print(response.status_code)  # 200 = 成功
+# print(response.text)         # 返回文本
+# print(response.json())       # 如果是接口 JSON，直接转字典
+# logger.info(f"cron task sync_hk_daily_url result: {response.status_code} - {response.text} - {response.json()}")
 
-response = requests.get(sync_us_daily_url)
-# 查看结果
-print(response.status_code)  # 200 = 成功
-print(response.text)         # 返回文本
-print(response.json())       # 如果是接口 JSON，直接转字典
-logger.info(f"cron task sync_us_daily_url result: {response.status_code} - {response.text} - {response.json()}")
+# response = requests.get(sync_us_daily_url)
+# # 查看结果
+# print(response.status_code)  # 200 = 成功
+# print(response.text)         # 返回文本
+# print(response.json())       # 如果是接口 JSON，直接转字典
+# logger.info(f"cron task sync_us_daily_url result: {response.status_code} - {response.text} - {response.json()}")
