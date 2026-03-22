@@ -1,9 +1,9 @@
 # app/core/task.py
 from __future__ import annotations
 from dataclasses import dataclass, field
-import enum
 from typing import Dict, List
-from core.job import Job, JobType, JobStatus
+import enum
+from core.job import JobStatus
 from datetime import datetime
 class TaskStatus(enum.Enum):
     CREATED = "CREATED" # indicates that the task has been created but not yet started
@@ -22,7 +22,7 @@ class TaskMode(enum.Enum):
 @dataclass
 class Task:
     id: str
-    desc: str = ""
+    description: str = ""
     status: TaskStatus = TaskStatus.CREATED
     jobs: List[Job] = field(default_factory=list)
     mode: TaskMode = TaskMode.DAG   # sequential / parallel / dag

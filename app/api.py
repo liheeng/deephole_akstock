@@ -14,7 +14,7 @@ from utils.task_manager_old import task_manager
 from db.db_common import DB
 from utils.common import is_running_in_docker
 from utils.log_manager import get_default_logger, get_task_logger
-from core.task import Task, Job, TaskStatus
+from core.task import Task, TaskStatus
 from core.scheduler import run_task
 from core.worker import start_workers
 from db.duckdb import DuckDBController
@@ -25,8 +25,6 @@ from db.db_common import DB
 import executors.cn_daily_sync_executor
 import executors.hk_daily_sync_executor
 import executors.us_daily_sync_exectuor
-import executors.download_executor
-import executors.duckdb_executor
 
 logger = get_default_logger()
 

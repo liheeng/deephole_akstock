@@ -23,7 +23,7 @@ def worker_loop():
 
         executor = get_executor(job.type)
 
-        defn = JOB_DEFINITIONS[job.type.value]
+        defn = JOB_DEFINITIONS[job.type]
         # Step 1: 抢占并发槽位（非常关键）
         ok = task_manager.try_acquire_concurrency_slot(job, defn)
         if not ok:

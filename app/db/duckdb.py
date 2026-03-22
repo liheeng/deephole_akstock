@@ -9,10 +9,13 @@ import pandas as pd
 class DuckDBController:
     _instance = None
     _lock = threading.Lock()  # 全局写入锁（关键！）
-
-    def __new__(cls, db_path: str = "stock.duckdb"):
+    db_path: str
+    
+    def __new__(cls, db_path: str | None = None):
         # 单例模式，保证全局只有一个连接控制器
         if cls._instance is None:
+            if not db_path:
+                raise ValueError(f"Missing argument db_path!")
             cls._instance = super().__new__(cls)
             cls._instance.db_path = db_path
         return cls._instance

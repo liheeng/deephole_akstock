@@ -9,7 +9,7 @@ from utils.log_manager import get_default_logger
 
 def run_task(task: Task) -> bool:
     if not task_is_allowed(task):
-        emsg = f"some jobs in task({task.id}-{task.desc})) is  not allowed, it is singleton."
+        emsg = f"some jobs in task({task.id}-{task.description})) is  not allowed, it is singleton."
         get_default_logger().error(emsg)
         raise ValueError(emsg)
     
@@ -18,7 +18,7 @@ def run_task(task: Task) -> bool:
         get_default_logger.warning(f"load same task {task.id} from DB!")
 
     if not task_can_run(_task):
-        wmsg = f"task {_task.id} - ({_task.desc}) cannot be run!"
+        wmsg = f"task {_task.id} - ({_task.description}) cannot be run!"
         get_default_logger().warning(wmsg)
         _task = task_manager.update_task_status(task, TaskStatus.SUSPENDED)
         return False

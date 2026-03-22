@@ -1,12 +1,10 @@
 # app/core/task_manager.py
 
-import duckdb
 from datetime import datetime
-from api import status
 from utils.log_manager import get_default_logger
 from core.task import Task, TaskMode, TaskStatus
 from core.job import JOB_DEFINITIONS, Job, JobStatus, JobType, JobDefinition
-from db.db_common import DB
+from db.db_common import DB, safe_time
 import json
 from db.duckdb import DuckDBController
 
@@ -26,7 +24,7 @@ def job_dag_ok(job: Job) -> bool:
     return rows[0] == 0
 
 def job_concurrency_ok(job: Job) -> bool:
-    defn = JOB_DEFINITIONS[job.type.value]
+    defn = JOB_DEFINITIONS[job.type]
 
     if defn.max_concurrency == 0:
         return True
@@ -40,7 +38,7 @@ def job_concurrency_ok(job: Job) -> bool:
     return row[0] < defn.max_concurrency
 
 def job_singleton_ok(job: Job) -> bool:
-    defn = JOB_DEFINITIONS[job.type.value]
+    defn = JOB_DEFINITIONS[job.type]
 
     if not defn.singleton:
         return True
@@ -88,7 +86,7 @@ def build_task(task_row: list, job_rows: list) -> Task | None:
     
     task = Task(
         id=task_row[0],
-        desc=task_row[1],
+        description=task_row[1],
         status=TaskStatus(task_row[2]),
         mode=TaskMode(task_row[3]),
         start_time=task_row[4],
@@ -155,19 +153,19 @@ class TaskManager:
         db.execute(
         """
         INSERT INTO tasks (
-            id, desc, status, mode,
+            id, description, status, mode,
             start_time, execute_time, stop_time, message
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
         params=[
             task.id,
-            task.desc,
+            task.description,
             task.status.value,
             task.mode.value,
-            task.start_time,
-            task.execute_time,
-            task.stop_time,
+            safe_time(task.start_time),
+            safe_time(task.execute_time),
+            safe_time(task.stop_time),
             task.message
         ])
 
@@ -187,7 +185,7 @@ class TaskManager:
         """,
         params=[
             job.id,
-            job.type,    
+            job.type.value,    
             job.status.value,
             job.task_id,
 
@@ -197,8 +195,8 @@ class TaskManager:
             job.retries,
             job.retry_count,
 
-            job.execute_time,
-            job.stop_time,
+            safe_time(job.execute_time),
+            safe_time(job.stop_time),
 
             job.message,
             job.error
@@ -297,7 +295,6 @@ class TaskManager:
         elif job.status == JobStatus.RUNNING:
             job.execute_time = _time
         
-        task_status_changed = job.update_status(JobStatus.RUNNING)
         if task_status_changed and job.task:
             task_manager.update_task_status(job.task, job.task.status)
 
@@ -404,7 +401,7 @@ class TaskManager:
         db.execute("""
             INSERT INTO running_jobs (job_id, task_id, type, concurrency_key, start_time)
             VALUES (?, ?, ?, ?, now())
-        """, [job.id, job.task_id, job.type, defn.concurrency_key])
+        """, [job.id, job.task_id, job.type.value, defn.concurrency_key])
 
         return True
 

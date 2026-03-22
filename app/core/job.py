@@ -1,8 +1,8 @@
 from __future__ import annotations
-from core.task import Task
 from dataclasses import dataclass, field
-import enum
 from typing import Dict, List
+import enum
+# from core.task import Task
 
 class JobType(enum.Enum):
     CN_DAILY_SYNC = "cn_daily_sync" # 同步中国股票的日线数据
@@ -21,6 +21,26 @@ class JobDefinition:
     max_concurrency: int
     singleton: bool = False # whether only one instance of this job type can run at the same time across the whole system
 
+JOB_DEFINITIONS = {
+    JobType.US_DAILY_SYNC: JobDefinition(
+        type=JobType.US_DAILY_SYNC,
+        concurrency_key=JobConcurrencyKey.US_DAILY_SYNC.value,
+        max_concurrency=1,
+        singleton=True
+    ),
+    JobType.HK_DAILY_SYNC: JobDefinition(
+        type=JobType.HK_DAILY_SYNC,
+        concurrency_key=JobConcurrencyKey.HK_DAILY_SYNC.value,
+        max_concurrency=1,
+        singleton=True
+    ),
+    JobType.CN_DAILY_SYNC: JobDefinition(
+        type=JobType.CN_DAILY_SYNC,
+        concurrency_key=JobConcurrencyKey.CN_DAILY_SYNC.value,
+        max_concurrency=1,
+        singleton=True
+    ),
+}
 class JobStatus(enum.Enum):
     CREATED = "CREATED" # indicates that the job is waiting to be executed
     QUEUED = "QUEUED" # indicates the job is added into quequ and be waiting for execution
@@ -56,24 +76,3 @@ class Job:
             return self.task.update_status_based_on_jobs() 
         else:
             return False
-
-JOB_DEFINITIONS = {
-    JobType.US_DAILY_SYNC.value: JobDefinition(
-        type=JobType.US_DAILY_SYNC,
-        concurrency_key=JobConcurrencyKey.US_DAILY_SYNC.value,
-        max_concurrency=1,
-        singleton=True
-    ),
-    JobType.HK_DAILY_SYNC.value: JobDefinition(
-        type=JobType.HK_DAILY_SYNC,
-        concurrency_key=JobConcurrencyKey.HK_DAILY_SYNC.value,
-        max_concurrency=1,
-        singleton=True
-    ),
-    JobType.CN_DAILY_SYNC.value: JobDefinition(
-        type=JobType.CN_DAILY_SYNC,
-        concurrency_key=JobConcurrencyKey.CN_DAILY_SYNC.value,
-        max_concurrency=1,
-        singleton=True
-    ),
-}

@@ -4,13 +4,15 @@ from utils.task_manager_old import task_manager
 from utils.log_manager import get_default_logger   
 from core.updater import Updater
 from core.registry import MARKETS
-from core.job import JobType
+from core.job import JobType, JobStatus, JobDefinition, JOB_DEFINITIONS, Job
+from core.task import Task, TaskStatus
 
 from db.db_common import DB
 import api
-from core.task import Task, TaskStatus, Job, JobMetadata, JobStatus
 import time
 import signal
+
+from utils.task_util import create_sync_cn_daily_task, create_sync_hk_daily_task, create_sync_us_daily_task
 
 # 用来安全退出
 running = True
@@ -32,13 +34,11 @@ def main():
     #     updater.run(market)
     api.init()
 
-    # create task
-    task = Task(
-        id=generate_task_id(), jobs=[], desc="Sync daily of Chinese A market")
-    sync_job = JobMetadata(id=generate_job_id(), type=JobType.CN_DAILY_SYNC.value)
-    job = Job(metadata=sync_job, belongs_to_task=task)
-    task.jobs.append(job)
-
+    # create sync CN daily task
+    task = create_sync_cn_daily_task()
+    # task = create_sync_hk_daily_task()
+    # task = create_sync_us_daily_task()
+    
     api.run_task(task)
 
     # ======================
