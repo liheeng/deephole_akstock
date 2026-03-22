@@ -1,7 +1,6 @@
 import logging
 import os
 from utils.common import is_running_in_docker
-from utils.task_manager_old import task_manager
 
 logs_volume = "/logs" if is_running_in_docker() else "./logs"
 LOG_DIR = logs_volume

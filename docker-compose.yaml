@@ -3,7 +3,7 @@ version: "3.9"
 services:
 
   akstock_db_init:
-    image: akshare-stock:1.0   # 👈 用同一个 image
+    image: akshare-stock:1.1  # 👈 用同一个 image
     build: .
     container_name: akstock_db_init
     command: python /app/init_db.py
@@ -13,7 +13,7 @@ services:
     restart: "no"
 
   akstock_stock_fetcher:
-    image: akshare-stock:1.0   # 👈 共用
+    image: akshare-stock:1.1  # 👈 共用
     container_name: akstock_stock_fetcher
     depends_on:
       - akstock_db_init
@@ -26,7 +26,7 @@ services:
     restart: unless-stopped
     
   akstock_api_service:
-    image: akshare-stock:1.0 # 👈 共用
+    image: akshare-stock:1.1 # 👈 共用
     container_name: akstock_api_service
     depends_on:
       - akstock_db_init
@@ -41,7 +41,7 @@ services:
     restart: unless-stopped
 
   akstock_dashboard:
-    image: akshare-stock:1.0 # 👈 共用
+    image: akshare-stock:1.1 # 👈 共用
     container_name: akstock_dashboard
     depends_on:
       - akstock_db_init

@@ -10,7 +10,7 @@
 ### Delete asstock docker image
 
 ``` bash
-> docker rmi asshare-stock:1.0
+> docker rmi akshare-stock:1.0
 ```
 
 ### Create akstock docker image

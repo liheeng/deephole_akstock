@@ -9,7 +9,6 @@ import asyncio
 import threading
 import duckdb
 
-from task_runner import run_fetch
 from core.task_manager import task_manager
 from db.db_common import DB
 from utils.common import is_running_in_docker

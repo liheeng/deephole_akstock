@@ -371,7 +371,7 @@ class TaskManager:
 
             task_rows = con.execute("""
                 SELECT * FROM tasks
-            ORDER BY created_at DESC
+            ORDER BY create_time DESC
             LIMIT ?
             """, (limit,)).fetchall()
 

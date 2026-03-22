@@ -41,10 +41,48 @@ st.title("📊 Stock Data Dashboard")
 if menu == "Tasks":
     st.header("任务列表")
 
-    res = requests.get(f"{API}/tasks")
-    data = res.json()
+    try:
+        resp = requests.get(f"{API}/tasks")
+        if resp.status_code == 200:
+            tasks = resp.json()
+        else:
+            st.error(f"请求失败：{resp.status_code}")
+            tasks = []
+    except Exception as e:
+        st.error(f"连接 B 服务失败：{str(e)}")
+        tasks = []
 
-    st.json(data)
+    if not tasks:
+        st.warning("暂无任务")
+        st.stop()
+
+    # 展示任务列表
+    for task in tasks:
+        status = task["status"]
+        desc = task["description"] or "无描述"
+
+        # 展开器
+        with st.expander(f"✅ {task['id']} | {status} | {desc}"):
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.markdown("### 任务信息")
+                st.write(f"ID：`{task['id']}`")
+                st.write(f"状态：**{task['status']}**")
+                st.write(f"模式：{task['mode']}")
+                st.write(f"开始时间：{task['start_time']}")
+                st.write(f"完成时间：{task['stop_time']}")
+                st.write(f"消息：{task['message']}")
+
+            with col2:
+                st.markdown("### 关联 Jobs")
+                jobs = task.get("jobs", [])
+                if jobs:
+                    st.dataframe(jobs, use_container_width=True)
+                else:
+                    st.info("无 Job")
+
+            st.divider()
 
 
 # # ----------------------------
