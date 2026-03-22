@@ -281,6 +281,18 @@ class TaskManager:
                 _time.strftime("%Y-%m-%d %H:%M:%S"),
                 job_id
             ])
+        elif new_status == JobStatus.QUEUED:
+            db.execute("""
+                UPDATE jobs
+                SET status=?, message=?, error=?, update_time=now()
+                WHERE id=?
+            """, 
+            params = [
+                new_status.value,
+                message,
+                error,
+                job_id
+            ])
         else:
             get_default_logger().warning(f"Unsupported job status to update: {new_status} of job {job_id}")
         

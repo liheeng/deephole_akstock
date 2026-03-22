@@ -10,11 +10,13 @@ import threading
 import duckdb
 
 from task_runner import run_fetch
-from utils.task_manager_old import task_manager
+from core.task_manager import task_manager
 from db.db_common import DB
 from utils.common import is_running_in_docker
 from utils.log_manager import get_default_logger, get_task_logger
+from utils.task_util import create_sync_daily_task
 from core.task import Task, TaskStatus
+from core.job import JobType
 from core.scheduler import run_task
 from core.worker import start_workers
 from db.duckdb import DuckDBController
@@ -50,71 +52,41 @@ app = FastAPI(lifespan=lifespan)
 if is_running_in_docker():
     app.mount("/terminal", StaticFiles(directory="terminal", html=True), name="terminal")
 
-@app.get("/status")
-def status():
-    return task_manager.get_status()
+# @app.get("/status")
+# def status():
+#     return task_manager.get_status()
 
 
-@app.post("/fetch")
-def trigger_fetch():
+# @app.post("/fetch")
+# def trigger_fetch():
 
-    if task_manager.running:
-        return {
-            "status": "rejected",
-            "task_id": task_manager.task_id,   
-            "running_by": task_manager.source
-        }
+#     if task_manager.running:
+#         return {
+#             "status": "rejected",
+#             "task_id": task_manager.task_id,   
+#             "running_by": task_manager.source
+#         }
 
-    threading.Thread(target=run_fetch, args=("api",)).start()
+#     threading.Thread(target=run_fetch, args=("api",)).start()
 
-    return {"status": "started"}
+#     return {"status": "started"}
 
-@app.post("/call_task")
-def call_task(task: Task):
-    # jobs = [Job(**j) for j in task["jobs"]]
-    # t = Task(id=task["id"], jobs=jobs)
+@app.get("/sync_daily/{sync_type}")
+def call_task(sync_type: str):
+    task = create_sync_daily_task(sync_type)
+    if task:
+        run_task(task)
+    else:
+        return {"error":"wrong sync type!"}
     
-    try:
-        if run_task(task):
-            task.status = TaskStatus.SUBMITTED
-            return {"task_id": task.id, "status": TaskStatus.SUBMITTED}
-        else:
-            return {"task_id": task.id, "status": TaskStatus.SUSPENDED}
-    except Exception as e:
-        return {"task_id": task.id, "status": TaskStatus.FAILED, "message": e}
-    
-
 @app.get("/tasks")
 def list_tasks(limit: int = 20):
-
-    con = duckdb.connect(DB)
-
-    rows = con.execute(f"""
-        SELECT *
-        FROM task_log
-        ORDER BY start_time DESC
-        LIMIT {limit}
-    """).fetchall()
-
-    con.close()
-
-    return rows
-
+    return task_manager.list_tasks(limit)
 
 @app.get("/tasks/{task_id}")
-def get_task(task_id: int):
+def get_task(task_id: str):
+    return task_manager.load_task(task_id)
 
-    con = duckdb.connect(DB)
-
-    row = con.execute("""
-        SELECT *
-        FROM task_log
-        WHERE id=?
-    """, (task_id,)).fetchone()
-
-    con.close()
-
-    return row
 
 # @app.get("/logs/{task_id}")
 # def get_logs(task_id: str):
@@ -127,18 +99,18 @@ def get_task(task_id: int):
 #     with open(path) as f:
 #         return {"logs": f.readlines()}
     
-# @app.get("/logs/{task_id}/tail")
-# def tail_logs(task_id: str, n: int = 50):
+@app.get("/logs/tail")
+def tail_logs(n: int = 50):
 
-#     path = f"/logs/{task_id}.log" if is_running_in_docker() else f"./logs/{task_id}.log"
+    path = f"/logs/default.log" if is_running_in_docker() else f"./logs/default.log"
 
-#     if not os.path.exists(path):
-#         return {"logs": []}
+    if not os.path.exists(path):
+        return {"logs": []}
 
-#     with open(path) as f:
-#         lines = f.readlines()
+    with open(path) as f:
+        lines = f.readlines()
 
-#     return {"logs": lines[-n:]}
+    return {"logs": lines[-n:]}
 
 @app.websocket("/ws/terminal/{container}")
 async def terminal_ws(websocket: WebSocket, container: str):

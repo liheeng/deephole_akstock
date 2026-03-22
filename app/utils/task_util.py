@@ -25,3 +25,14 @@ def create_sync_us_daily_task() -> Task:
     job = Job(id=generate_job_id(), type=JobType.US_DAILY_SYNC, task_id=task.id, task=task)
     task.jobs.append(job)
     return task
+
+def create_sync_daily_task(sync_type: str) -> Task | None:
+    job_type = JobType(sync_type)
+    if job_type == JobType.CN_DAILY_SYNC:
+        return create_sync_cn_daily_task()
+    elif job_type == JobType.HK_DAILY_SYNC:
+        return create_sync_hk_daily_task()
+    elif job_type == JobType.US_DAILY_SYNC:
+        return create_sync_us_daily_task()
+    else:
+        return None
