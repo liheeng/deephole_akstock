@@ -368,25 +368,34 @@ class TaskManager:
     
     def list_tasks(self, limit=20):    
         def callback(con):
-
+            # 1. 查询任务   
             task_rows = con.execute("""
                 SELECT * FROM tasks
             ORDER BY create_time DESC
             LIMIT ?
             """, (limit,)).fetchall()
 
+            # 2. 查询关联的所有 jobs
             task_ids = [row[0] for row in task_rows]
-            job_rows = con.execute("""
-                SELECT * FROM jobs WHERE task_id in ?
-            """, (tuple(task_ids),)).fetchall()
+            job_rows = []
+            if task_ids:
+                con.execute("""
+                    SELECT * FROM jobs WHERE task_id in ?
+                """, (tuple(task_ids),)).fetchall()
 
-            return task_rows, job_rows
+            # 3. 🔥 关键：把 job 按 task_id 分组（核心修复）
+            from collections import defaultdict
+            job_map = defaultdict(list)
+            for job in job_rows:
+                task_id = job[3]  # job 里第3列是 task_id（如果不是3，改成你真实的下标）
+                job_map[task_id].append(job)
+            return task_rows, job_map
 
-        task_rows, job_rows = db.execute("SELECT 1", callback=callback)
+        task_rows, job_map = db.execute("SELECT 1", callback=callback)
 
         tasks = []
         for task_row in task_rows:
-            tasks.append(build_task(task_row, job_rows))
+            tasks.append(build_task(task_row, job_map[task_row[0]] ))
         return tasks
     
     def clean_stale_running_jobs(self):
