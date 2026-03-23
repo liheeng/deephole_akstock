@@ -78,11 +78,20 @@ def call_task(sync_type: str):
          if run_task(task):
             return {"message": "started sync task-" + sync_type}
          else:
-            return {"message": "failed to start sync task-" + sync_type}        
+            raise HTTPException(
+                status_code=400,
+                detail=f"failed to start sync task-{sync_type}"
+            )
         except Exception as e:
-            return {"error": str(e)}
+            raise HTTPException(
+                status_code=500,
+                detail=f"failed to run task-{sync_type}, error：{str(e)}"
+            )
     else:
-        return {"error":"wrong sync type!"}
+        raise HTTPException(
+            status_code=400,
+            detail=f"wrong sync type-{sync_type}"
+        )
     
 @app.get("/tasks")
 def list_tasks(limit: int = 20):

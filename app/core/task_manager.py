@@ -98,28 +98,28 @@ def build_task(task_row: list, job_rows: list) -> Task | None:
 
     jobs = []
 
-    for row in job_rows:
+    for job_row in job_rows:
     
         # If the job belongs to a different task, log a error and skip it
-        if row[1] != task.id:
-            print(f"Error: job {row[0]} belongs to task {row[1]}, expected {task.id}")
-            get_default_logger().error(f"Job {row[0]} belongs to task {row[1]}, expected {task.id}")
+        if job_row[3] != task.id:
+            print(f"Error: job {job_row[0]} belongs to task {job_row[1]}, expected {task.id}")
+            get_default_logger().error(f"Job {job_row[0]} belongs to task {job_row[1]}, expected {task.id}")
             continue
 
         job = Job(
-            id=row[0],
-            type=JobType(row[1]),
-            status=JobStatus(row[2]),
-            task_id=row[3],
+            id=job_row[0],
+            type=JobType(job_row[1]),
+            status=JobStatus(job_row[2]),
+            task_id=job_row[3],
             task = task,  # type: ignore
-            params=json.loads(row[4] or "{}"),
-            depends_on=json.loads(row[5] or "[]"),
-            retry_count=row[6],
-            retries=row[7],
-            execute_time=row[8],
-            stop_time=row[9],
-            message=row[10],
-            error=row[11]
+            params=json.loads(job_row[4] or "{}"),
+            depends_on=json.loads(job_row[5] or "[]"),
+            retry_count=job_row[6],
+            retries=job_row[7],
+            execute_time=job_row[8],
+            stop_time=job_row[9],
+            message=job_row[10],
+            error=job_row[11]
         )
 
         jobs.append(job)
@@ -215,20 +215,20 @@ class TaskManager:
         job_rows = db.execute("SELECT 1", callback=callback)
 
         jobs = []
-        for row in job_rows:
+        for job_row in job_rows:
             job = Job(
-                id=row[0],
-                type=JobType(row[1]),
-                status=JobStatus(row[2]),
-                task_id=row[3],
-                params=json.loads(row[4] or "{}"),
-                depends_on=json.loads(row[5] or "[]"),
-                retry_count=row[6],
-                retries=row[7],
-                execute_time=row[8],
-                stop_time=row[9],
-                message=row[10],
-                error=row[11]
+                id=job_row[0],
+                type=JobType(job_row[1]),
+                status=JobStatus(job_row[2]),
+                task_id=job_row[3],
+                params=json.loads(job_row[4] or "{}"),
+                depends_on=json.loads(job_row[5] or "[]"),
+                retry_count=job_row[6],
+                retries=job_row[7],
+                execute_time=job_row[8],
+                stop_time=job_row[9],
+                message=job_row[10],
+                error=job_row[11]
             )
 
             jobs.append(job)
@@ -379,7 +379,7 @@ class TaskManager:
             task_ids = [row[0] for row in task_rows]
             job_rows = []
             if task_ids:
-                con.execute("""
+                job_rows =con.execute("""
                     SELECT * FROM jobs WHERE task_id in ?
                 """, (tuple(task_ids),)).fetchall()
 

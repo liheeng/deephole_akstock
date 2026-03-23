@@ -35,6 +35,16 @@ menu = st.sidebar.radio(
 
 st.title("📊 Stock Data Dashboard")
 
+def trigger_sync(st: streamlit, job_type: JobType):
+        if st.button("🚀 执行 Sync"):
+        res = requests.get(f"{API}/sync_daily/" + job_type.value)
+        if res.status_code == 200:
+            st.success("任务已触发")
+            data = res.json()
+            st.json(data)
+        else:
+            st.error(f"任务执行失败, 错误信息：{res.detail}")
+
 # ----------------------------
 # 🧩 Tasks 页面
 # ----------------------------
@@ -115,39 +125,21 @@ if menu == "Tasks":
 # ----------------------------
 elif menu == "Sync CN Daily":
     st.header("同步中国A股市场日线数据")
-
-    if st.button("🚀 执行 Sync"):
-        res = requests.get(f"{API}/sync_daily/" + JobType.CN_DAILY_SYNC.value)
-        data = res.json()
-
-        st.success("任务已触发")
-        st.json(data)
+    trigger_sync(st, JobType.CN_DAILY_SYNC)
 
 # ----------------------------
 # 🧩 Sync HK Daily 页面
 # ----------------------------
 elif menu == "Sync HK Daily":
     st.header("同步香港股市场日线数据")
-
-    if st.button("🚀 执行 Sync"):
-        res = requests.get(f"{API}/sync_daily/" + JobType.HK_DAILY_SYNC.value)
-        data = res.json()
-
-        st.success("任务已触发")
-        st.json(data)
+    trigger_sync(st, JobType.HK_DAILY_SYNC)
 
 # ----------------------------
 # 🧩 Sync US Daily 页面
 # ----------------------------
 elif menu == "Sync US Daily":
     st.header("同步美国股市场日线数据")
-
-    if st.button("🚀 执行 Sync"):
-        res = requests.get(f"{API}/sync_daily/" + JobType.US_DAILY_SYNC.value)
-        data = res.json()
-
-        st.success("任务已触发")
-        st.json(data)
+    trigger_sync(st, JobType.US_DAILY_SYNC)
 
 # ----------------------------
 # 🧩 Logs 页面（重点🔥）
