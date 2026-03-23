@@ -15,7 +15,8 @@ def is_running_in_docker() -> bool:
     return False
 
 def random_sleep():
-    time.sleep(random.uniform(0.5, 1.5))
+    # time.sleep(random.uniform(0.5, 1.5))
+    time.sleep(random.uniform(0.2, 0.8))
 
 
 def batch_sleep(i):
