@@ -2,24 +2,21 @@
 
 import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, HTTPException, WebSocket
 from fastapi.staticfiles import StaticFiles
 import subprocess
 import asyncio
-import threading
-import duckdb
 
 from core.task_manager import task_manager
 from db.db_common import DB
 from utils.common import is_running_in_docker
-from utils.log_manager import get_default_logger, get_task_logger
+from utils.log_manager import get_default_logger
 from utils.task_util import create_sync_daily_task
-from core.task import Task, TaskStatus
-from core.job import JobType
 from core.scheduler import run_task
 from core.worker import start_workers
 from db.duckdb import DuckDBController
 from db.db_common import DB
+from core.error import TaskError
 
 # !!! Register executors, any new executor needs to be import here, it is very important, 
 # otherwise the API won't know how to handle the incoming jobs !!!
@@ -72,30 +69,37 @@ if is_running_in_docker():
 
 @app.get("/sync_daily/{sync_type}")
 def call_task(sync_type: str):
-    task = create_sync_daily_task(sync_type)
-    if task:
-        try:
-         if run_task(task):
-            return {"message": "started sync task-" + sync_type}
-         else:
-            raise HTTPException(
-                status_code=400,
-                detail=f"failed to start sync task-{sync_type}"
-            )
-        except Exception as e:
+    try:
+        task = create_sync_daily_task(sync_type)
+        if task:
+
+            if run_task(task):
+                return {"message": "started sync task-" + sync_type}
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"failed to start sync task-{sync_type}"
+                )
+        else:
+            return {"message": "invalid sync type-" + sync_type}
+    except Exception as e:
+        if isinstance(e, TaskError):
+            return {"message": e.message}
+        else:    
             raise HTTPException(
                 status_code=500,
                 detail=f"failed to run task-{sync_type}, error：{str(e)}"
             )
-    else:
-        raise HTTPException(
-            status_code=400,
-            detail=f"wrong sync type-{sync_type}"
-        )
     
 @app.get("/tasks")
 def list_tasks(limit: int = 20):
-    return task_manager.list_tasks(limit)
+    try:
+        return task_manager.list_tasks(limit)
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"failed to list tasks, error：{str(e)}"
+        )
 
 @app.get("/tasks/{task_id}")
 def get_task(task_id: str):

@@ -53,7 +53,8 @@ class Job:
     id: str
     type: JobType
     task_id: str | None = None  # task object reference
-    task: Task | None = None  # task object reference
+    # ✅ 这一行修复循环引用
+    task: Task | None = field(default=None, metadata={"exclude": True})
     status: JobStatus = JobStatus.CREATED
     params: Dict = field(default_factory=dict)
     depends_on: List[str] = field(default_factory=list)

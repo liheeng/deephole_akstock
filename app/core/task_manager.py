@@ -111,7 +111,6 @@ def build_task(task_row: list, job_rows: list) -> Task | None:
             type=JobType(job_row[1]),
             status=JobStatus(job_row[2]),
             task_id=job_row[3],
-            task = task,  # type: ignore
             params=json.loads(job_row[4] or "{}"),
             depends_on=json.loads(job_row[5] or "[]"),
             retry_count=job_row[6],
@@ -215,23 +214,24 @@ class TaskManager:
         job_rows = db.execute("SELECT 1", callback=callback)
 
         jobs = []
-        for job_row in job_rows:
-            job = Job(
-                id=job_row[0],
-                type=JobType(job_row[1]),
-                status=JobStatus(job_row[2]),
-                task_id=job_row[3],
-                params=json.loads(job_row[4] or "{}"),
-                depends_on=json.loads(job_row[5] or "[]"),
-                retry_count=job_row[6],
-                retries=job_row[7],
-                execute_time=job_row[8],
-                stop_time=job_row[9],
-                message=job_row[10],
-                error=job_row[11]
-            )
+        if job_rows:
+            for job_row in job_rows:
+                job = Job(
+                    id=job_row[0],
+                    type=JobType(job_row[1]),
+                    status=JobStatus(job_row[2]),
+                    task_id=job_row[3],
+                    params=json.loads(job_row[4] or "{}"),
+                    depends_on=json.loads(job_row[5] or "[]"),
+                    retry_count=job_row[6],
+                    retries=job_row[7],
+                    execute_time=job_row[8],
+                    stop_time=job_row[9],
+                    message=job_row[10],
+                    error=job_row[11]
+                )
 
-            jobs.append(job)
+                jobs.append(job)
 
         return jobs
     
@@ -307,8 +307,9 @@ class TaskManager:
         elif job.status == JobStatus.RUNNING:
             job.execute_time = _time
         
-        if task_status_changed and job.task:
-            task_manager.update_task_status(job.task, job.task.status)
+        task = self.load_task(job.task_id)
+        if task_status_changed and task:
+            task_manager.update_task_status(task, task.status)
 
         return status
 
@@ -386,16 +387,19 @@ class TaskManager:
             # 3. 🔥 关键：把 job 按 task_id 分组（核心修复）
             from collections import defaultdict
             job_map = defaultdict(list)
-            for job in job_rows:
-                task_id = job[3]  # job 里第3列是 task_id（如果不是3，改成你真实的下标）
-                job_map[task_id].append(job)
+            for job_row in job_rows:
+                task_id = job_row[3]  # job 里第3列是 task_id（如果不是3，改成你真实的下标）
+                job_map[task_id].append(job_row)
             return task_rows, job_map
+        
+        try:
+            task_rows, job_map = db.execute("SELECT 1", callback=callback)
 
-        task_rows, job_map = db.execute("SELECT 1", callback=callback)
-
-        tasks = []
-        for task_row in task_rows:
-            tasks.append(build_task(task_row, job_map[task_row[0]] ))
+            tasks = []
+            for task_row in task_rows:
+                tasks.append(build_task(task_row, job_map[task_row[0]] ))
+        except Exception as e:
+            get_default_logger().exception(f"failed to list tasks, error：{str(e)}")
         return tasks
     
     def clean_stale_running_jobs(self):

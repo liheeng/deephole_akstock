@@ -1,0 +1,3 @@
+docker start akstock_stock_fetcher
+docker start akstock_api_service
+docker start akstock_dashboard

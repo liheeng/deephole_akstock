@@ -35,15 +35,30 @@ menu = st.sidebar.radio(
 
 st.title("📊 Stock Data Dashboard")
 
-def trigger_sync(st: streamlit, job_type: JobType):
-        if st.button("🚀 执行 Sync"):
-        res = requests.get(f"{API}/sync_daily/" + job_type.value)
-        if res.status_code == 200:
-            st.success("任务已触发")
-            data = res.json()
-            st.json(data)
-        else:
-            st.error(f"任务执行失败, 错误信息：{res.detail}")
+def trigger_sync(st, job_type: JobType):
+    if st.button("🚀 执行 Sync"):
+        try:
+            res = requests.get(f"{API}/sync_daily/{job_type.value}")
+
+            if res.status_code == 200:
+                st.success("任务已触发")
+                data = res.json()
+                st.json(data)
+            else:
+                # -----------------------
+                # 安全获取错误信息
+                # -----------------------
+                try:
+                    err_data = res.json()
+                    msg = err_data.get("detail", f"服务器错误 {res.status_code}")
+                except:
+                    # 如果返回不是JSON，直接取文本
+                    msg = res.text.strip() or f"HTTP {res.status_code} 错误"
+
+                st.error(f"任务执行失败：{msg}")
+                
+        except Exception as e:
+            st.error(f"请求异常：{str(e)}")
 
 # ----------------------------
 # 🧩 Tasks 页面
@@ -59,7 +74,7 @@ if menu == "Tasks":
             st.error(f"请求失败：{resp.status_code}")
             tasks = []
     except Exception as e:
-        st.error(f"连接 B 服务失败：{str(e)}")
+        st.error(f"连接服务失败：{str(e)}")
         tasks = []
 
     if not tasks:

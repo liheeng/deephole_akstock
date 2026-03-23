@@ -6,13 +6,15 @@ from core.task import Task, TaskStatus
 from core.job import JobStatus
 from core.task_manager import task_is_allowed, task_can_run, task_manager
 from utils.log_manager import get_default_logger
+from core.error import TaskError, ERROR_CODE
 
 def run_task(task: Task) -> bool:
     if not task_is_allowed(task):
         emsg = f"some jobs in task({task.id}-{task.description})) is  not allowed, it is singleton."
-        get_default_logger().error(emsg)
-        raise ValueError(emsg)
-    
+        err = TaskError(ERROR_CODE.ERROR_TASK_NOT_ALLOWED, emsg)
+        get_default_logger().error(err)
+        raise err
+        
     _task = task_manager.load_save_task(task)
     if _task != task:
         get_default_logger.warning(f"load same task {task.id} from DB!")
@@ -21,7 +23,10 @@ def run_task(task: Task) -> bool:
         wmsg = f"task {_task.id} - ({_task.description}) cannot be run!"
         get_default_logger().warning(wmsg)
         _task = task_manager.update_task_status(task, TaskStatus.SUSPENDED)
-        return False
+        emsg = f"some jobs in task({task.id}-{task.description})) cannot be run, it does not meet job dag condition or concurrency limit or exceed retry limit, please check job policy!"
+        err = TaskError(ERROR_CODE.ERROR_TASK_CAN_NOT_RUN, emsg)
+        get_default_logger().error(err)
+        raise err
     
     completed = set() # The completed set contains those jobs which is scheduled and be added into queue, and "ready to run".
     job_map = {job.id: job for job in _task.jobs}
