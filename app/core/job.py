@@ -70,10 +70,7 @@ class Job:
     def get_id(self):
         return self.id
 
-    def update_status(self, new_status: JobStatus) -> bool:
+    def update_status(self, new_status: JobStatus) -> JobStatus:
+        old_status = self.status
         self.status = new_status
-        # Here you can also add code to log the status change or perform other actions as needed
-        if self.task:
-            return self.task.update_status_based_on_jobs() 
-        else:
-            return False
+        return old_status

@@ -300,7 +300,7 @@ class TaskManager:
     
     def update_job_status(self, job: Job, new_status: JobStatus) -> JobStatus:
         status = job.status
-        task_status_changed = job.update_status(new_status)
+        old_job_status = job.update_status(new_status)
         _time = self.update_job_status_by_id(job_id = job.id, new_status=job.status, message=job.message, error=job.error).strftime("%Y-%m-%d %H:%M:%S")
         if job.status in [JobStatus.SUCCESS, JobStatus.FAILED]:
             job.stop_time = _time
@@ -308,8 +308,8 @@ class TaskManager:
             job.execute_time = _time
         
         task = self.load_task(job.task_id)
-        if task_status_changed and task:
-            task_manager.update_task_status(task, task.status)
+        if task and task.update_status_based_on_jobs():
+            self.update_task_status_by_id(task_id=task.id, new_status=task.status, message="update task status due to job status change")
 
         return status
 
@@ -355,10 +355,10 @@ class TaskManager:
             get_default_logger().warning(f"Unsupported task status to update: {new_status} of task {task_id}")
         return _time
 
-    def update_task_status(self, task: Task, new_status: TaskStatus, message="") -> TaskStatus:
+    def update_task_status(self, task: Task, new_status: TaskStatus, message: str | None=None) -> TaskStatus:
         status = task.status
         task.status = new_status
-        _time = self.update_task_status_by_id(task.id, task.status, task.message).strftime("%Y-%m-%d %H:%M:%S")
+        _time = self.update_task_status_by_id(task.id, task.status, message if message else task.message).strftime("%Y-%m-%d %H:%M:%S")
         if task.status in [TaskStatus.SUCCESS, TaskStatus.FAILED, TaskStatus.PARTIAL_SUCCESS]:
             task.stop_time = _time
         elif task.status == TaskStatus.SUBMITTED:

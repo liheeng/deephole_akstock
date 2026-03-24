@@ -1,7 +1,7 @@
 # app/core/task.py
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import List
 import enum
 from core.job import JobStatus
 from datetime import datetime

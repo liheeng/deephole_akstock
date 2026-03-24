@@ -48,25 +48,6 @@ app = FastAPI(lifespan=lifespan)
 if is_running_in_docker():
     app.mount("/terminal", StaticFiles(directory="terminal", html=True), name="terminal")
 
-# @app.get("/status")
-# def status():
-#     return task_manager.get_status()
-
-
-# @app.post("/fetch")
-# def trigger_fetch():
-
-#     if task_manager.running:
-#         return {
-#             "status": "rejected",
-#             "task_id": task_manager.task_id,   
-#             "running_by": task_manager.source
-#         }
-
-#     threading.Thread(target=run_fetch, args=("api",)).start()
-
-#     return {"status": "started"}
-
 @app.get("/sync_daily/{sync_type}")
 def call_task(sync_type: str):
     try:

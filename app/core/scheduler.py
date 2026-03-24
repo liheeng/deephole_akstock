@@ -22,7 +22,7 @@ def run_task(task: Task) -> bool:
     if not task_can_run(_task):
         wmsg = f"task {_task.id} - ({_task.description}) cannot be run!"
         get_default_logger().warning(wmsg)
-        _task = task_manager.update_task_status(task, TaskStatus.SUSPENDED)
+        task_manager.update_task_status(task, TaskStatus.SUSPENDED)
         emsg = f"some jobs in task({task.id}-{task.description})) cannot be run, it does not meet job dag condition or concurrency limit or exceed retry limit, please check job policy!"
         err = TaskError(ERROR_CODE.ERROR_TASK_CAN_NOT_RUN, emsg)
         get_default_logger().error(err)
