@@ -1,11 +1,11 @@
 import akshare as ak
 import pandas as pd
-from sources.akshare_stock_source import StockSource
+from sources.akshare_stock_source import SourceAPI
 from utils.log_manager import get_default_logger
 import easyquotation as eq
 
 class AKshareSinaHKSource:
-    SOURCE: StockSource = StockSource.SINA
+    SOURCE: SourceAPI = SourceAPI.SINA
     
     def normalize(self, df: pd.DataFrame, symbol: str) -> pd.DataFrame:
         """
@@ -50,7 +50,7 @@ class AKshareSinaHKSource:
             raise e  # 上层重试
 
 class AKshareEastQuotationHKSource:
-    SOURCE: StockSource = StockSource.EAST_QUOTATION
+    SOURCE: SourceAPI = SourceAPI.EAST_QUOTATION
 
     def normalize(self, df: pd.DataFrame, symbol: str) -> pd.DataFrame:
         """
@@ -111,7 +111,7 @@ class AKshareEastQuotationHKSource:
             raise e  # 上层重试
         
 class AKshareEastMoneyHKSource:
-    SOURCE: StockSource = StockSource.EAST
+    SOURCE: SourceAPI = SourceAPI.EAST
 
     def normalize(self, df: pd.DataFrame, symbol: str) -> pd.DataFrame:   
         """

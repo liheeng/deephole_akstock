@@ -2,6 +2,7 @@ import requests
 import pandas as pd
 import akshare as ak
 from sources.akshare_us import AkshareUSStockSource
+from markets.symbol import SymbolType
 from utils.log_manager import get_default_logger
 
 NYSE_LIST_FILE = "https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/nyse/nyse_full_tickers.json"
@@ -56,3 +57,16 @@ class USStockMarket:
 
     def get_source(self):
         return AkshareUSStockSource()
+
+    def identify_symbol_type(self, code: str) -> SymbolType:
+        if code.startswith('^'):
+            return SymbolType.INDEX        # 指数
+        
+        parts = code.split('^')
+        if len(parts) >= 4:
+            return SymbolType.OPTION       # 期权（典型格式：code^date^C/P^strike）
+        
+        if '^' in code:
+            return SymbolType.OTC_PREFERRED # OTC、优先股、ADR 等特殊标的
+        
+        return SymbolType.STOCK            # 普通股票

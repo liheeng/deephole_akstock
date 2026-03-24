@@ -1,10 +1,10 @@
 import akshare as ak
 import pandas as pd
 from utils.log_manager import get_default_logger
-from sources.akshare_stock_source import StockSource
+from sources.akshare_stock_source import SourceAPI
 
 class AKshareSinaCNASource:
-    SOURCE: StockSource = StockSource.SINA
+    SOURCE: SourceAPI = SourceAPI.SINA
     
     def normalize(self, df: pd.DataFrame, symbol: str) -> pd.DataFrame:
         """
@@ -52,7 +52,7 @@ class AKshareSinaCNASource:
             raise e  # 上层重试
 
 class AKshareTencentCNASource:
-    SOURCE: StockSource = StockSource.TENCENT
+    SOURCE: SourceAPI = SourceAPI.TENCENT
     
     def normalize(self, df: pd.DataFrame, symbol: str) -> pd.DataFrame:
         """
@@ -98,7 +98,7 @@ class AKshareTencentCNASource:
             raise e  # 上层重试
         
 class AKshareEastMoneyCNASource:
-    SOURCE: StockSource = StockSource.EAST
+    SOURCE: SourceAPI = SourceAPI.EAST
 
     def normalize(self, df: pd.DataFrame, symbol: str) -> pd.DataFrame:   
         """
