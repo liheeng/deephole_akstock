@@ -1,11 +1,11 @@
 import akshare as ak
 import yfinance as yf
 import pandas as pd
-from sources.akshare_stock_source import SourceAPI
+from sources.akshare_stock_source import StockSource
 from utils.log_manager import get_default_logger
 from utils.symbol import fix_preferred_symbol
 class AKshareSinaUSSource:
-    SOURCE: SourceAPI = SourceAPI.SINA
+    SOURCE: StockSource = StockSource.SINA
     
     def normalize(self, df: pd.DataFrame, symbol: str) -> pd.DataFrame:
         """
@@ -51,7 +51,7 @@ class AKshareSinaUSSource:
             raise e  # 上层重试
 
 class AKshareYFinanceSource:
-    SOURCE: SourceAPI = SourceAPI.YFINANCE
+    SOURCE: StockSource = StockSource.YFINANCE
 
     def normalize(self, df: pd.DataFrame, symbol: str) -> pd.DataFrame:   
         """

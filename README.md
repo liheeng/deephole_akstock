@@ -69,3 +69,11 @@
 ``` bash
 > bash stop_containers.sh
 ```
+
+## Knowledge of stock
+  
+* code: pure string, no dot, e.g., 600000, AAPL, 00700
+* exchange: market/exchange abbreviation, e.g., SH, SZ, HK, NASDAQ, NYSE
+* symbol: code.exchange (dot-connected), e.g., 600000.SH, 00700.HK,AAPL.NASDAQ
+* symbol_type: security type: stock, index, future, option, otc, preferred
+* market: country/region: CN, HK, US
