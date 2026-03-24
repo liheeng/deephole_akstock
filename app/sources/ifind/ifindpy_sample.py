@@ -11,10 +11,10 @@ def get_access_token(refresh_token: str):
     print(accessToken)
     return accessToken
 
-def get_realtime_quotation(code: str, accessToken: str):
+def get_realtime_quotation(codes: str, accessToken: str):
     thsUrl = 'https://quantapi.51ifind.com/api/v1/realtime__quotation'
     thsHeaders = {"Content-Type":"application/json", "access_token":accessToken}
-    thsPara = {"codes":code , "indicators":"open,high,low,latest"}
+    thsPara = {"codes": codes , "indicators":"open,high,low,latest"}
     thsResponse = requests.post(url=thsUrl, json=thsPara, headers=thsHeaders)
     print(thsResponse.content)
 
