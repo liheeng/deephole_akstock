@@ -1,5 +1,5 @@
 import akshare as ak
-from sources.akshare_cna import AkshareCNAStockSource
+from app.sources.cna_datasource import CNAStockSource
 from utils.log_manager import get_default_logger
 
 class CNAStockMarket:
@@ -30,4 +30,4 @@ class CNAStockMarket:
         return self.get_shanghai_symbol_list() + self.get_shenzhen_symbol_list()
 
     def get_source(self):
-        return AkshareCNAStockSource()
+        return CNAStockSource()

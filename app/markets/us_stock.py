@@ -1,7 +1,7 @@
 import requests
 import pandas as pd
 import akshare as ak
-from sources.akshare_us import AkshareUSStockSource
+from app.sources.us_datasource import USStockSource
 from markets.symbol import SymbolType
 from utils.log_manager import get_default_logger
 
@@ -56,7 +56,7 @@ class USStockMarket:
         return self.get_nyse_symbol_list() + self.get_nasdaq_symbol_list() + self.get_amex_symbol_list()
 
     def get_source(self):
-        return AkshareUSStockSource()
+        return USStockSource()
 
     def identify_symbol_type(self, code: str) -> SymbolType:
         if code.startswith('^'):

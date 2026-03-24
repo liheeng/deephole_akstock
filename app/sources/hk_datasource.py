@@ -1,10 +1,11 @@
 import akshare as ak
 import pandas as pd
+from sources.data_source import DataSourceAPI
 from utils.log_manager import get_default_logger
-from sources.akshare_stock_source import StockSource
+import easyquotation as eq
 
-class AKshareSinaCNASource:
-    SOURCE: StockSource = StockSource.SINA
+class AKshareSinaHKSource:
+    source_api_type: DataSourceAPI = DataSourceAPI.AKSHARE_SINA_API
     
     def normalize(self, df: pd.DataFrame, symbol: str) -> pd.DataFrame:
         """
@@ -18,28 +19,25 @@ class AKshareSinaCNASource:
             "high": "high",
             "low": "low",
             "close": "close",
-            "volume": "volume",
-            "amount": "amount",
-            "turnover": "turnover",
+            "volume": "volume"
         }, inplace=True)
 
         df["symbol"] = symbol
 
         return df[[
-            "symbol", "date", "open", "high", "low", "close", "volume", "amount", "turnover"
+            "symbol", "date", "open", "high", "low", "close", "volume"
         ]]
 
     def fetch_daily(self, symbol, start) -> pd.DataFrame | None:
 
-        code = symbol.split(".")[-1].lower()  + symbol.split(".")[0]
+        code = symbol.split(".")[0]
 
         # 🥇 尝试新浪
         try:
-            df = ak.stock_zh_a_daily(
-                symbol=code,
-                start_date=start,
-                adjust="qfq"
-            )
+            df = ak.stock_hk_daily(symbol=code, adjust="qfq")
+            # filter those data only is later than specific start
+            df["date"] = pd.to_datetime(df["date"])
+            df = df[df["date"] >= start]
 
             if df is not None and not df.empty:
                 print(f"[SINA] success: {symbol}")
@@ -51,12 +49,12 @@ class AKshareSinaCNASource:
             get_default_logger().error(f"[SINA] failed: {symbol}, error={e}")  
             raise e  # 上层重试
 
-class AKshareTencentCNASource:
-    SOURCE: StockSource = StockSource.TENCENT
-    
+class AKshareEastQuotationHKSource:
+    source_api_type: DataSourceAPI = DataSourceAPI.EAST_QUOTATION_API
+
     def normalize(self, df: pd.DataFrame, symbol: str) -> pd.DataFrame:
         """
-        腾讯格式转换
+        东方量化（腾讯）格式转换
         """
         df = df.copy()
 
@@ -77,28 +75,43 @@ class AKshareTencentCNASource:
 
     def fetch_daily(self, symbol, start) -> pd.DataFrame | None:
 
-        code = symbol.split(".")[-1].lower()  + symbol.split(".")[0]
+        code = symbol.split(".")[0]
 
-        # 尝试腾讯
+        # 尝试EastQuotation(腾讯)
         try:
-            df = ak.stock_zh_a_hist_tx(
-                symbol=code,
-                start_date=start,
-                adjust="qfq"
-            )
+            # 使用港股日K线数据源
+            quotation = eq.use("daykline")
+            # 获取历史日K（默认返回全部历史）
+            data = quotation.real([code])
+
+            # 转换为 DataFrame
+            df_list = []
+            for code, rows in data.items():
+                for row in rows:
+                    # 腾讯返回格式：[日期, 开盘, 最高, 最低, 收盘, 成交量, 成交额]
+                    df_list.append([row[0], row[1], row[2], row[3], row[4], row[5]])
+
+            df = pd.DataFrame(df_list, columns=["date", "open", "high", "low", "close", "amount"])
+            # 日期格式处理
+            df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
+            # 数值转 float
+            df[["open", "high", "low", "close", "amount"]] = df[["open", "high", "low", "close", "amount"]].astype(float)
+            
+            # 过滤日期
+            df = df[df["date"] >= start]
 
             if df is not None and not df.empty:
-                print(f"[TENCENT] success: {symbol}")
-                get_default_logger().info(f"[TENCENT] success: {symbol}")
+                print(f"[EASTQUOTATION] success: {symbol}")
+                get_default_logger().info(f"[EASTQUOTATION] success: {symbol}")
                 return self.normalize(df, symbol)
 
         except Exception as e:
-            print(f"[TENCENT] failed: {symbol}, error={e}")
-            get_default_logger().error(f"[TENCENT] failed: {symbol}, error={e}")
+            print(f"[EASTQUOTATION] failed: {symbol}, error={e}")
+            get_default_logger().error(f"[EASTQUOTATION] failed: {symbol}, error={e}")
             raise e  # 上层重试
         
-class AKshareEastMoneyCNASource:
-    SOURCE: StockSource = StockSource.EAST
+class AKshareEastMoneyHKSource:
+    source_api_type: DataSourceAPI = DataSourceAPI.AKSHARE_EASTMONEY_API
 
     def normalize(self, df: pd.DataFrame, symbol: str) -> pd.DataFrame:   
         """
@@ -128,7 +141,7 @@ class AKshareEastMoneyCNASource:
         
         # 东财
         try:
-            df = ak.stock_zh_a_hist(
+            df = ak.stock_hk_hist(
                 symbol=code,
                 start_date=start,
                 adjust="qfq",
@@ -146,24 +159,24 @@ class AKshareEastMoneyCNASource:
             raise e  # 上层重试
 
         
-class AkshareCNAStockSource:
+class HKStockSource:
     
     def fetch_daily(self, symbol, start):
 
-        # 先尝试新浪，失败重试一次，再失败尝试东财，最后失败尝试腾讯
+        # 先尝试新浪，失败重试一次，再失败尝试EASTQUOTATION(腾讯), 最后失败尝试东财
         try: 
             get_default_logger().info(f"Trying SINA for {symbol} daily data since {start}")
-            return AKshareSinaCNASource().fetch_daily(symbol, start)
+            return AKshareSinaHKSource().fetch_daily(symbol, start)
+        except:
+            pass
+        try:
+            get_default_logger().info(f"Trying EASTQUOTATION for {symbol} daily data since {start}")
+            return AKshareEastQuotationHKSource().fetch_daily(symbol, start)
         except:
             pass
         try:
             get_default_logger().info(f"Trying EASTMONEY for {symbol} daily data since {start}")       
-            return AKshareEastMoneyCNASource().fetch_daily(symbol, start)
-        except:
-            pass
-        try:
-            get_default_logger().info(f"Trying TENCENT for {symbol} daily data since {start}")
-            return AKshareTencentCNASource().fetch_daily(symbol, start)
+            return AKshareEastMoneyHKSource().fetch_daily(symbol, start)
         except:
             pass
         

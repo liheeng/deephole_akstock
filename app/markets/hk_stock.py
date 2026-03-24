@@ -1,5 +1,5 @@
 import akshare as ak
-from sources.akshare_hk import AkshareHKStockSource
+from app.sources.hk_datasource import HKStockSource
 from utils.log_manager import get_default_logger
 
 class HongKongStockMarket:
@@ -17,4 +17,4 @@ class HongKongStockMarket:
         return df
 
     def get_source(self):
-        return AkshareHKStockSource()
+        return HKStockSource()
