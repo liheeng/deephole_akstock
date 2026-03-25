@@ -2,8 +2,9 @@ version: "3.9"
 
 services:
 
+  # 1. 数据库初始化（不跑 cron）
   akstock_db_init:
-    image: akshare-stock:${IMAGE_VERSION}  # 👈 用同一个 image
+    image: akshare-stock:${IMAGE_VERSION}
     build: .
     container_name: akstock_db_init
     command: python /app/init_db.py
@@ -11,9 +12,29 @@ services:
       - ${DATA_VOLUME}:/data
       - ${LOG_VOLUME}:/logs
     restart: "no"
+    environment:
+      - ENABLE_CRON=false  # 👈 关键
 
+  # 2. API 服务（不跑 cron）
+  akstock_api_service:
+    image: akshare-stock:${IMAGE_VERSION}
+    container_name: akstock_api_service
+    depends_on:
+      - akstock_db_init
+    volumes:
+      - ${DATA_VOLUME}:/data
+      - ${LOG_VOLUME}:/logs
+    environment:
+      - TZ=${TIME_ZONE}
+      - ENABLE_CRON=false  # 👈 关键
+    ports:
+      - "8000:8000"
+    command: uvicorn api:app --host 0.0.0.0 --port 8000
+    restart: unless-stopped
+
+  # 3. 【专门】定时抓取服务（只跑 cron）
   akstock_stock_fetcher:
-    image: akshare-stock:${IMAGE_VERSION}  # 👈 共用
+    image: akshare-stock:${IMAGE_VERSION}
     container_name: akstock_stock_fetcher
     depends_on:
       - akstock_db_init
@@ -22,40 +43,30 @@ services:
       - ${LOG_VOLUME}:/logs
     environment:
       - TZ=${TIME_ZONE}
+      - ENABLE_CRON=true       # 👈 只有这个开启 cron
       - CRON_SCHEDULE=${CRON_SCHEDULE}
     restart: unless-stopped
-    
-  akstock_api_service:
-    image: akshare-stock:${IMAGE_VERSION} # 👈 共用
-    container_name: akstock_api_service
-    depends_on:
-      - akstock_db_init
-      - akstock_stock_fetcher
-    volumes:
-      - ${DATA_VOLUME}:/data
-      - ${LOG_VOLUME}:/logs
-    ports:
-      - "8000:8000"
-    command: >
-      uvicorn api:app --host 0.0.0.0 --port 8000
-    restart: unless-stopped
 
+  # 4. Dashboard（不跑 cron）
   akstock_dashboard:
-    image: akshare-stock:${IMAGE_VERSION} # 👈 共用
+    image: akshare-stock:${IMAGE_VERSION}
     container_name: akstock_dashboard
     depends_on:
       - akstock_db_init
-      - akstock_stock_fetcher
       - akstock_api_service
     volumes:
       - ${DATA_VOLUME}:/data
       - ${LOG_VOLUME}:/logs
+    environment:
+      - TZ=${TIME_ZONE}
+      - ENABLE_CRON=false  # 👈 关键
     ports:
       - "8501:8501"
-    command: >
-      streamlit run dashboard.py --server.port 8501 --server.address 0.0.0.0
+    command: streamlit run dashboard.py --server.port 8501 --server.address 0.0.0.0
     restart: unless-stopped
+
+
 
 volumes:
   duckdb_data:
-  duckdb_logs:   # 👈 必须声明
+  duckdb_logs:
