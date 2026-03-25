@@ -15,27 +15,37 @@ from utils.task_util import create_sync_daily_task
 from core.scheduler import run_task
 from core.worker import start_workers
 from db.duckdb import DuckDBController
-from db.db_common import DB
 from core.error import TaskError
+from sources.ifind.ifind_api import IfindApi
 
-# !!! Register executors, any new executor needs to be import here, it is very important, 
-# otherwise the API won't know how to handle the incoming jobs !!!
-import executors.cn_daily_sync_executor
-import executors.hk_daily_sync_executor
-import executors.us_daily_sync_exectuor
+# !!! Register executors, any new executor needs to be import here,
+# it is very important,otherwise the API won't know how to handle
+# the incoming jobs!!!
+import executors.cn_daily_sync_executor    # noqa
+import executors.hk_daily_sync_executor    # noqa
+import executors.us_daily_sync_exectuor    # noqa
 
 logger = get_default_logger()
 
+
 def init():
     logger.info("API service is starting up")
-    
+
     # Init DuckDB 
     DuckDBController(db_path=DB)
-    logger.info("DuckDB initialized")
+    logger.info("DuckDB connection initialized")
 
+    # Init iFinD API
+    try:
+        IfindApi(refresh_token=os.getenv("IFIND_REFRESH_TOKEN"))
+        logger.info("iFinD API initialized")
+    except Exception as e:
+        logger.error(f"iFinD API is failed to initialize, error: str({e})")
+    
     # 启动工作线程池
     start_workers(n=4)   # 👈 在这里启动
     logger.info("Worker threads started")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -47,6 +57,7 @@ app = FastAPI(lifespan=lifespan)
 
 if is_running_in_docker():
     app.mount("/terminal", StaticFiles(directory="terminal", html=True), name="terminal")
+
 
 @app.get("/sync_daily/{sync_type}")
 def call_task(sync_type: str):
@@ -71,7 +82,8 @@ def call_task(sync_type: str):
                 status_code=500,
                 detail=f"failed to run task-{sync_type}, error：{str(e)}"
             )
-    
+
+
 @app.get("/tasks")
 def list_tasks(limit: int = 20):
     try:
@@ -82,26 +94,17 @@ def list_tasks(limit: int = 20):
             detail=f"failed to list tasks, error：{str(e)}"
         )
 
+
 @app.get("/tasks/{task_id}")
 def get_task(task_id: str):
     return task_manager.load_task(task_id)
 
 
-# @app.get("/logs/{task_id}")
-# def get_logs(task_id: str):
 
-#     path = f"/logs/{task_id}.log" if is_running_in_docker() else f"./logs/{task_id}.log"
-
-#     if not os.path.exists(path):
-#         return {"logs": []}
-
-#     with open(path) as f:
-#         return {"logs": f.readlines()}
-    
 @app.get("/logs/tail")
 def tail_logs(n: int = 50):
 
-    path = f"/logs/default.log" if is_running_in_docker() else f"./logs/default.log"
+    path = "/logs/default.log" if is_running_in_docker() else "./logs/default.log"
 
     if not os.path.exists(path):
         return {"logs": []}
@@ -110,6 +113,7 @@ def tail_logs(n: int = 50):
         lines = f.readlines()
 
     return {"logs": lines[-n:]}
+
 
 @app.websocket("/ws/terminal/{container}")
 async def terminal_ws(websocket: WebSocket, container: str):

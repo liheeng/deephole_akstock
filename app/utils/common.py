@@ -30,3 +30,16 @@ def date_to_str(d):
     if isinstance(d, str):
         return d
     return d.strftime("%Y%m%d")
+
+
+def safe_format(s: str, **kwargs):
+    """
+    安全格式化字符串：
+    存在的变量 → 替换
+    不存在的变量 → 保留 {xxx} 原样
+    永不报错
+    """
+    class SafeFormatter(dict):
+        def __missing__(self, key):
+            return f"{{{key}}}"  # 👈 核心：不存在就返回 {key}
+    return s.format_map(SafeFormatter(kwargs))

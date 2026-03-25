@@ -1,8 +1,13 @@
 import akshare as ak
 import pandas as pd
-from sources.data_source import DataSourceAPI
+from markets.market import Region
+from sources.data_source import DataSource, DataSourceAPI
+from sources.datasource_adapter import convert_symbol
+from sources.ifind.ifind_api import IfindApi
 from utils.log_manager import get_default_logger
 import easyquotation as eq
+from datetime import datetime
+
 
 class AKshareSinaHKSource:
     source_api_type: DataSourceAPI = DataSourceAPI.AKSHARE_SINA_API
@@ -28,15 +33,16 @@ class AKshareSinaHKSource:
             "symbol", "date", "open", "high", "low", "close", "volume"
         ]]
 
-    def fetch_daily(self, symbol, start) -> pd.DataFrame | None:
+    def fetch_daily(self, symbol, start: datetime) -> pd.DataFrame | None:
 
-        code = symbol.split(".")[0]
-
+        # code = symbol.split(".")[0]
+        code = convert_symbol(symbol, DataSource.AKSHARE, Region.HK, self.source_api_type)
+        
         # 🥇 尝试新浪
         try:
             df = ak.stock_hk_daily(symbol=code, adjust="qfq")
             # filter those data only is later than specific start
-            df["date"] = pd.to_datetime(df["date"])
+            df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
             df = df[df["date"] >= start]
 
             if df is not None and not df.empty:
@@ -73,10 +79,11 @@ class AKshareEastQuotationHKSource:
             "symbol", "date", "open", "high", "low", "close", "amount"
         ]]
 
-    def fetch_daily(self, symbol, start) -> pd.DataFrame | None:
+    def fetch_daily(self, symbol, start: datetime) -> pd.DataFrame | None:
 
-        code = symbol.split(".")[0]
-
+        # code = symbol.split(".")[0]
+        code = convert_symbol(symbol, DataSource.EASTQUOTATION, Region.HK, self.source_api_type)
+        
         # 尝试EastQuotation(腾讯)
         try:
             # 使用港股日K线数据源
@@ -136,8 +143,9 @@ class AKshareEastMoneyHKSource:
             "symbol", "date", "open", "high", "low", "close", "volume", "amount", "turnover"
         ]]
 
-    def fetch_daily(self, symbol, start) -> pd.DataFrame | None:
-        code = symbol.split(".")[0]
+    def fetch_daily(self, symbol, start: datetime) -> pd.DataFrame | None:
+        # code = symbol.split(".")[0]
+        code = convert_symbol(symbol, DataSource.AKSHARE, Region.HK, self.source_api_type)
         
         # 东财
         try:
@@ -159,25 +167,87 @@ class AKshareEastMoneyHKSource:
             raise e  # 上层重试
 
         
+class IFinDHKSource:
+    """ 同花顺iFinD
+    """
+    source_api_type: DataSourceAPI = DataSourceAPI.IFIND_API
+
+    def normalize(self, df: pd.DataFrame, symbol: str) -> pd.DataFrame:
+        """
+        iFinD格式转换
+        """
+        df = df.copy()
+
+        df.rename(columns={
+            "date": "date",
+            "open": "open",
+            "high": "high",
+            "low": "low",
+            "close": "close",
+            "volume": "volume",
+            "amount": "amount",
+            "changeRatio": "pct",
+            "turnoverRatio": "turnover",
+        }, inplace=True)
+
+        df["symbol"] = symbol
+
+        return df[[
+            "symbol", "date", "open", "high", "low", "close", "volume", "amount", "pct", "turnover"    # noqa
+        ]]
+
+    def fetch_daily(self, symbol, start: datetime) -> pd.DataFrame | None:
+        if not IfindApi.instance().is_available():
+            raise Exception("iFinD is not available")
+
+        code = convert_symbol(symbol, DataSource.IFIND, Region.HK)
+        start = start.strftime("%Y-%m-%d")
+        # iFinD
+        try:
+            df = IfindApi.instance().get_historical_data(
+                code=code,
+                start=start
+            )
+
+            if df is not None and not df.empty:
+                print(f"[iFinD] success: {symbol}")
+                get_default_logger().info(f"[iFinD] success: {symbol}")
+                return self.normalize(df, symbol)
+
+        except Exception as e:
+            print(f"[iFinD] failed: {symbol}, error={e}")
+            get_default_logger().error(f"[iFinD] failed: {symbol}, error={e}")
+            raise e  # 上层重试
+
+
 class HKStockSource:
     
-    def fetch_daily(self, symbol, start):
+    def fetch_daily(self, symbol, start: datetime):
 
-        # 先尝试新浪，失败重试一次，再失败尝试EASTQUOTATION(腾讯), 最后失败尝试东财
+        # 先尝试iFinD, 失败再尝试新浪，失败重试一次，再失败尝试EASTQUOTATION(腾讯), 最后失败尝试东财
+        try:
+            get_default_logger().info(f"Trying iFinD for {symbol} daily data since {start}")
+            return IFinDHKSource().fetch_daily(symbol, start)
+        except Exception as e:
+            get_default_logger().error(f"[iFinD] failed: {symbol}, error={e}")
+            pass
         try: 
             get_default_logger().info(f"Trying SINA for {symbol} daily data since {start}")
             return AKshareSinaHKSource().fetch_daily(symbol, start)
-        except:
+        except Exception as e:
+            get_default_logger().error(f"[SINA] failed: {symbol}, error={e}")
             pass
         try:
             get_default_logger().info(f"Trying EASTQUOTATION for {symbol} daily data since {start}")
             return AKshareEastQuotationHKSource().fetch_daily(symbol, start)
-        except:
+        except Exception as e:
+            get_default_logger().error(f"[EASTQUOTATION] failed: {symbol}, error={e}")
             pass
         try:
             get_default_logger().info(f"Trying EASTMONEY for {symbol} daily data since {start}")       
             return AKshareEastMoneyHKSource().fetch_daily(symbol, start)
-        except:
+        except Exception as e:
+            get_default_logger().error(f"[EASTMONEY] failed: {symbol}, error={e}")
             pass
         
         # ❌ 全失败

@@ -1,6 +1,5 @@
 import json
 from typing import Tuple, Dict
-from collections import defaultdict
 import pandas as pd
 from utils.log_manager import get_default_logger
 # 你的原始数据（已转字符串）
@@ -30,7 +29,8 @@ def convert_to_df(data_json) -> Tuple[bool, Dict[str, pd.DataFrame]|None]:
             "low": ohlcv["low"],
             "volume": ohlcv["volume"],
             "amount": ohlcv["amount"],
-            "turnover": ohlcv["turnover"]
+            "changeRatio": ohlcv["changeRatio"],
+            "turnoverRatio": ohlcv["turnoverRatio"]
         })
 
         his_data[thscode] = df

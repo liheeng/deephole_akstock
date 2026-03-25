@@ -1,17 +1,19 @@
 import requests
 import pandas as pd
-import akshare as ak
-from app.sources.us_datasource import USStockSource
-from markets.symbol import SymbolType
+from sources.us_datasource import USStockSource
+from markets.market import SymbolType
+from markets.market import Region
 from utils.log_manager import get_default_logger
 
 NYSE_LIST_FILE = "https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/nyse/nyse_full_tickers.json"
 NASDAQ_LIST_URL = "https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/nasdaq/nasdaq_full_tickers.json"
 AMEX_LIST_URL = "https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/amex/amex_full_tickers.json"
 
+
 class USStockMarket:
 
-    name = "US"
+    region: Region = Region.US
+    name: str = region.value.upper()
 
     def get_nyse_symbol_list(self):
         nyse_symbol_list = requests.get(NYSE_LIST_FILE).json()
@@ -67,6 +69,6 @@ class USStockMarket:
             return SymbolType.OPTION       # 期权（典型格式：code^date^C/P^strike）
         
         if '^' in code:
-            return SymbolType.OTC_PREFERRED # OTC、优先股、ADR 等特殊标的
+            return SymbolType.OTC_PREFERRED     # OTC、优先股、ADR 等特殊标的
         
         return SymbolType.STOCK            # 普通股票

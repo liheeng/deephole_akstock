@@ -1,10 +1,13 @@
 import akshare as ak
-from app.sources.cna_datasource import CNAStockSource
+from sources.cna_datasource import CNAStockSource
+from markets.market import Region
 from utils.log_manager import get_default_logger
+
 
 class CNAStockMarket:
 
-    name = "CN"
+    region: Region = Region.CN
+    name: str = region.value.upper()
 
     def get_shanghai_symbol_list(self):
 
@@ -12,7 +15,8 @@ class CNAStockMarket:
         df = [
             f"{code}.SH" for code in stock_info_sh_name_code_df["证券代码"]
         ]
-        get_default_logger().info(f"Fetched {len(df)} symbols from Shanghai Stock Exchange")
+        get_default_logger().info(f"Fetched {len(df)} symbols from Shanghai \
+            Stock Exchange")
 
         return df
     
@@ -22,7 +26,8 @@ class CNAStockMarket:
         df = [
             f"{code}.SZ" for code in stock_info_sz_name_code_df["A股代码"]
         ]
-        get_default_logger().info(f"Fetched {len(df)} symbols from Shenzhen Stock Exchange") 
+        get_default_logger().info(f"Fetched {len(df)} symbols from Shenzhen \
+            Stock Exchange") 
 
         return df
     

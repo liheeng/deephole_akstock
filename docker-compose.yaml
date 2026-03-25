@@ -27,6 +27,7 @@ services:
     environment:
       - TZ=${TIME_ZONE}
       - ENABLE_CRON=false  # 👈 关键
+      - IFIND_REFRESH_TOKEN
     ports:
       - "8000:8000"
     command: uvicorn api:app --host 0.0.0.0 --port 8000

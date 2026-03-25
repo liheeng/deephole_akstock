@@ -1,4 +1,3 @@
-import duckdb
 from core.normalizer import normalize
 from utils.retry import retry
 from utils.time import random_sleep
@@ -6,6 +5,8 @@ from utils.log_manager import get_default_logger
 import pandas as pd
 from datetime import date
 from db.duckdb import DuckDBController
+from datetime import datetime
+
 
 class Updater:
 
@@ -21,7 +22,7 @@ class Updater:
         return r[0] if r else None
 
     @retry(3)
-    def fetch(self, source, symbol, start):
+    def fetch(self, source, symbol, start: datetime):
         return source.fetch_daily(symbol, start)
 
     def run(self, market):
@@ -41,7 +42,8 @@ class Updater:
                 get_default_logger().info(f"{symbol} already updated today, skipping")
                 continue
             
-            start = last.strftime("%Y%m%d") if last else "19900101" # type: ignore
+            start = last.strftime("%Y%m%d") if last else "1990-01-01" # type: ignore
+            start = pd.to_datetime(start)
 
             df = self.fetch(source, symbol, start)
 

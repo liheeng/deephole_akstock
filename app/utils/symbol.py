@@ -1,4 +1,4 @@
-def fix_preferred_symbol(symbol):
+def fix_preferred_symbol(symbol, replacement: str = "-"):
     """
     专门给 yfinance 使用的股票代码格式化
     官方规则：
@@ -14,7 +14,7 @@ def fix_preferred_symbol(symbol):
 
     # 2. 优先股：中间包含 ^ → 替换成 -
     if "^" in symbol:
-        return symbol.replace("^", "-")
+        return symbol.replace("^", replacement)
 
     # 普通股票 → 不变
     return symbol

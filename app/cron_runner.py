@@ -12,6 +12,7 @@ from core.job import JobType
 from utils.log_manager import get_default_logger
 from datetime import datetime
 
+
 logger = get_default_logger()
 
 sync_cn_daily_url = "http://akstock_api_service:8000/sync_daily/" + JobType.CN_DAILY_SYNC.value
@@ -19,7 +20,7 @@ sync_hk_daily_url = "http://akstock_api_service:8000/sync_daily/" + JobType.HK_D
 sync_us_daily_url = "http://akstock_api_service:8000/sync_daily/" + JobType.US_DAILY_SYNC.value
 
 # logger.warning(f"cros task is disabled in version 1.1, will be enabled in version 1.2!")
-logger.info(f"start cron tasks at " + datetime.now())
+logger.info(f"start cron tasks at {datetime.now()}")
 
 response = requests.get(sync_cn_daily_url)
 # 查看结果
