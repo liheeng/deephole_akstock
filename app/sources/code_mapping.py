@@ -23,10 +23,12 @@ DATA_SOURCE_FORMAT = {
             "sina": "{exchange_lower}{code}",
             "tencent": "{exchange_lower}{code}"
         },
+        "hk": "{api}",
         "hk_api": {
             "eastmoney": "{code}",
             "sina": "{code}"
         },
+        "us": "{api}",
         "us_api": {
             "eastmoney": "{code}",
             "sina": "{code}"

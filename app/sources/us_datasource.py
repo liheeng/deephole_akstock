@@ -163,14 +163,17 @@ class IFinDUSSource:
         _days = (end.date() - start.date()).days
         _days = 1 if _days == 0 else _days
         count = HIS_BATCH_SIZE_LIMIT // _days
+        last_index = next_index + count
+        if last_index > len(symbols):
+            last_index = len(symbols)
         symbols_str = ""
-        for symbol in symbols[next_index:next_index + count]:
+        for symbol in symbols[next_index:last_index]:
             symbols_str = symbol if len(symbols_str) == 0 else f"{symbols_str},{symbol}"
 
         return next_index + count, symbols_str
     
     def fetch_daily(self, symbols_str, start: datetime) -> pd.DataFrame | Dict[str, pd.DataFrame] | None:
-        if not IfindApi.instance().is_available():
+        if IfindApi.instance() is None or not IfindApi.instance().is_available():
             raise Exception("iFinD is not available")
 
         codes_str = ""
@@ -246,6 +249,6 @@ class USStockSource(DataSource):
             get_default_logger().info(f"trying {source_api_name} API for {symbols_str} daily data since {start}")
             return instance.fetch_daily(symbols_str, start)
         except Exception as e:
-            get_default_logger().error(f"trying from {source_api_name} failed: {symbols_str}, error={e}")
+            get_default_logger().exception(f"trying from {source_api_name} failed: {symbols_str}, error={e}")
             raise e
     

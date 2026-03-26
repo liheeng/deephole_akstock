@@ -50,8 +50,9 @@ class AKshareSinaHKSource:
         try:
             df = ak.stock_hk_daily(symbol=code, adjust="qfq")
             # filter those data only is later than specific start
-            df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
+            df["date"] = pd.to_datetime(df["date"])
             df = df[df["date"] >= start]
+            # df["date"] = df.dt.strftime("%Y-%m-%d")
 
             if df is not None and not df.empty:
                 print(f"[SINA] success: {symbol}")
@@ -62,6 +63,7 @@ class AKshareSinaHKSource:
             print(f"[SINA] failed: {symbol}, error={e}")
             get_default_logger().error(f"[SINA] failed: {symbol}, error={e}")  
             raise e  # 上层重试
+
 
 class AKshareEastQuotationHKSource:
     source_api_type: DataSourceAPI = DataSourceAPI.EAST_QUOTATION_API
@@ -115,13 +117,14 @@ class AKshareEastQuotationHKSource:
 
             df = pd.DataFrame(df_list, columns=["date", "open", "high", "low", "close", "amount"])
             # 日期格式处理
-            df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
+            # 过滤日期
+            df["date"] = pd.to_datetime(df["date"])
+            df = df[df["date"] >= start]
+            # df["date"] = df.dt.strftime("%Y-%m-%d")
+
             # 数值转 float
             df[["open", "high", "low", "close", "amount"]] = df[["open", "high", "low", "close", "amount"]].astype(float)
             
-            # 过滤日期
-            df = df[df["date"] >= start]
-
             if df is not None and not df.empty:
                 print(f"[EASTQUOTATION] success: {symbol}")
                 get_default_logger().info(f"[EASTQUOTATION] success: {symbol}")
@@ -227,14 +230,17 @@ class IFinDHKSource:
         _days = (end.date() - start.date()).days
         _days = 1 if _days == 0 else _days
         count = HIS_BATCH_SIZE_LIMIT // _days
+        last_index = next_index + count
+        if last_index > len(symbols):
+            last_index = len(symbols)
         symbols_str = ""
-        for symbol in symbols[next_index:next_index + count]:
+        for symbol in symbols[next_index:last_index]:
             symbols_str = symbol if len(symbols_str) == 0 else f"{symbols_str},{symbol}"
 
         return next_index + count, symbols_str
     
     def fetch_daily(self, symbols_str, start: datetime) -> pd.DataFrame | Dict[str, pd.DataFrame] | None:
-        if not IfindApi.instance().is_available():
+        if IfindApi.instance() is None or not IfindApi.instance().is_available():
             raise Exception("iFinD is not available")
 
         codes_str = ""
@@ -311,6 +317,6 @@ class HKStockSource(DataSource):
             get_default_logger().info(f"trying {source_api_name} API for {symbols_str} daily data since {start}")
             return instance.fetch_daily(symbols_str, start)
         except Exception as e:
-            get_default_logger().error(f"trying from {source_api_name} failed: {symbols_str}, error={e}")
+            get_default_logger().exception(f"trying from {source_api_name} failed: {symbols_str}, error={e}")
             raise e
         
