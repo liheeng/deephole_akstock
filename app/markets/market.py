@@ -1,4 +1,8 @@
 import enum
+from abc import ABC, abstractmethod
+from typing import List
+import pandas as pd
+from sources.data_source import DataSource
 
 
 class Region(enum.Enum):
@@ -23,3 +27,16 @@ class SymbolType(enum.Enum):
     FUTURE = "future"
     OPTION = "option"
     OTC_PREFERRED = "otc/preferred"
+
+
+class Market(ABC):
+    region: Region
+    name: str
+
+    @abstractmethod
+    def get_symbol_list(self) -> List[str]:
+        pass
+
+    @abstractmethod
+    def get_source(self) -> DataSource:
+        pass

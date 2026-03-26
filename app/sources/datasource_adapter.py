@@ -1,20 +1,20 @@
 from sources.code_mapping import build_symbol
 from markets.market import Region   
-from sources.data_source import DataSource, DataSourceAPI
+from sources.data_source import DataSourceType, DataSourceAPI
 from utils.symbol import fix_preferred_symbol
 
 
 def convert_symbol(
     symbol: str,
-    data_source: DataSource,
+    data_source: DataSourceType,
     region_type: Region,
     api_type: DataSourceAPI | None = None
 ):
     code = build_symbol(symbol, data_source, region_type, api_type)
     if region_type == Region.US:
-        if data_source == DataSource.YFINANCE:
+        if data_source == DataSourceType.YFINANCE:
             code = fix_preferred_symbol(code, "-")
-        elif data_source == DataSource.IFIND:
+        elif data_source == DataSourceType.IFIND:
             code = fix_preferred_symbol(code, ".")
     return code
 

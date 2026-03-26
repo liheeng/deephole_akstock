@@ -1,9 +1,10 @@
 import akshare as ak
 import pandas as pd
+from typing import Dict, List
 from markets.market import Region
-from sources.data_source import DataSource, DataSourceAPI
+from sources.data_source import DataSourceType, DataSourceAPI, DataSource
 from sources.datasource_adapter import convert_symbol
-from sources.ifind.ifind_api import IfindApi
+from sources.ifind.ifind_api import IfindApi, HIS_BATCH_SIZE_LIMIT
 from utils.log_manager import get_default_logger
 import easyquotation as eq
 from datetime import datetime
@@ -33,10 +34,17 @@ class AKshareSinaHKSource:
             "symbol", "date", "open", "high", "low", "close", "volume"
         ]]
 
+    def candidate_symbols(self,
+                          symbols: List[str],
+                          next_index: int,
+                          start: datetime,
+                          end: datetime | None) -> tuple[int, str]:
+        return next_index + 1, symbols[next_index]
+    
     def fetch_daily(self, symbol, start: datetime) -> pd.DataFrame | None:
 
         # code = symbol.split(".")[0]
-        code = convert_symbol(symbol, DataSource.AKSHARE, Region.HK, self.source_api_type)
+        code = convert_symbol(symbol, DataSourceType.AKSHARE, Region.HK, self.source_api_type)
         
         # 🥇 尝试新浪
         try:
@@ -79,10 +87,17 @@ class AKshareEastQuotationHKSource:
             "symbol", "date", "open", "high", "low", "close", "amount"
         ]]
 
+    def candidate_symbols(self,
+                          symbols: List[str],
+                          next_index: int,
+                          start: datetime,
+                          end: datetime | None) -> tuple[int, str]:
+        return next_index + 1, symbols[next_index]
+    
     def fetch_daily(self, symbol, start: datetime) -> pd.DataFrame | None:
 
         # code = symbol.split(".")[0]
-        code = convert_symbol(symbol, DataSource.EASTQUOTATION, Region.HK, self.source_api_type)
+        code = convert_symbol(symbol, DataSourceType.EASTQUOTATION, Region.HK, self.source_api_type)
         
         # 尝试EastQuotation(腾讯)
         try:
@@ -143,9 +158,16 @@ class AKshareEastMoneyHKSource:
             "symbol", "date", "open", "high", "low", "close", "volume", "amount", "turnover"
         ]]
 
+    def candidate_symbols(self,
+                          symbols: List[str],
+                          next_index: int,
+                          start: datetime,
+                          end: datetime | None) -> tuple[int, str]:
+        return next_index + 1, symbols[next_index]
+    
     def fetch_daily(self, symbol, start: datetime) -> pd.DataFrame | None:
         # code = symbol.split(".")[0]
-        code = convert_symbol(symbol, DataSource.AKSHARE, Region.HK, self.source_api_type)
+        code = convert_symbol(symbol, DataSourceType.AKSHARE, Region.HK, self.source_api_type)
         
         # 东财
         try:
@@ -196,66 +218,99 @@ class IFinDHKSource:
             "symbol", "date", "open", "high", "low", "close", "volume", "amount", "pct", "turnover"    # noqa
         ]]
 
-    def fetch_daily(self, symbol, start: datetime) -> pd.DataFrame | None:
+    def candidate_symbols(self,
+                          symbols: List[str],
+                          next_index: int,
+                          start: datetime,
+                          end: datetime | None) -> tuple[int, str]:
+        end = end or datetime.now()
+        _days = (end.date() - start.date()).days
+        _days = 1 if _days == 0 else _days
+        count = HIS_BATCH_SIZE_LIMIT // _days
+        symbols_str = ""
+        for symbol in symbols[next_index:next_index + count]:
+            symbols_str = symbol if len(symbols_str) == 0 else f"{symbols_str},{symbol}"
+
+        return next_index + count, symbols_str
+    
+    def fetch_daily(self, symbols_str, start: datetime) -> pd.DataFrame | Dict[str, pd.DataFrame] | None:
         if not IfindApi.instance().is_available():
             raise Exception("iFinD is not available")
 
-        code = convert_symbol(symbol, DataSource.IFIND, Region.HK)
-        start = start.strftime("%Y-%m-%d")
+        codes_str = ""
+        origin_symbols_list = []
+        for symbol in symbols_str.split(","):
+            origin_symbols_list.append(symbol)
+            symbol = convert_symbol(symbol, DataSourceType.IFIND, Region.HK)
+            codes_str = symbol if len(codes_str) == 0 else f"{codes_str},{symbol}"    
+            
         # iFinD
         try:
-            df = IfindApi.instance().get_historical_data(
-                code=code,
-                start=start
-            )
+            his_data: Dict[str, pd.DataFrame] = IfindApi.instance().get_historical_data(
+                codes=codes_str,
+                start=start.strftime("%Y-%m-%d")
+            ) # type: ignore
 
-            if df is not None and not df.empty:
-                print(f"[iFinD] success: {symbol}")
-                get_default_logger().info(f"[iFinD] success: {symbol}")
-                return self.normalize(df, symbol)
+            if his_data is None or len(his_data) == 0:
+                return None
+            
+            print(f"[iFinD] success: {symbols_str}")
+            get_default_logger().info(f"[iFinD] success: {symbols_str}")
+            new_his_data = {}
+            his_data_keys = list(his_data.keys())
+            for i in range(len(his_data_keys)):
+                new_his_data[origin_symbols_list[i]] = self.normalize(his_data[his_data_keys[i]], origin_symbols_list[i])
+            
+            return new_his_data
 
         except Exception as e:
-            print(f"[iFinD] failed: {symbol}, error={e}")
-            get_default_logger().error(f"[iFinD] failed: {symbol}, error={e}")
+            print(f"[iFinD] failed: {symbols_str}, error={e}")
+            # get_default_logger().error(f"[iFinD] failed: {symbols_str}, error={e}")
             raise e  # 上层重试
 
 
-class HKStockSource:
+class HKStockSource(DataSource):
+    source_api_list = []
+    source_api_cursor: int
+
+    def __init__(self):
+        super().__init__()
+        self.source_api_list = [
+            IFinDHKSource,
+            AKshareSinaHKSource,
+            AKshareEastQuotationHKSource,
+            AKshareEastMoneyHKSource
+        ]
+        self.source_api_cursor = -1
+
+    def prepare_fetch(self):
+        # Reset cursor to use first source API
+        self.source_api_cursor = -1
+
+    def candidate_symbols(self,
+                          symbols: List[str],
+                          next_index: int,
+                          start: datetime,
+                          end: datetime | None) -> tuple[int, str]:
+        cursor = self.source_api_cursor + 1
+        if cursor >= len(self.source_api_list):
+            cursor = 0
+
+        return self.source_api_list[cursor]().candidate_symbols(symbols, next_index, start, end)
+   
+    def fetch_daily(self, symbols_str, start: datetime) -> pd.DataFrame | Dict[str, pd.DataFrame] | None:
+        self.source_api_cursor += 1
+        if self.source_api_cursor >= len(self.source_api_list):
+            self.source_api_cursor = 0
     
-    def fetch_daily(self, symbol, start: datetime):
-
-        # 先尝试iFinD, 失败再尝试新浪，失败重试一次，再失败尝试EASTQUOTATION(腾讯), 最后失败尝试东财
-        try:
-            get_default_logger().info(f"Trying iFinD for {symbol} daily data since {start}")
-            return IFinDHKSource().fetch_daily(symbol, start)
-        except Exception as e:
-            get_default_logger().error(f"[iFinD] failed: {symbol}, error={e}")
-            pass
-        try: 
-            get_default_logger().info(f"Trying SINA for {symbol} daily data since {start}")
-            return AKshareSinaHKSource().fetch_daily(symbol, start)
-        except Exception as e:
-            get_default_logger().error(f"[SINA] failed: {symbol}, error={e}")
-            pass
-        try:
-            get_default_logger().info(f"Trying EASTQUOTATION for {symbol} daily data since {start}")
-            return AKshareEastQuotationHKSource().fetch_daily(symbol, start)
-        except Exception as e:
-            get_default_logger().error(f"[EASTQUOTATION] failed: {symbol}, error={e}")
-            pass
-        try:
-            get_default_logger().info(f"Trying EASTMONEY for {symbol} daily data since {start}")       
-            return AKshareEastMoneyHKSource().fetch_daily(symbol, start)
-        except Exception as e:
-            get_default_logger().error(f"[EASTMONEY] failed: {symbol}, error={e}")
-            pass
+        source_api = self.source_api_list[self.source_api_cursor]
         
-        # ❌ 全失败
-        get_default_logger().error(f"[FAIL] no data: {symbol}")
-
-        return pd.DataFrame(columns=[
-            "symbol", "date", "open", "high", "low", "close", "volume", "amount"
-        ])
-
-
+        try:
+            instance = source_api()
+            source_api_name = instance.source_api_type.value
+            get_default_logger().info(f"trying {source_api_name} API for {symbols_str} daily data since {start}")
+            return instance.fetch_daily(symbols_str, start)
+        except Exception as e:
+            get_default_logger().error(f"trying from {source_api_name} failed: {symbols_str}, error={e}")
+            raise e
         

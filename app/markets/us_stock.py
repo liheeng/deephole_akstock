@@ -1,8 +1,10 @@
 import requests
+from typing import List
 import pandas as pd
+from sources.data_source import DataSource
 from sources.us_datasource import USStockSource
 from markets.market import SymbolType
-from markets.market import Region
+from markets.market import Region, Market
 from utils.log_manager import get_default_logger
 
 NYSE_LIST_FILE = "https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/nyse/nyse_full_tickers.json"
@@ -10,7 +12,7 @@ NASDAQ_LIST_URL = "https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/
 AMEX_LIST_URL = "https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/amex/amex_full_tickers.json"
 
 
-class USStockMarket:
+class USStockMarket(Market):
 
     region: Region = Region.US
     name: str = region.value.upper()
@@ -54,10 +56,10 @@ class USStockMarket:
 
         return df
 
-    def get_symbol_list(self):
+    def get_symbol_list(self) -> List[str]:
         return self.get_nyse_symbol_list() + self.get_nasdaq_symbol_list() + self.get_amex_symbol_list()
 
-    def get_source(self):
+    def get_source(self) -> DataSource:
         return USStockSource()
 
     def identify_symbol_type(self, code: str) -> SymbolType:

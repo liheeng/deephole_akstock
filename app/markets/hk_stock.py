@@ -1,15 +1,17 @@
 import akshare as ak
+from typing import List
+from sources.data_source import DataSource
 from sources.hk_datasource import HKStockSource
-from markets.market import Region
+from markets.market import Region, Market
 from utils.log_manager import get_default_logger
 
 
-class HongKongStockMarket:
+class HongKongStockMarket(Market):
 
     region: Region = Region.HK
     name: str = region.value.upper()
 
-    def get_symbol_list(self):
+    def get_symbol_list(self) -> List[str]:
 
         stock_hk_df = ak.stock_hk_spot()
         df = [
@@ -20,5 +22,5 @@ class HongKongStockMarket:
         
         return df
 
-    def get_source(self):
+    def get_source(self) -> DataSource:
         return HKStockSource()

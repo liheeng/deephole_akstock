@@ -1,9 +1,13 @@
 # coding=utf-8
 
 import enum
+from abc import ABC, abstractmethod
+import pandas as pd
+from datetime import datetime
+from typing import List, Dict
 
 
-class DataSource(enum.Enum):
+class DataSourceType(enum.Enum):
     AKSHARE = "akshare"     # akshare, support CN-A, HK, US
     YFINANCE = "yfinance"   # yahoo finance, support US, also support CN-A and HK
     IFIND = "ifind"     # ifind, support CN-A, HK and US
@@ -11,9 +15,9 @@ class DataSource(enum.Enum):
 
 
 class DataSourceAPI(enum.Enum):
-    AKSHARE_EASTMONEY_API = f"{DataSource.AKSHARE.value}.eastmoney"
-    AKSHARE_SINA_API = f"{DataSource.AKSHARE.value}.sina"
-    AKSHARE_TENCENT_API = f"{DataSource.AKSHARE.value}.tencent"
+    AKSHARE_EASTMONEY_API = f"{DataSourceType.AKSHARE.value}.eastmoney"
+    AKSHARE_SINA_API = f"{DataSourceType.AKSHARE.value}.sina"
+    AKSHARE_TENCENT_API = f"{DataSourceType.AKSHARE.value}.tencent"
     
     CN_SSE_API = "cn.sse"   # 上交所
     CN_SZSE_API = "cn.szse"     # 深交所
@@ -28,3 +32,27 @@ class DataSourceAPI(enum.Enum):
     EAST_QUOTATION_API = "eastquotation"    # 东方量化
     YFINANCE_API = "yfinance"   # yfinance
     IFIND_API = "ifind"
+
+
+class DataSource(ABC):
+    # @abstractmethod
+    # def normalize(self, df: pd.DataFrame, symbols: str) -> pd.DataFrame:
+    #     pass
+    
+    @abstractmethod
+    def prepare_fetch(self):
+        pass
+
+    @abstractmethod
+    def candidate_symbols(self,
+                          symbols: List[str],
+                          next_index: int,
+                          start: datetime,
+                          end: datetime | None) -> tuple[int, str]:
+        pass
+
+    @abstractmethod
+    def fetch_daily(self, symbols_str: str, start: datetime) -> pd.DataFrame | Dict[str, pd.DataFrame] | None:
+        pass
+
+

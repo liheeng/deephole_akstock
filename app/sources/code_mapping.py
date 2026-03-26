@@ -1,5 +1,5 @@
 import re
-from sources.data_source import DataSource, DataSourceAPI
+from sources.data_source import DataSourceType, DataSourceAPI
 from markets.market import Region, ExchangeType
 from utils.common import safe_format
 # 数据源格式定义（已修复缩进 + 结构）
@@ -46,7 +46,7 @@ def get_placeholders(format_str: str) -> list[str]:
 
 def build_symbol(
     symbol: str,
-    data_source: DataSource,
+    data_source: DataSourceType,
     region_type: Region,
     api_type: DataSourceAPI | None = None
 ):
