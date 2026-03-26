@@ -8,4 +8,6 @@ logs/
 
 # 顺便忽略所有 .pyc .pyo 缓存文件（推荐一起加）
 *.py[cod]
-*$py.class
+*$py.class'
+
+.vscode/launch.json

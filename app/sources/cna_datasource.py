@@ -6,6 +6,7 @@ from sources.data_source import DataSource, DataSourceAPI
 from sources.datasource_adapter import convert_symbol
 from sources.ifind.ifind_api import IfindApi
 from datetime import datetime
+from typing import Dict
 
 
 class AKshareSinaCNASource:
@@ -112,7 +113,7 @@ class IFinDCNASource:
     """
     source_api_type: DataSourceAPI = DataSourceAPI.IFIND_API
 
-    def normalize(self, df: pd.DataFrame, symbol: str) -> pd.DataFrame:
+    def normalize(self, his_data: Dict[str, pd.DataFrame], symbol: str) -> pd.DataFrame:
         """
         iFinD格式转换
         """
@@ -146,15 +147,15 @@ class IFinDCNASource:
         
         # iFinD
         try:
-            df = IfindApi.instance().get_historical_data(
-                code=code,
+            his_data: Dict[str, pd.DataFrame] = IfindApi.instance().get_historical_data(
+                codes=code,
                 start=start
             )
 
-            if df is not None and not df.empty:
+            if his_data is not None and len(his_data) > 0:
                 print(f"[iFinD] success: {symbol}")
                 get_default_logger().info(f"[iFinD] success: {symbol}")
-                return self.normalize(df, symbol)
+                return self.normalize(his_data, symbol)
 
         except Exception as e:
             print(f"[iFinD] failed: {symbol}, error={e}")
