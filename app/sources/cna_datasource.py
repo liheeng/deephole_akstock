@@ -4,7 +4,7 @@ from utils.log_manager import get_default_logger
 from markets.market import Region
 from sources.data_source import DataSourceType, DataSourceAPI, DataSource
 from sources.datasource_adapter import convert_symbol
-from sources.ifind.ifind_api import IfindApi, HIS_BATCH_SIZE_LIMIT
+from sources.ifind.ifind_api import IfindApi, HIS_BATCH_SIZE_LIMIT, HIS_BATCH_SYMBOLS_LIMIT
 from datetime import datetime
 from typing import Dict, List
 
@@ -160,6 +160,7 @@ class IFinDCNASource:
         _days = (end.date() - start.date()).days
         _days = 1 if _days == 0 else _days
         count = HIS_BATCH_SIZE_LIMIT // _days
+        count = HIS_BATCH_SYMBOLS_LIMIT if count > HIS_BATCH_SYMBOLS_LIMIT else count
         last_index = next_index + count
         if last_index > len(symbols):
             last_index = len(symbols)

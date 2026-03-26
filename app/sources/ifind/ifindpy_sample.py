@@ -22,11 +22,11 @@ def get_historical_data(codes: str, accessToken: str):
     thsPara ={
         "codes": codes,
         "indicators": "open,close,volume",
-        "startdate": "2024-08-25",
-        "enddate": "2025-08-25",
+        "startdate": "2026-01-01",
+        "enddate": "2026-03-25",
         "functionpara": {
-            "Interval": "W",
-            "CPS": "3",
+            "Interval": "D",
+            "CPS": "2",
             "Currency": "RMB",
             "Fill": "Blank",
         }

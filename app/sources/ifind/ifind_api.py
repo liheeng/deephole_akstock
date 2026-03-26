@@ -10,6 +10,7 @@ REFRESH_TOKEN = 'eyJzaWduX3RpbWUiOiIyMDI2LTAzLTIzIDExOjM4OjIyIn0=.eyJ1aWQiOiI3Nj
 
 # 每次最多获取 5000 条历史数据
 HIS_BATCH_SIZE_LIMIT = 5000
+HIS_BATCH_SYMBOLS_LIMIT = 30
 
 
 class IfindApi:
@@ -59,7 +60,13 @@ class IfindApi:
             codes: str,
             start: str,
             end: str | None = None,
-            indicators: str = "open,close,high,low,volume,amount,changeRatio,turnoverRatio") -> Dict[str, pd.DataFrame] | None:    # noqa
+            indicators: str = "open,close,high,low,volume,amount,changeRatio,turnoverRatio",
+            func_params: Dict[str, str] = {
+                "Interval": "D",
+                "CPS": "2",
+                "Currency": "RMB",
+                "Fill": "Blank",
+            }) -> Dict[str, pd.DataFrame] | None:    # noqa
         thsUrl = 'https://quantapi.51ifind.com/api/v1/cmd_history_quotation'
         thsHeaders = {"Content-Type":"application/json", "access_token": self.access_token}    # noqa
         thsPara = {
@@ -67,12 +74,7 @@ class IfindApi:
             "indicators": indicators,
             "startdate": start,
             "enddate": end if end else datetime.now().strftime("%Y-%m-%d"),
-            "functionpara": {
-                "Interval": "W",
-                "CPS": "2",
-                "Currency": "RMB",
-                "Fill": "Blank",
-            }
+            "functionpara": func_params
         }
         thsResponse = requests.post(url=thsUrl, json=thsPara, headers=thsHeaders)   # noqa
         # print(thsResponse.content)

@@ -34,8 +34,8 @@ def main():
     api.init()
 
     # create sync CN daily task
-    task = create_sync_cn_daily_task()
-    # task = create_sync_hk_daily_task()
+    # task = create_sync_cn_daily_task()
+    task = create_sync_hk_daily_task()
     # task = create_sync_us_daily_task()
     
     api.run_task(task)
