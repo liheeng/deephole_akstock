@@ -5,10 +5,10 @@ from utils.common import is_running_in_docker
 logs_volume = "/logs" if is_running_in_docker() else "./logs"
 LOG_DIR = logs_volume
 
-def get_default_logger():
+def get_default_logger(name="api"):
     os.makedirs(LOG_DIR, exist_ok=True)
 
-    logger = logging.getLogger("api")
+    logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
 
     # ❗避免重复 handler（非常重要）
@@ -27,6 +27,10 @@ def get_default_logger():
     logger.addHandler(handler)
 
     return logger
+
+
+def get_logger(name="api"):
+    return get_default_logger(name)
 
 # def get_task_logger(task_id: str = None):
 #     _task_id = task_id if task_id is not None else task_manager.task_id
