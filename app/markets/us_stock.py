@@ -5,7 +5,9 @@ from sources.data_source import DataSource
 from sources.us_datasource import USStockSource
 from markets.market import SymbolType
 from markets.market import Region, Market
-from utils.log_manager import get_default_logger
+from utils.log_manager import get_logger
+
+logger = get_logger(__name__)
 
 NYSE_LIST_FILE = "https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/nyse/nyse_full_tickers.json"
 NASDAQ_LIST_URL = "https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/nasdaq/nasdaq_full_tickers.json"
@@ -26,7 +28,7 @@ class USStockMarket(Market):
         df = [
             f"{code}.NYSE" for code in nyse_symbol_df["symbol"]
         ]
-        get_default_logger().info(f"Fetched {len(df)} symbols from NYSE")
+        logger.info(f"Fetched {len(df)} symbols from NYSE")
 
         return df
 
@@ -39,7 +41,7 @@ class USStockMarket(Market):
         df = [
             f"{code}.NASDAQ" for code in nasdaq_symbol_df["symbol"]
         ]
-        get_default_logger().info(f"Fetched {len(df)} symbols from NASDAQ")
+        logger.info(f"Fetched {len(df)} symbols from NASDAQ")
 
         return df
 
@@ -52,7 +54,7 @@ class USStockMarket(Market):
         df = [
             f"{code}.AMEX" for code in amex_symbol_df["symbol"]
         ]
-        get_default_logger().info(f"Fetched {len(df)} symbols from AMEX")
+        logger.info(f"Fetched {len(df)} symbols from AMEX")
 
         return df
 

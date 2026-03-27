@@ -1,6 +1,6 @@
 # from utils.task_db import generate_job_id, generate_task_id, insert_task
 # from utils.http import patch_requests
-# from utils.log_manager import get_default_logger   
+# from utils.log_manager import get_logger   
 # from core.updater import Updater
 # from core.registry import MARKETS
 # from core.job import JobType, JobStatus, JobDefinition, JOB_DEFINITIONS, Job
@@ -34,8 +34,8 @@ def main():
     api.init()
 
     # create sync CN daily task
-    # task = create_sync_cn_daily_task()
-    task = create_sync_hk_daily_task()
+    task = create_sync_cn_daily_task()
+    # task = create_sync_hk_daily_task()
     # task = create_sync_us_daily_task()
     
     api.run_task(task)

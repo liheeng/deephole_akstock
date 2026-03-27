@@ -5,10 +5,12 @@ from datetime import date, datetime
 from core.normalizer import normalize
 from utils.retry import retry
 from utils.time import random_sleep
-from utils.log_manager import get_default_logger
+from utils.log_manager import get_logger
 from db.duckdb import DuckDBController
 from markets.market import Market
 from sources.data_source import DataSource
+
+logger = get_logger(__name__)
 
 
 class Updater:
@@ -62,7 +64,7 @@ class Updater:
             last = self.get_last_date(symbols[next])  
             # Skip if last date is today
             if last and last == _today:
-                get_default_logger().info(f"{symbols[next]} already updated today, skipping")
+                logger.info(f"{symbols[next]} already updated today, skipping")
                 continue
 
             start = last.strftime("%Y%m%d") if last else "1990-01-01"  # type: ignore
@@ -89,7 +91,7 @@ class Updater:
             # result = con.execute(sql)
             
             inserted = df.rowcount if df.rowcount >= 0 else number_of_rows   # 👈 关键
-            get_default_logger().info(f"{market.name}-{fetch_symbols} inserted {inserted} rows")
+            logger.info(f"{market.name}-{fetch_symbols} inserted {inserted} rows")
 
             random_sleep()
 
@@ -99,7 +101,7 @@ class Updater:
             
         #     # Skip if last date is today
         #     if last and last == _today:
-        #         get_default_logger().info(f"{symbol} already updated today, skipping")
+        #         logger.info(f"{symbol} already updated today, skipping")
         #         continue
             
         #     start = last.strftime("%Y%m%d") if last else "1990-01-01" # type: ignore
@@ -133,7 +135,7 @@ class Updater:
             
         #     inserted = result.rowcount if result.rowcount >= 0 else number_of_rows # 👈 关键
         #     market_name = market.name
-        #     get_default_logger().info(f"{market_name}-{symbol} inserted {inserted} rows")
+        #     logger.info(f"{market_name}-{symbol} inserted {inserted} rows")
 
         #     random_sleep()
 

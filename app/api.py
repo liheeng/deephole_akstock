@@ -10,7 +10,7 @@ import asyncio
 from core.task_manager import task_manager
 from db.db_common import DB
 from utils.common import is_running_in_docker
-from utils.log_manager import get_default_logger
+from utils.log_manager import get_logger
 from utils.task_util import create_sync_daily_task
 from core.scheduler import run_task
 from core.worker import start_workers
@@ -25,7 +25,7 @@ import executors.cn_daily_sync_executor    # noqa
 import executors.hk_daily_sync_executor    # noqa
 import executors.us_daily_sync_exectuor    # noqa
 
-logger = get_default_logger()
+logger = get_logger(__name__)
 
 
 def init():
@@ -51,7 +51,7 @@ def init():
 async def lifespan(app: FastAPI):
     init()
     yield
-    get_default_logger().error("API servide is shutting down")
+    logger.error("API servide is shutting down")
 
 app = FastAPI(lifespan=lifespan)
 

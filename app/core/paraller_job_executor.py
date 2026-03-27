@@ -1,35 +1,50 @@
 import time
-import logging
 from dataclasses import dataclass
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Dict, Any, Generic, TypeVar, Callable, Optional
 from utils.log_manager import get_logger
 
 T = TypeVar("T")  # 单个Job返回类型
-R = TypeVar("R")  # 最终合并结果类型
+R = TypeVar("R")  # 最终合并后的结果类型
 
 logger = get_logger(__name__)
 
 
 # =============================================================================
-# ✅  ParallelJob：每个任务自带 名称、参数、回调、额外参数（完全自包含）
+# ParallelJob：任务自身包含所有回调、参数、名称
 # =============================================================================
-@dataclass
+@dataclass(eq=False)
 class ParallelJob(Generic[T]):
     name: str
     parameters: Dict[str, Any]
-    job_callback: Callable[[Dict[str, Any]], T]
-    job_result_process_callback: Optional[Callable[[T, "ParallelJob[T]"], None]] = None
+    job_callback: Callable[["ParallelJob[T]"], T]
+    # 支持返回新的 result
+    job_result_process_callback: Optional[Callable[[T, "ParallelJob[T]"], T]] = None
     extra_params: Optional[Dict[str, Any]] = None
+
+    # --------------------------
+    # 【核心】按对象地址判断相等（唯一标识）
+    # --------------------------
+    def __eq__(self, other):
+        # ✅ 你要的：比较【对象地址】 + 【name 属性】
+        if not isinstance(other, ParallelJob):
+            return False
+        return id(self) == id(other) and self.name == other.name
+
+    # --------------------------
+    # 【核心】用对象地址做哈希值（绝对可哈希）
+    # --------------------------
+    def __hash__(self):
+        return hash(id(self))
 
 
 # =============================================================================
-# ✅ 并行执行器：只负责并发、重试、合并
+# 并行执行器（结果存储为 DICT：key=job, value=result）
 # =============================================================================
 class ParallelJobExecutor(Generic[T, R]):
     def __init__(
         self,
-        job_result_assemble_callback: Callable[[List[T]], R],
+        job_result_assemble_callback: Callable[[Dict[ParallelJob[T], T]], R],
         max_workers: int = 5,
         max_retry: int = 3,
         retry_interval: int = 1
@@ -43,7 +58,7 @@ class ParallelJobExecutor(Generic[T, R]):
         retries = 0
         while retries < self.max_retry:
             try:
-                return job.job_callback(job.parameters)
+                return job.job_callback(job)
             except Exception as e:
                 retries += 1
                 logger.warning(f"⚠️ Job [{job.name}] 失败 {retries}/{self.max_retry} | 错误: {str(e)}")
@@ -54,7 +69,10 @@ class ParallelJobExecutor(Generic[T, R]):
 
     def execute(self, jobs: List[ParallelJob[T]]) -> R:
         futures = []
-        success_results: List[T] = []
+        # ======================
+        # ✅ 改为字典：key = job, value = result
+        # ======================
+        success_results: Dict[ParallelJob[T], T] = {}
 
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             for job in jobs:
@@ -65,54 +83,53 @@ class ParallelJobExecutor(Generic[T, R]):
                 try:
                     result = future.result()
                     if result is not None:
-                        success_results.append(result)
+                        # 执行处理回调
+                        if job.job_result_process_callback is not None:
+                            result = job.job_result_process_callback(result, job)
 
-                        # ✅ 每个 Job 自己的回调
-                        if job.job_result_process_callback:
-                            job.job_result_process_callback(result, job)
+                        # ✅ 存入字典
+                        success_results[job] = result
 
                 except Exception as e:
-                    logger.error(f"❌ Job [{job.name}] 执行异常: {str(e)}")
+                    logger.exception(f"❌ Job [{job.name}] 执行异常: ", e)
 
+        # 传入字典给合并函数
         return self.job_result_assemble_callback(success_results)
 
 # ===================================
 # Example:
 # import pandas as pd
 
-# # ----------------------
-# # 1. 定义回调
-# # ----------------------
-# def fetch_stock(params: Dict[str, Any]) -> pd.DataFrame:
-#     return pd.DataFrame({"code": [params["code"]], "close": [10]})
+# # 1. 任务执行
+# def fetch_job(params):
+#     return pd.DataFrame({"code": [params["code"]]})
 
-# def on_job_done(df: pd.DataFrame, job: ParallelJob):
-#     print(f"✅ Job [{job.name}] 完成！")
-#     # 可以直接访问 job.extra_params
+# # 2. 任务完成处理
+# def on_job_done(result, job):
+#     result["job_name"] = job.name
+#     return result  # 返回新result
+
+# # 3. 合并函数（接收字典）
+# def assemble_results(results_dict: Dict[ParallelJob, pd.DataFrame]) -> pd.DataFrame:
+#     dfs = list(results_dict.values())
+#     return pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
 
 # # ----------------------
-# # 2. 组装独立 Job
+# # 创建任务
 # # ----------------------
 # job1 = ParallelJob(
-#     name="平安银行",
+#     name="股票000001",
 #     parameters={"code": "000001"},
-#     job_callback=fetch_stock,
-#     job_result_process_callback=on_job_done,
-#     extra_params={"key": "xxx"}
-# )
-
-# job2 = ParallelJob(
-#     name="万科A",
-#     parameters={"code": "000002"},
-#     job_callback=fetch_stock,
+#     job_callback=fetch_job,
 #     job_result_process_callback=on_job_done
 # )
 
 # # ----------------------
-# # 3. 执行器只负责合并
+# # 执行
 # # ----------------------
-# def assemble(dfs: List[pd.DataFrame]) -> pd.DataFrame:
-#     return pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
+# executor = ParallelJobExecutor(
+#     job_result_assemble_callback=assemble_results,
+#     max_workers=5
+# )
 
-# executor = ParallelJobExecutor(assemble, max_workers=5)
-# result = executor.execute([job1, job2])
+# df = executor.execute([job1])

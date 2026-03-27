@@ -5,7 +5,8 @@ from utils.common import is_running_in_docker
 logs_volume = "/logs" if is_running_in_docker() else "./logs"
 LOG_DIR = logs_volume
 
-def get_default_logger(name="api"):
+
+def get_default_logger(name="default"):
     os.makedirs(LOG_DIR, exist_ok=True)
 
     logger = logging.getLogger(name)
@@ -19,17 +20,23 @@ def get_default_logger(name="api"):
 
     handler = logging.FileHandler(log_file, encoding="utf-8")
 
+    # ✅【关键修复】加上 %(name)s 才能打印 logger 名字
     formatter = logging.Formatter(
-        "%(asctime)s | %(levelname)s | %(message)s"
+        "%(asctime)s | %(name)-15s | %(levelname)-8s | %(message)s"
     )
 
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
+    # ✅ 可选：同时输出到控制台
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+
     return logger
 
 
-def get_logger(name="api"):
+def get_logger(name):
     return get_default_logger(name)
 
 # def get_task_logger(task_id: str = None):

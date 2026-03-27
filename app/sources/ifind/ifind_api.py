@@ -3,14 +3,17 @@ import json
 import pandas as pd
 from datetime import datetime
 from sources.ifind.data_adapter import convert_to_df
-from utils.log_manager import get_default_logger
+from utils.log_manager import get_logger
 from typing import Dict
+
+logger = get_logger(__name__)
+
 
 REFRESH_TOKEN = 'eyJzaWduX3RpbWUiOiIyMDI2LTAzLTIzIDExOjM4OjIyIn0=.eyJ1aWQiOiI3NjA2MjMxOTEiLCJ1c2VyIjp7ImFjY291bnQiOiJibHpjZDAwMSIsImF1dGhVc2VySW5mbyI6e30sImNvZGVDU0kiOltdLCJjb2RlWnpBdXRoIjpbXSwiaGFzQUlQcmVkaWN0IjpmYWxzZSwiaGFzQUlUYWxrIjpmYWxzZSwiaGFzQ0lDQyI6ZmFsc2UsImhhc0NTSSI6ZmFsc2UsImhhc0V2ZW50RHJpdmUiOmZhbHNlLCJoYXNGVFNFIjpmYWxzZSwiaGFzRmFzdCI6ZmFsc2UsImhhc0Z1bmRWYWx1YXRpb24iOmZhbHNlLCJoYXNISyI6dHJ1ZSwiaGFzTE1FIjpmYWxzZSwiaGFzTGV2ZWwyIjpmYWxzZSwiaGFzUmVhbENNRSI6ZmFsc2UsImhhc1RyYW5zZmVyIjpmYWxzZSwiaGFzVVMiOmZhbHNlLCJoYXNVU0FJbmRleCI6ZmFsc2UsImhhc1VTREVCVCI6ZmFsc2UsIm1hcmtldEF1dGgiOnsiRENFIjpmYWxzZX0sIm1heE9uTGluZSI6MSwibm9EaXNrIjpmYWxzZSwicHJvZHVjdFR5cGUiOiJTVVBFUkNPTU1BTkRQUk9EVUNUIiwicmVmcmVzaFRva2VuRXhwaXJlZFRpbWUiOiIyMDI2LTA0LTAzIDExOjE5OjI3Iiwic2Vzc3Npb24iOiIyYTE0OWE1OTFkNzZiZjA3MDc0MmFhMGViOWJkN2Y0MiIsInNpZEluZm8iOns2NDoiMTExMTExMTExMTExMTExMTExMTExMTExIiwxOiIxMDEiLDI6IjEiLDY3OiIxMDExMTExMTExMTExMTExMTExMTExMTEiLDM6IjEiLDY5OiIxMTExMTExMTExMTExMTExMTExMTExMTExIiw1OiIxIiw2OiIxIiw3MToiMTExMTExMTExMTExMTExMTExMTExMTAwIiw3OiIxMTExMTExMTExMSIsODoiMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDEiLDEzODoiMTExMTExMTExMTExMTExMTExMTExMTExMSIsMTM5OiIxMTExMTExMTExMTExMTExMTExMTExMTExIiwxNDA6IjExMTExMTExMTExMTExMTExMTExMTExMTEiLDE0MToiMTExMTExMTExMTExMTExMTExMTExMTExMSIsMTQyOiIxMTExMTExMTExMTExMTExMTExMTExMTExIiwxNDM6IjExIiw4MDoiMTExMTExMTExMTExMTExMTExMTExMTExIiw4MToiMTExMTExMTExMTExMTExMTExMTExMTExIiw4MjoiMTExMTExMTExMTExMTExMTExMTEwMTEwIiw4MzoiMTExMTExMTExMTExMTExMTExMDAwMDAwIiw4NToiMDExMTExMTExMTExMTExMTExMTExMTExIiw4NzoiMTExMTExMTEwMDExMTExMDExMTExMTExIiw4OToiMTExMTExMTEwMTEwMTAwMDAwMDAxMTExIiw5MDoiMTExMTEwMTExMTExMTExMTEwMDAxMTExMTAiLDkzOiIxMTExMTExMTExMTExMTExMTAwMDAxMTExIiw5NDoiMTExMTExMTExMTExMTExMTExMTExMTExMSIsOTY6IjExMTExMTExMTExMTExMTExMTExMTExMTEiLDk5OiIxMDAiLDEwMDoiMTExMTAxMTExMTExMTExMTExMCIsMTAyOiIxIiw0NDoiMTEiLDEwOToiMSIsNTM6IjExMTExMTExMTExMTExMTExMTExMTExMSIsNTQ6IjExMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwIiw1NzoiMDAwMDAwMDAwMDAwMDAwMDAwMDAxMDAwMDAwMDAiLDYyOiIxMTExMTExMTExMTExMTExMTExMTExMTEiLDYzOiIxMTExMTExMTExMTExMTExMTExMTExMTEifSwidGltZXN0YW1wIjoiMTc3NDIzNzEwMjQ5MCIsInRyYW5zQXV0aCI6ZmFsc2UsInR0bFZhbHVlIjowLCJ1aWQiOiI3NjA2MjMxOTEiLCJ1c2VyVHlwZSI6IkZSRUVJQUwiLCJ3aWZpbmRMaW1pdE1hcCI6e319fQ==.D1F0D33C1379DEDD30CE8078849A9C1AE5E6CA808EC337C79B66E2F96BF5DBEE'
 
 # 每次最多获取 5000 条历史数据
-HIS_BATCH_SIZE_LIMIT = 5000
-HIS_BATCH_SYMBOLS_LIMIT = 30
+HIS_BATCH_SIZE_LIMIT = 1000
+HIS_BATCH_SYMBOLS_LIMIT = 100
 
 
 class IfindApi:
@@ -43,7 +46,7 @@ class IfindApi:
         accessToken = json.loads(getAccessTokenResponse.content)['data']['access_token']    # noqa
         if not accessToken:
             raise ValueError("Failed to get accessToken!")
-        get_default_logger().info(f"got iFind access token: {accessToken}")
+        logger.info(f"got iFind access token: {accessToken}")
         return accessToken
 
     def get_realtime_quotation(self, codes: str, accessToken: str):
@@ -52,7 +55,7 @@ class IfindApi:
         thsPara = {"codes": codes, "indicators": "open,high,low,latest"}
         thsResponse = requests.post(url=thsUrl, json=thsPara, headers=thsHeaders)   # noqa
         # print(thsResponse.content)
-        get_default_logger().debug(f"fetch {codes} realtime quotation: {thsResponse.content}")   # noqa
+        logger.debug(f"fetch {codes} realtime quotation: {thsResponse.content}")   # noqa
         return thsResponse
 
     def get_historical_data(
@@ -78,7 +81,7 @@ class IfindApi:
         }
         thsResponse = requests.post(url=thsUrl, json=thsPara, headers=thsHeaders)   # noqa
         # print(thsResponse.content)
-        get_default_logger().debug(f"fetch {codes} historical data: {thsResponse.content}")    # noqa
+        logger.debug(f"fetch {codes} historical data: {thsResponse.content}")    # noqa
         
         success, his_data = convert_to_df(thsResponse.content)
         if success:

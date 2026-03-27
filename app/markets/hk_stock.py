@@ -3,7 +3,9 @@ from typing import List
 from sources.data_source import DataSource
 from sources.hk_datasource import HKStockSource
 from markets.market import Region, Market
-from utils.log_manager import get_default_logger
+from utils.log_manager import get_logger
+
+logger = get_logger(__name__)
 
 
 class HongKongStockMarket(Market):
@@ -17,7 +19,7 @@ class HongKongStockMarket(Market):
         df = [
             f"{code}.HK" for code in stock_hk_df["代码"]
         ]
-        get_default_logger().info(f"Fetched {len(df)} symbols from Hong Kong \
+        logger.info(f"Fetched {len(df)} symbols from Hong Kong \
                                   Stock Exchange")
         
         return df

@@ -5,9 +5,11 @@ from markets.market import Region
 from sources.data_source import DataSourceType, DataSourceAPI, DataSource
 from sources.datasource_adapter import convert_symbol
 from sources.ifind.ifind_api import IfindApi, HIS_BATCH_SIZE_LIMIT, HIS_BATCH_SYMBOLS_LIMIT
-from utils.log_manager import get_default_logger
+from utils.log_manager import get_logger
 import easyquotation as eq
 from datetime import datetime
+
+logger = get_logger(__name__)
 
 
 class AKshareSinaHKSource:
@@ -56,12 +58,12 @@ class AKshareSinaHKSource:
 
             if df is not None and not df.empty:
                 print(f"[SINA] success: {symbol}")
-                get_default_logger().info(f"[SINA] success: {symbol}")
+                logger.info(f"[SINA] success: {symbol}")
                 return self.normalize(df, symbol)
 
         except Exception as e:
             print(f"[SINA] failed: {symbol}, error={e}")
-            get_default_logger().error(f"[SINA] failed: {symbol}, error={e}")  
+            logger.error(f"[SINA] failed: {symbol}, error={e}")  
             raise e  # 上层重试
 
 
@@ -127,12 +129,12 @@ class AKshareEastQuotationHKSource:
             
             if df is not None and not df.empty:
                 print(f"[EASTQUOTATION] success: {symbol}")
-                get_default_logger().info(f"[EASTQUOTATION] success: {symbol}")
+                logger.info(f"[EASTQUOTATION] success: {symbol}")
                 return self.normalize(df, symbol)
 
         except Exception as e:
             print(f"[EASTQUOTATION] failed: {symbol}, error={e}")
-            get_default_logger().error(f"[EASTQUOTATION] failed: {symbol}, error={e}")
+            logger.error(f"[EASTQUOTATION] failed: {symbol}, error={e}")
             raise e  # 上层重试
         
 class AKshareEastMoneyHKSource:
@@ -183,12 +185,12 @@ class AKshareEastMoneyHKSource:
 
             if df is not None and not df.empty:
                 print(f"[EASTMONEY] success: {symbol}")
-                get_default_logger().info(f"[EASTMONEY] success: {symbol}")
+                logger.info(f"[EASTMONEY] success: {symbol}")
                 return self.normalize(df, symbol)
 
         except Exception as e:
             print(f"[EASTMONEY] failed: {symbol}, error={e}")
-            get_default_logger().error(f"[EASTMONEY] failed: {symbol}, error={e}")
+            logger.error(f"[EASTMONEY] failed: {symbol}, error={e}")
             raise e  # 上层重试
 
         
@@ -262,7 +264,7 @@ class IFinDHKSource:
                 return None
             
             print(f"[iFinD] success: {symbols_str}")
-            get_default_logger().info(f"[iFinD] success: {symbols_str}")
+            logger.info(f"[iFinD] success: {symbols_str}")
             new_his_data = {}
             his_data_keys = list(his_data.keys())
             for i in range(len(his_data_keys)):
@@ -272,7 +274,7 @@ class IFinDHKSource:
 
         except Exception as e:
             print(f"[iFinD] failed: {symbols_str}, error={e}")
-            # get_default_logger().error(f"[iFinD] failed: {symbols_str}, error={e}")
+            # logger.error(f"[iFinD] failed: {symbols_str}, error={e}")
             raise e  # 上层重试
 
 
@@ -315,9 +317,9 @@ class HKStockSource(DataSource):
         try:
             instance = source_api()
             source_api_name = instance.source_api_type.value
-            get_default_logger().info(f"trying {source_api_name} API for {symbols_str} daily data since {start}")
+            logger.info(f"trying {source_api_name} API for {symbols_str} daily data since {start}")
             return instance.fetch_daily(symbols_str, start)
         except Exception as e:
-            get_default_logger().exception(f"trying from {source_api_name} failed: {symbols_str}, error={e}")
+            logger.exception(f"trying from {source_api_name} failed: {symbols_str}, error={e}")
             raise e
         

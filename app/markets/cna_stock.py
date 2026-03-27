@@ -3,8 +3,9 @@ from typing import List
 from sources.data_source import DataSource
 from sources.cna_datasource import CNAStockSource
 from markets.market import Region, Market
-from utils.log_manager import get_default_logger
+from utils.log_manager import get_logger
 
+logger = get_logger(__name__)
 
 class CNAStockMarket(Market):
 
@@ -17,7 +18,7 @@ class CNAStockMarket(Market):
         df = [
             f"{code}.SH" for code in stock_info_sh_name_code_df["证券代码"]
         ]
-        get_default_logger().info(f"Fetched {len(df)} symbols from Shanghai \
+        logger.info(f"Fetched {len(df)} symbols from Shanghai \
             Stock Exchange")
 
         return df
@@ -28,7 +29,7 @@ class CNAStockMarket(Market):
         df = [
             f"{code}.SZ" for code in stock_info_sz_name_code_df["A股代码"]
         ]
-        get_default_logger().info(f"Fetched {len(df)} symbols from Shenzhen \
+        logger.info(f"Fetched {len(df)} symbols from Shenzhen \
             Stock Exchange") 
 
         return df

@@ -1,7 +1,7 @@
 # app/core/task_manager.py
 
 from datetime import datetime
-from utils.log_manager import get_default_logger
+from utils.log_manager import get_logger
 from core.task import Task, TaskMode, TaskStatus
 from core.job import JOB_DEFINITIONS, Job, JobStatus, JobType, JobDefinition
 from db.db_common import DB, safe_time
@@ -9,6 +9,9 @@ import json
 from db.duckdb import DuckDBController
 
 db = DuckDBController(DB)
+
+logger = get_logger(__name__)
+
 
 def job_dag_ok(job: Job) -> bool:
     if not job.depends_on:
@@ -103,7 +106,7 @@ def build_task(task_row: list, job_rows: list) -> Task | None:
         # If the job belongs to a different task, log a error and skip it
         if job_row[3] != task.id:
             print(f"Error: job {job_row[0]} belongs to task {job_row[1]}, expected {task.id}")
-            get_default_logger().error(f"Job {job_row[0]} belongs to task {job_row[1]}, expected {task.id}")
+            logger.error(f"Job {job_row[0]} belongs to task {job_row[1]}, expected {task.id}")
             continue
 
         job = Job(
@@ -294,7 +297,7 @@ class TaskManager:
                 job_id
             ])
         else:
-            get_default_logger().warning(f"Unsupported job status to update: {new_status} of job {job_id}")
+            logger.warning(f"Unsupported job status to update: {new_status} of job {job_id}")
         
         return _time
     
@@ -352,7 +355,7 @@ class TaskManager:
                 task_id
             ])
         else:
-            get_default_logger().warning(f"Unsupported task status to update: {new_status} of task {task_id}")
+            logger.warning(f"Unsupported task status to update: {new_status} of task {task_id}")
         return _time
 
     def update_task_status(self, task: Task, new_status: TaskStatus, message: str | None=None) -> TaskStatus:
@@ -399,7 +402,7 @@ class TaskManager:
             for task_row in task_rows:
                 tasks.append(build_task(task_row, job_map[task_row[0]] ))
         except Exception as e:
-            get_default_logger().exception(f"failed to list tasks, error：{str(e)}")
+            logger.exception(f"failed to list tasks, error：{str(e)}")
         return tasks
     
     def clean_stale_running_jobs(self):

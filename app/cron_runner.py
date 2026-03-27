@@ -9,11 +9,11 @@
 
 import requests
 from core.job import JobType
-from utils.log_manager import get_default_logger
+from utils.log_manager import get_logger
 from datetime import datetime
 
 
-logger = get_default_logger()
+logger = get_logger(__name__)
 
 sync_cn_daily_url = "http://akstock_api_service:8000/sync_daily/" + JobType.CN_DAILY_SYNC.value
 sync_hk_daily_url = "http://akstock_api_service:8000/sync_daily/" + JobType.HK_DAILY_SYNC.value

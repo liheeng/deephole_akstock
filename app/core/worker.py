@@ -7,7 +7,10 @@ from core.task_manager import job_can_run, task_manager
 from core.queue import job_queue
 from executors.base import get_executor
 from core.result_store import result_store
-from utils.log_manager import get_default_logger
+from utils.log_manager import get_logger
+
+logger = get_logger(__name__)
+
 
 def worker_loop():
     while True:
@@ -40,7 +43,7 @@ def worker_loop():
         except Exception as e:
             task_manager.update_job_status(job, JobStatus.FAILED)
             job.error = str(e)
-            get_default_logger().error(f"Job failed: {job.id}, error={e}")
+            logger.error(f"Job failed: {job.id}, error={e}")
             print(f"Job failed: {job.id}, {e}")
         finally:
             task_manager.release_concurrency_slot(job)
@@ -53,5 +56,5 @@ def start_workers(n=4):
         t = threading.Thread(target=worker_loop, daemon=True)
         t.name = f"api-service-worker-{i}"
         t.start()
-        get_default_logger().info(f"Worker thread started: {t.name}")
+        logger.info(f"Worker thread started: {t.name}")
         print(f"Worker thread started: {t.name}")

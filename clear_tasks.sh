@@ -1,0 +1,1 @@
+duckdb data/stock.duckdb -c "delete from tasks;" -c "delete from jobs;" -c "delete from running_jobs;"

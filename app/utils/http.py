@@ -146,7 +146,7 @@ _original_request = requests.sessions.Session.request
 def patched_request(self, method, url, **kwargs):
     # 👉 随机延迟（防封关键）
     # time.sleep(random.uniform(0.3, 1.2))
-    time.sleep(random.uniform(0.2, 0.8))
+    time.sleep(random.uniform(0.1, 0.3))
 
     custom_headers = kwargs.get("headers", {})
     headers = build_headers(url, custom_headers)

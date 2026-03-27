@@ -78,11 +78,11 @@ class DuckDBController:
         with self._lock:
             con = self._get_connection()
             try:
-                return self.execute_with_conn(con, sql, params, fetch_mode, callback)
+                return self._execute(con, sql, params, fetch_mode, callback)
             finally:
                 con.close()
 
-    def execute_with_conn(self, con: DuckDBPyConnection, sql: str, params: Optional[list] = None, fetch_mode: str|None = None, callback: Optional[callable] = None):
+    def _execute(self, con: DuckDBPyConnection, sql: str, params: Optional[list] = None, fetch_mode: str|None = None, callback: Optional[callable] = None):
         result = con.execute(sql, params)
         if fetch_mode is not None:
             if fetch_mode == "one":
