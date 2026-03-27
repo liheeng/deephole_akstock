@@ -1,4 +1,5 @@
 import duckdb
+from duckdb import DuckDBPyConnection
 import threading
 from typing import Optional, Union
 import pandas as pd
@@ -70,30 +71,42 @@ class DuckDBController:
         finally:
             con.close()
 
-    def execute(self, sql: str, params: Optional[list] = None, fetch: str|None = None, callback: Optional[callable] = None):
+    def execute(self, sql: str, params: Optional[list] = None, fetch_mode: str|None = None, callback: Optional[callable] = None):
         """
         安全执行任意 SQL（create/delete/update 等）
         """
         with self._lock:
             con = self._get_connection()
             try:
-                result = con.execute(sql, params)
-                if fetch is not None:
-                    if fetch == "one":
-                        result = result.fetchone()
-                    elif fetch == "all":
-                        result = result.fetchall()
-                    elif fetch == "df":
-                        result = result.df()
-                    else:
-                        pass
-                    
-                if callback:
-                    return callback(result)
-                else:
-                    return result
+                return self.execute_with_conn(con, sql, params, fetch_mode, callback)
             finally:
                 con.close()
+
+    def execute_with_conn(self, con: DuckDBPyConnection, sql: str, params: Optional[list] = None, fetch_mode: str|None = None, callback: Optional[callable] = None):
+        result = con.execute(sql, params)
+        if fetch_mode is not None:
+            if fetch_mode == "one":
+                result = result.fetchone()
+            elif fetch_mode == "all":
+                result = result.fetchall()
+            elif fetch_mode == "df":
+                result = result.df()
+            else:
+                pass
+            
+        if callback:
+            return callback(result)
+        else:
+            return result
+        
+    def start_transaction(self) -> DuckDBPyConnection:
+        con = self._get_connection()
+        con.execute("BEGIN TRANSACTION")
+        return con
+    
+    def commit_transaction(self, con: DuckDBPyConnection):
+        con.execute("COMMIT TRANSACTION")
+        con.close()
 
 # ==============================
 # 【使用示例】

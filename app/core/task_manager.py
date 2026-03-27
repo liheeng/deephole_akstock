@@ -19,7 +19,7 @@ def job_dag_ok(job: Job) -> bool:
         FROM jobs
         WHERE id IN ?
         AND status != 'SUCCESS'
-    """, [tuple(job.depends_on)], fetch="one")
+    """, [tuple(job.depends_on)], fetch_mode="one")
 
     return rows[0] == 0
 
@@ -33,7 +33,7 @@ def job_concurrency_ok(job: Job) -> bool:
         SELECT COUNT(*)
         FROM running_jobs
         WHERE concurrency_key = ?
-    """, [defn.concurrency_key], fetch="one")
+    """, [defn.concurrency_key], fetch_mode="one")
 
     return row[0] < defn.max_concurrency
 
@@ -48,7 +48,7 @@ def job_singleton_ok(job: Job) -> bool:
         FROM jobs
         WHERE type = ?
         AND status IN ('CREATED','QUEUED','RUNNING')
-    """, [job.type.value], fetch="one")
+    """, [job.type.value], fetch_mode="one")
 
     return row[0] == 0
 
@@ -417,7 +417,7 @@ class TaskManager:
             SELECT COUNT(*)
             FROM running_jobs
             WHERE concurrency_key = ?
-        """, [defn.concurrency_key], fetch="one")
+        """, [defn.concurrency_key], fetch_mode="one")
 
         if row[0] >= defn.max_concurrency:
             return False
