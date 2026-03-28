@@ -3,6 +3,9 @@ from dataclasses import dataclass
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Dict, Any, Generic, TypeVar, Callable, Optional
 from utils.log_manager import get_logger
+import threading
+
+# mini_racer_lock = threading.Lock()
 
 T = TypeVar("T")  # 单个Job返回类型
 R = TypeVar("R")  # 最终合并后的结果类型
@@ -16,10 +19,10 @@ logger = get_logger(__name__)
 @dataclass(eq=False)
 class ParallelJob(Generic[T]):
     name: str
-    parameters: Dict[str, Any]
     job_callback: Callable[["ParallelJob[T]"], T]
+    job_params: Dict[str, Any]
     # 支持返回新的 result
-    job_result_process_callback: Optional[Callable[[T, "ParallelJob[T]"], T]] = None
+    job_result_extra_callback: Optional[Callable[[T, "ParallelJob[T]"], T]] = None
     extra_params: Optional[Dict[str, Any]] = None
 
     # --------------------------
@@ -53,12 +56,14 @@ class ParallelJobExecutor(Generic[T, R]):
         self.max_workers = max_workers
         self.max_retry = max_retry
         self.retry_interval = retry_interval
+        self.mini_racer_lock = threading.Lock()
 
     def _run_job_with_retry(self, job: ParallelJob[T]) -> T | None:
         retries = 0
         while retries < self.max_retry:
             try:
-                return job.job_callback(job)
+                with self.mini_racer_lock:
+                    return job.job_callback(job)
             except Exception as e:
                 retries += 1
                 logger.warning(f"⚠️ Job [{job.name}] 失败 {retries}/{self.max_retry} | 错误: {str(e)}")
@@ -84,14 +89,14 @@ class ParallelJobExecutor(Generic[T, R]):
                     result = future.result()
                     if result is not None:
                         # 执行处理回调
-                        if job.job_result_process_callback is not None:
-                            result = job.job_result_process_callback(result, job)
+                        if job.job_result_extra_callback is not None:
+                            result = job.job_result_extra_callback(result, job)
 
                         # ✅ 存入字典
                         success_results[job] = result
 
                 except Exception as e:
-                    logger.exception(f"❌ Job [{job.name}] 执行异常: ", e)
+                    logger.exception(f"❌ Job [{job.name}] 执行异常: {e}")
 
         # 传入字典给合并函数
         return self.job_result_assemble_callback(success_results)
@@ -121,7 +126,7 @@ class ParallelJobExecutor(Generic[T, R]):
 #     name="股票000001",
 #     parameters={"code": "000001"},
 #     job_callback=fetch_job,
-#     job_result_process_callback=on_job_done
+#     job_result_extra_callback=on_job_done
 # )
 
 # # ----------------------

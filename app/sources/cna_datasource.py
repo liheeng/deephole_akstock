@@ -64,52 +64,52 @@ class AKshareSinaCNASource:
         start = start.strftime("%Y%m%d")
 
         def on_job(job: ParallelJob) -> pd.DataFrame | None:
+            origin_symbol = job.job_params["origin_symbol"]
             df = ak.stock_zh_a_daily(
-                symbol=job.parameters["symbol"],
-                start_date=job.parameters["start_date"],
-                adjust=job.parameters["adjust"])
+                symbol=job.job_params["symbol"],
+                start_date=job.job_params["start_date"],
+                adjust=job.job_params["adjust"])
             if df is not None and not df.empty:
-                print(f"[SINA] success: {symbols_str}")
-                logger.info(f"[SINA] success: {symbols_str}")
-                return self.normalize(df, symbols_str)
+                print(f"[SINA] success: {origin_symbol}")
+                logger.info(f"[SINA] success: {origin_symbol}")
+                return self.normalize(df, origin_symbol)
             else:
                 print(f"[SINA] failed: {symbols_str}")
                 logger.error(f"[SINA] failed: {symbols_str}")
                 return None
         
-        def on_job_done(df: pd.DataFrame | None, job: ParallelJob) -> pd.DataFrame | None:
-            if df is None:
-                return None
-            logger.info(f"✅ Job [{job.name}] 完成！")
-            return self.normalize(df, job.extra_params["origin_symbol"])
+        # def on_job_done(df: pd.DataFrame | None, job: ParallelJob) -> pd.DataFrame | None:
+        #     if df is None:
+        #         return None
+        #     logger.info(f"✅ Job [{job.name}] 完成！")
+        #     return self.normalize(df, job.extra_params["origin_symbol"])
             
-        def on_job_conate(results: Dict[ParallelJob, pd.DataFrame]) -> Dict[str, pd.DataFrame] | None:
+        def on_job_concate(results: Dict[ParallelJob, pd.DataFrame]) -> Dict[str, pd.DataFrame] | None:
             new_his_data = {}
-            for job in paraller_jobs:
-                new_his_data[job.extra_params["origin_symbol"]] = results[job]
+            for job in results.keys():
+                new_his_data[job.job_params["origin_symbol"]] = results[job]
             return new_his_data
 
         pje = ParallelJobExecutor(
-            job_result_assemble_callback=on_job_conate,
+            job_result_assemble_callback=on_job_concate,
             max_workers=20,
             max_retry=3,
             retry_interval=1
         )
             
         codes_str = ""
-        origin_symbols_list = []
+        # origin_symbols_list = []
         paraller_jobs = []
-        for symbol in symbols_str.split(","):
-            origin_symbols_list.append(symbol)
-            symbol = convert_symbol(symbols_str, DataSourceType.AKSHARE, Region.CN, self.source_api_type)
-            codes_str = symbol if len(codes_str) == 0 else f"{codes_str},{symbol}"
+        for origin_symbol in symbols_str.split(","):
+            # origin_symbols_list.append(symbol)
+            code = convert_symbol(origin_symbol, DataSourceType.AKSHARE, Region.CN, self.source_api_type)
             paraller_jobs.append(
                 ParallelJob(
-                    name=f"AKshareSinaCNASource - {symbol}",
-                    parameters={"symbol": symbol, "start_date": start, "adjust": "qfq"},
-                    job_callback=on_job,
-                    job_result_process_callback=on_job_done,
-                    extra_params={"origin_symbol": symbol}
+                    name=f"AKshareSinaCNASource - {origin_symbol}",
+                    job_params={"origin_symbol": origin_symbol, "symbol": code, "start_date": start, "adjust": "qfq"},
+                    job_callback=on_job
+                    # job_result_extra_callback=on_job_done,
+                    # extra_params={"origin_symbol": origin_symbol}
                 )
             )
 

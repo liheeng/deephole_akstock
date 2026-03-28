@@ -11,3 +11,5 @@ logs/
 *$py.class'
 
 .vscode/launch.json
+cn_stock_csv
+cn_stock_csv.zip
