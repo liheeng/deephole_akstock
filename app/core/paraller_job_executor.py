@@ -56,17 +56,17 @@ class ParallelJobExecutor(Generic[T, R]):
         self.max_workers = max_workers
         self.max_retry = max_retry
         self.retry_interval = retry_interval
-        self.mini_racer_lock = threading.Lock()
+        # self.mini_racer_lock = threading.Lock()
 
     def _run_job_with_retry(self, job: ParallelJob[T]) -> T | None:
         retries = 0
         while retries < self.max_retry:
             try:
-                with self.mini_racer_lock:
-                    return job.job_callback(job)
+                # with self.mini_racer_lock:
+                return job.job_callback(job)
             except Exception as e:
                 retries += 1
-                logger.warning(f"⚠️ Job [{job.name}] 失败 {retries}/{self.max_retry} | 错误: {str(e)}")
+                logger.exception(f"⚠️ Job [{job.name}] 失败 {retries}/{self.max_retry} | 错误: {str(e)}")
                 time.sleep(self.retry_interval)
 
         logger.error(f"❌ Job [{job.name}] 最终失败！")

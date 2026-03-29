@@ -8,9 +8,18 @@ logger = get_logger(__name__)
 T = TypeVar("T")  # 单个WorkerTask的run方法返回类型
 
 
+@dataclass
+class ExecutorTaskResult(Dict[str, Any], Generic[T]):
+    status: bool = False
+    data: T | None = None
+    message: str = ""
+    error: str = ""
+    time: float = 0.0
+
+
 class AbstractExectuorTask(ABC, Generic[T]):
     @abstractmethod
-    def run(self, params: Dict[str, Any] | None) -> T | None:
+    def run(self, params: Dict[str, Any] | None) -> T:
         pass
 
 

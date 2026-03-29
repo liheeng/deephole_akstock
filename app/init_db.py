@@ -27,7 +27,7 @@ def init_db():
     print("Initializing database...")
 
     con.execute("""
-    CREATE TABLE stock_daily (
+    CREATE TABLE stock_daily_new (
         symbol VARCHAR,
         market VARCHAR,
         date DATE,

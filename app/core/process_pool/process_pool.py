@@ -9,7 +9,7 @@ from concurrent.futures import ProcessPoolExecutor
 from typing import Dict, Any, Optional, Callable
 
 from utils.log_manager import get_logger
-from core.process_pool.executor_task import AbstractExectuorTask, ExectuorTaskCfg
+from core.process_pool.executor_task import AbstractExectuorTask, ExectuorTaskCfg, ExecutorTaskResult
 
 logger = get_logger(__name__)
 
@@ -34,7 +34,7 @@ class BaseExecutor(ABC):
             self._pool_ref.release(self)
 
     @abstractmethod
-    def run(self, executor_task: ExectuorTaskCfg, timeout: Optional[int] = None) -> Dict[str, Any]:
+    def run(self, executor_task: ExectuorTaskCfg, timeout: Optional[int] = None) -> ExecutorTaskResult:
         pass
 
 
@@ -46,7 +46,7 @@ class DynamicTaskExecutor(BaseExecutor):
         self,
         executor_task: ExectuorTaskCfg,
         timeout: Optional[int] | None = None
-    ) -> Dict[str, Any]:
+    ) -> ExecutorTaskResult:
         if not executor_task.task_module_file or not executor_task.task_class_name:
             raise ValueError("task_module_file or task_class_name is empty")
 
@@ -67,9 +67,11 @@ class DynamicTaskExecutor(BaseExecutor):
     @staticmethod
     def _task_runner(
         task_module_file, task_class_name, task_params, call_before_task, call_after_task
-    ):
+    ) -> ExecutorTaskResult:
         start_time = time.time()
-        result = {"status": False, "data": None, "time": 0.0, "message": "", "error": ""}
+        result = ExecutorTaskResult(
+            status=False
+        )
         try:
             module = importlib.import_module(task_module_file)
             cls = getattr(module, task_class_name)
@@ -77,17 +79,18 @@ class DynamicTaskExecutor(BaseExecutor):
             if call_before_task:
                 instance = call_before_task(instance, task_params)
             data = instance.run(task_params)
-            result["status"] = True
-            result["data"] = data
-            result["message"] = "执行成功"
+            result.status = True
+            result.data = data
+            result.message = "执行成功"
             if call_after_task:
                 result = call_after_task(result, task_params)
         except Exception as e:
-            result["message"] = "执行失败"
-            result["error"] = f"{str(e)}\n{traceback.format_exc()}"
-            logger.error(f"任务执行异常: {e}", exc_info=True)
+            result.status = False
+            result.message = "执行失败"
+            result.error = f"{str(e)}\n{traceback.format_exc()}"
+            logger.exception(f"任务执行异常: {e}", exc_info=True)
         finally:
-            result["time"] = round(time.time() - start_time, 3)
+            result.time = round(time.time() - start_time, 3)
         return result
 
 
@@ -106,7 +109,7 @@ class PreInitTaskExecutor(BaseExecutor):
         self.call_before_task = executor_task.call_before_task
         self.call_after_task = executor_task.call_after_task
 
-    def run(self, executor_task: ExectuorTaskCfg, timeout: Optional[int] = None) -> Dict[str, Any]:
+    def run(self, executor_task: ExectuorTaskCfg, timeout: Optional[int] = None) -> ExecutorTaskResult:
         try:
             future = self._pool.submit(
                 self._task_runner,
@@ -122,7 +125,7 @@ class PreInitTaskExecutor(BaseExecutor):
             self.release()
 
     @staticmethod
-    def _task_runner(task_module_file, task_class_name, task_params, call_before_task, call_after_task):
+    def _task_runner(task_module_file, task_class_name, task_params, call_before_task, call_after_task) -> ExecutorTaskResult:
         if not hasattr(PreInitTaskExecutor._task_runner, "instance_cache"):
             PreInitTaskExecutor._task_runner.instance_cache = {}
 
@@ -130,7 +133,9 @@ class PreInitTaskExecutor(BaseExecutor):
         instance = PreInitTaskExecutor._task_runner.instance_cache.get(key)
 
         start_time = time.time()
-        result = {"status": False, "data": None, "time": 0.0, "message": "", "error": ""}
+        result = ExecutorTaskResult(
+            status = False
+        )
 
         try:
             if instance is None:
@@ -144,19 +149,20 @@ class PreInitTaskExecutor(BaseExecutor):
                 instance = call_before_task(instance, task_params)
 
             data = instance.run(task_params)
-            result["status"] = True
-            result["data"] = data
-            result["message"] = "执行成功"
+            result.status =  True
+            result.data = data
+            result.message = "执行成功"
 
             if call_after_task:
                 result = call_after_task(result, task_params)
-
+            
         except Exception as e:
-            result["message"] = "预初始化任务执行失败"
-            result["error"] = f"{str(e)}\n{traceback.format_exc()}"
-            logger.error(f"预初始化任务执行异常: {e}", exc_info=True)
+            result.status = False
+            result.message = "预初始化任务执行失败"
+            result.error = f"{str(e)}\n{traceback.format_exc()}"
+            logger.exception(f"预初始化任务执行异常: {e}", exc_info=True)
         finally:
-            result["time"] = round(time.time() - start_time, 3)
+            result.time = round(time.time() - start_time, 3)
 
         return result
 
@@ -229,7 +235,7 @@ if __name__ == "__main__":
     task_cfg = ExectuorTaskCfg(
         task_module_file="sources.akshare.akshare_worker_download",
         task_class_name="AkshareWorkerDownload",
-        task_params={"symbol": "sz000001", "start": "2026-03-01", "adjust": "qfq"}
+        task_params={"symbol": "sz000001", "start_date": "2026-03-01", "adjust": "qfq"}
     )
     executor = executor_pool.acquire()
     result = executor.run(task_cfg, timeout=1500)
@@ -247,7 +253,7 @@ if __name__ == "__main__":
 
     executor2 = executor_pool2.acquire()
     task_cfg2 = ExectuorTaskCfg(
-        task_params={"symbol": "sh601899", "start": "2026-03-01", "adjust": "qfq"}
+        task_params={"symbol": "sh601899", "start_date": "2026-03-01", "adjust": "qfq"}
     )
     result2 = executor2.run(task_cfg2, timeout=1500)
     print("------------- SH601899")
@@ -255,7 +261,7 @@ if __name__ == "__main__":
 
     executor2 = executor_pool2.acquire()
     task_cfg2 = ExectuorTaskCfg(
-        task_params={"symbol": "sh688090", "start": "2026-03-01", "adjust": "qfq"}
+        task_params={"symbol": "sh688090", "start_date": "2026-03-01", "adjust": "qfq"}
     )
     result2 = executor2.run(task_cfg2, timeout=1500)
     print("------------- SH688090")

@@ -13,3 +13,8 @@ logs/
 .vscode/launch.json
 cn_stock_csv
 cn_stock_csv.zip
+hk_stock_csv
+hk_stock_csv.zip
+us_stock_csv
+us_stock_csv.zip
+clean_db
