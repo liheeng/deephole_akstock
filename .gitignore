@@ -11,6 +11,7 @@ logs/
 *$py.class
 
 clean_db
+csv_data
 cn_stock_csv
 cn_stock_csv.zip
 hk_stock_csv
