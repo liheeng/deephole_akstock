@@ -2,7 +2,7 @@ import akshare as ak
 import pandas as pd
 from typing import Dict, List
 from markets.market import Region
-from sources.data_source import DataSourceType, DataSourceAPI, DataSource
+from sources.data_source import DataSourceType, DataSourceApiName, DataSource
 from sources.datasource_adapter import convert_symbol
 from sources.ifind.ifind_api import IfindApi, HIS_BATCH_SIZE_LIMIT, HIS_BATCH_SYMBOLS_LIMIT
 from utils.log_manager import get_logger
@@ -13,7 +13,7 @@ logger = get_logger(__name__)
 
 
 class AKshareSinaHKSource:
-    source_api_type: DataSourceAPI = DataSourceAPI.AKSHARE_SINA_API
+    source_api_type: DataSourceApiName = DataSourceApiName.AKSHARE_SINA_API
     
     def normalize(self, df: pd.DataFrame, symbol: str) -> pd.DataFrame:
         """
@@ -68,7 +68,7 @@ class AKshareSinaHKSource:
 
 
 class AKshareEastQuotationHKSource:
-    source_api_type: DataSourceAPI = DataSourceAPI.EAST_QUOTATION_API
+    source_api_type: DataSourceApiName = DataSourceApiName.EAST_QUOTATION_API
 
     def normalize(self, df: pd.DataFrame, symbol: str) -> pd.DataFrame:
         """
@@ -138,7 +138,7 @@ class AKshareEastQuotationHKSource:
             raise e  # 上层重试
         
 class AKshareEastMoneyHKSource:
-    source_api_type: DataSourceAPI = DataSourceAPI.AKSHARE_EASTMONEY_API
+    source_api_type: DataSourceApiName = DataSourceApiName.AKSHARE_EASTMONEY_API
 
     def normalize(self, df: pd.DataFrame, symbol: str) -> pd.DataFrame:   
         """
@@ -197,7 +197,7 @@ class AKshareEastMoneyHKSource:
 class IFinDHKSource:
     """ 同花顺iFinD
     """
-    source_api_type: DataSourceAPI = DataSourceAPI.IFIND_API
+    source_api_type: DataSourceApiName = DataSourceApiName.IFIND_API
 
     def normalize(self, df: pd.DataFrame, symbol: str) -> pd.DataFrame:
         """

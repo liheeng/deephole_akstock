@@ -6,10 +6,11 @@ import importlib
 import queue
 from abc import ABC, abstractmethod
 from concurrent.futures import ProcessPoolExecutor
-from typing import Dict, Any, Optional, Callable
+from typing import Optional
 
 from utils.log_manager import get_logger
-from core.process_pool.executor_task import AbstractExectuorTask, ExectuorTaskCfg, ExecutorTaskResult
+from core.process_pool.executor_task import ExectuorTaskCfg
+from utils.task_util import TaskResult
 
 logger = get_logger(__name__)
 
@@ -34,7 +35,7 @@ class BaseExecutor(ABC):
             self._pool_ref.release(self)
 
     @abstractmethod
-    def run(self, executor_task: ExectuorTaskCfg, timeout: Optional[int] = None) -> ExecutorTaskResult:
+    def run(self, executor_task: ExectuorTaskCfg, timeout: Optional[int] = None) -> TaskResult:
         pass
 
 
@@ -46,7 +47,7 @@ class DynamicTaskExecutor(BaseExecutor):
         self,
         executor_task: ExectuorTaskCfg,
         timeout: Optional[int] | None = None
-    ) -> ExecutorTaskResult:
+    ) -> TaskResult:
         if not executor_task.task_module_file or not executor_task.task_class_name:
             raise ValueError("task_module_file or task_class_name is empty")
 
@@ -67,9 +68,9 @@ class DynamicTaskExecutor(BaseExecutor):
     @staticmethod
     def _task_runner(
         task_module_file, task_class_name, task_params, call_before_task, call_after_task
-    ) -> ExecutorTaskResult:
+    ) -> TaskResult:
         start_time = time.time()
-        result = ExecutorTaskResult(
+        result = TaskResult(
             status=False
         )
         try:
@@ -109,7 +110,7 @@ class PreInitTaskExecutor(BaseExecutor):
         self.call_before_task = executor_task.call_before_task
         self.call_after_task = executor_task.call_after_task
 
-    def run(self, executor_task: ExectuorTaskCfg, timeout: Optional[int] = None) -> ExecutorTaskResult:
+    def run(self, executor_task: ExectuorTaskCfg, timeout: Optional[int] = None) -> TaskResult:
         try:
             future = self._pool.submit(
                 self._task_runner,
@@ -125,7 +126,7 @@ class PreInitTaskExecutor(BaseExecutor):
             self.release()
 
     @staticmethod
-    def _task_runner(task_module_file, task_class_name, task_params, call_before_task, call_after_task) -> ExecutorTaskResult:
+    def _task_runner(task_module_file, task_class_name, task_params, call_before_task, call_after_task) -> TaskResult:
         if not hasattr(PreInitTaskExecutor._task_runner, "instance_cache"):
             PreInitTaskExecutor._task_runner.instance_cache = {}
 
@@ -133,8 +134,8 @@ class PreInitTaskExecutor(BaseExecutor):
         instance = PreInitTaskExecutor._task_runner.instance_cache.get(key)
 
         start_time = time.time()
-        result = ExecutorTaskResult(
-            status = False
+        result = TaskResult(
+            status=False
         )
 
         try:
@@ -149,7 +150,7 @@ class PreInitTaskExecutor(BaseExecutor):
                 instance = call_before_task(instance, task_params)
 
             data = instance.run(task_params)
-            result.status =  True
+            result.status = True
             result.data = data
             result.message = "执行成功"
 

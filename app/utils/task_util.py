@@ -1,6 +1,19 @@
 from core.task import Task
 from core.job import JobType, Job
 from utils.task_db import generate_job_id, generate_task_id
+from typing import Dict, Any, Generic
+
+from dataclasses import dataclass
+
+
+@dataclass
+class TaskResult(Dict[str, Any], Any):
+    status: bool = False
+    data: Any | None = None
+    message: str = ""
+    error: str = ""
+    time: float = 0.0
+
 
 def create_sync_cn_daily_task() -> Task:
     # create sync CN daily task

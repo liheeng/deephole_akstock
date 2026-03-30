@@ -1,14 +1,12 @@
 import time
 from dataclasses import dataclass
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, Future
 from typing import List, Dict, Any, Generic, TypeVar, Callable, Optional
 from utils.log_manager import get_logger
 import threading
 
-# mini_racer_lock = threading.Lock()
-
-T = TypeVar("T")  # 单个Job返回类型
-R = TypeVar("R")  # 最终合并后的结果类型
+T = TypeVar("T")
+R = TypeVar("R")
 
 logger = get_logger(__name__)
 
@@ -21,28 +19,20 @@ class ParallelJob(Generic[T]):
     name: str
     job_callback: Callable[["ParallelJob[T]"], T]
     job_params: Dict[str, Any]
-    # 支持返回新的 result
     job_result_extra_callback: Optional[Callable[[T, "ParallelJob[T]"], T]] = None
     extra_params: Optional[Dict[str, Any]] = None
 
-    # --------------------------
-    # 【核心】按对象地址判断相等（唯一标识）
-    # --------------------------
     def __eq__(self, other):
-        # ✅ 你要的：比较【对象地址】 + 【name 属性】
         if not isinstance(other, ParallelJob):
             return False
         return id(self) == id(other) and self.name == other.name
 
-    # --------------------------
-    # 【核心】用对象地址做哈希值（绝对可哈希）
-    # --------------------------
     def __hash__(self):
         return hash(id(self))
 
 
 # =============================================================================
-# 并行执行器（结果存储为 DICT：key=job, value=result）
+# 【升级】并行执行器：支持 shutdown / 取消任务 / 安全停止线程池
 # =============================================================================
 class ParallelJobExecutor(Generic[T, R]):
     def __init__(
@@ -56,50 +46,99 @@ class ParallelJobExecutor(Generic[T, R]):
         self.max_workers = max_workers
         self.max_retry = max_retry
         self.retry_interval = retry_interval
-        # self.mini_racer_lock = threading.Lock()
+
+        # === 新增：线程池 + 关闭控制 ===
+        self.executor: Optional[ThreadPoolExecutor] = None
+        self._shutdown_event = threading.Event()  # 停止信号
+        self._futures: List[tuple[ParallelJob, Future]] = []  # 保存所有任务
 
     def _run_job_with_retry(self, job: ParallelJob[T]) -> T | None:
         retries = 0
         while retries < self.max_retry:
+            # === 安全点：收到 shutdown 立即停止 ===
+            if self._shutdown_event.is_set():
+                logger.warning(f"[shutdown] Job [{job.name}] 已取消")
+                return None
+
             try:
-                # with self.mini_racer_lock:
                 return job.job_callback(job)
             except Exception as e:
                 retries += 1
-                logger.exception(f"⚠️ Job [{job.name}] 失败 {retries}/{self.max_retry} | 错误: {str(e)}")
+                logger.exception(f"Job [{job.name}] 失败 {retries}/{self.max_retry} | 错误: {str(e)}")
+
+                # 停止信号检查
+                if self._shutdown_event.is_set():
+                    return None
                 time.sleep(self.retry_interval)
 
-        logger.error(f"❌ Job [{job.name}] 最终失败！")
+        logger.error(f"Job [{job.name}] 最终失败！")
         return None
 
     def execute(self, jobs: List[ParallelJob[T]]) -> R:
-        futures = []
-        # ======================
-        # ✅ 改为字典：key = job, value = result
-        # ======================
+        """启动并行执行"""
+        # 重置状态
+        self._shutdown_event.clear()
+        self.executor = ThreadPoolExecutor(max_workers=self.max_workers)
+        self._futures.clear()
         success_results: Dict[ParallelJob[T], T] = {}
 
-        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+        try:
+            # 提交任务
             for job in jobs:
-                future = executor.submit(self._run_job_with_retry, job)
-                futures.append((job, future))
+                if self._shutdown_event.is_set():
+                    break
+                future = self.executor.submit(self._run_job_with_retry, job)
+                self._futures.append((job, future))
 
-            for job, future in futures:
+            # 收集结果
+            for job, future in self._futures:
+                if self._shutdown_event.is_set():
+                    future.cancel()
+                    continue
+
                 try:
                     result = future.result()
                     if result is not None:
-                        # 执行处理回调
-                        if job.job_result_extra_callback is not None:
+                        if job.job_result_extra_callback:
                             result = job.job_result_extra_callback(result, job)
-
-                        # ✅ 存入字典
                         success_results[job] = result
 
                 except Exception as e:
-                    logger.exception(f"❌ Job [{job.name}] 执行异常: {e}")
+                    logger.exception(f"Job [{job.name}] 执行异常: {e}")
 
-        # 传入字典给合并函数
+        finally:
+            # 无论如何都关闭线程池
+            self.executor.shutdown(wait=False)
+            self.executor = None
+
         return self.job_result_assemble_callback(success_results)
+
+    # =========================================================================
+    # ✅ 你要的：SHUTDOWN 方法
+    # =========================================================================
+    def shutdown(self, wait: bool = True, cancel_pending: bool = True):
+        """
+        安全关闭执行器：
+        - 停止新任务
+        - 取消排队任务
+        - 让正在执行的任务安全退出
+        """
+        logger.warning("[ParallelJobExecutor] 开始 shutdown...")
+
+        # 1. 触发停止信号
+        self._shutdown_event.set()
+
+        # 2. 取消所有未开始的任务
+        if cancel_pending and self._futures:
+            for job, future in self._futures:
+                if not future.done():
+                    future.cancel()
+
+        # 3. 关闭线程池
+        if self.executor:
+            self.executor.shutdown(wait=wait)
+
+        logger.warning("[ParallelJobExecutor] shutdown 完成")
 
 # ===================================
 # Example:

@@ -2,9 +2,16 @@
 
 import enum
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 import pandas as pd
 from datetime import datetime
 from typing import List, Dict
+from utils.common import ResultStatus
+from sources.data_source import FetchResult
+
+# 每次最多获取 5000 条历史数据
+HIS_BATCH_SIZE_LIMIT = 10000
+HIS_BATCH_SYMBOLS_LIMIT = 500
 
 
 class DataSourceType(enum.Enum):
@@ -14,7 +21,7 @@ class DataSourceType(enum.Enum):
     EASTQUOTATION = "eastquotation"     # eastquotation, support HK
 
 
-class DataSourceAPI(enum.Enum):
+class DataSourceApiName(enum.Enum):
     AKSHARE_EASTMONEY_API = f"{DataSourceType.AKSHARE.value}.eastmoney"
     AKSHARE_SINA_API = f"{DataSourceType.AKSHARE.value}.sina"
     AKSHARE_TENCENT_API = f"{DataSourceType.AKSHARE.value}.tencent"
@@ -35,24 +42,30 @@ class DataSourceAPI(enum.Enum):
 
 
 class DataSource(ABC):
-    # @abstractmethod
-    # def normalize(self, df: pd.DataFrame, symbols: str) -> pd.DataFrame:
-    #     pass
+
+    @abstractmethod
+    def fetch_daily(self, symbols_str: str, start: datetime) -> FetchResult | None:
+        pass
+
+
+@dataclass
+class FetchResult:
+    status: ResultStatus = ResultStatus.FAILED
+    data: Dict[str, pd.DataFrame] | pd.DataFrame | None = None
+    failed_symbols: List[str] | None = None
+    message: str = ""
+    error: str = ""
+
+
+class AbstractDataSourceAPI(ABC):
+    source_api_type: DataSourceApiName
+    name: str
     
     @abstractmethod
-    def prepare_fetch(self):
+    def normalize(self, df: pd.DataFrame, symbol: str) -> pd.DataFrame:
         pass
 
     @abstractmethod
-    def candidate_symbols(self,
-                          symbols: List[str],
-                          next_index: int,
-                          start: datetime,
-                          end: datetime | None) -> tuple[int, str]:
+    def fetch_hist(self, symbols_str: str, options: dict) -> FetchResult:
         pass
-
-    @abstractmethod
-    def fetch_daily(self, symbols_str: str, start: datetime) -> pd.DataFrame | Dict[str, pd.DataFrame] | None:
-        pass
-
 

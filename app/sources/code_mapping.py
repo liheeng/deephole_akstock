@@ -1,5 +1,5 @@
 import re
-from sources.data_source import DataSourceType, DataSourceAPI
+from sources.data_source import DataSourceType, DataSourceApiName
 from markets.market import Region, ExchangeType
 from utils.common import safe_format
 # 数据源格式定义（已修复缩进 + 结构）
@@ -50,7 +50,7 @@ def build_symbol(
     symbol: str,
     data_source: DataSourceType,
     region_type: Region,
-    api_type: DataSourceAPI | None = None
+    api_type: DataSourceApiName | None = None
 ):
     # 拆解 code 和 exchange
     code = symbol.split(".")[0]

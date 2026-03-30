@@ -1,6 +1,7 @@
 import time
 import random
 import os
+import enum
 
 def is_running_in_docker() -> bool:
     # 方法1：检查 .dockerenv 文件（最准）
@@ -43,3 +44,10 @@ def safe_format(s: str, **kwargs):
         def __missing__(self, key):
             return f"{{{key}}}"  # 👈 核心：不存在就返回 {key}
     return s.format_map(SafeFormatter(kwargs))
+
+
+class ResultStatus(enum.Enum):
+    SUCCESS = 0
+    PARTIAL_SUCCESS = 1
+    FAILED = 2
+    CANCELLED = 3
