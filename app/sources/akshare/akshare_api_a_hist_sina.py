@@ -4,7 +4,7 @@ import pandas as pd
 from utils.log_manager import get_logger
 from utils.common import ResultStatus
 from markets.market import Region
-from sources.data_source import DataSourceType, DataSourceApiName, AbstractDataSourceAPI, FetchResult
+from sources.data_source import DataSourceType, DataSourceApiName, AbstractDataSourceAPI, FetchResult, QueryOptions
 from sources.datasource_adapter import SymbolConverter
 from datetime import datetime
 from core.paraller_job_executor import ParallelJob
@@ -28,7 +28,10 @@ class AKshareApiAHistricSina(AbstractDataSourceAPI):
             "symbol", "date", "open", "high", "low", "close", "volume", "amount", "turnover"
         ]]
 
-    def fetch_hist(self, symbols_str: str, options: dict) -> FetchResult | None:
+    def fetch_hist(self, symbols_str: str, options: QueryOptions | None = None) -> FetchResult | None:
+        if options is None:
+            options = QueryOptions(start=pd.to_datetime("19000101"))
+
         symbol_converter = SymbolConverter(DataSourceType.AKSHARE, Region.CN, self.source_api_type)
         failed_symbols = []
         result_data = {}
@@ -78,7 +81,7 @@ class AKshareApiAHistricSina(AbstractDataSourceAPI):
             # use parallel processes
             return self.fetch_hist_parallel(symbols_str, options, symbol_converter)
 
-    def fetch_hist_parallel(self, symbols_str: str, options: dict, symbol_converter: SymbolConverter) -> FetchResult | None:
+    def fetch_hist_parallel(self, symbols_str: str, options: QueryOptions, symbol_converter: SymbolConverter) -> FetchResult | None:
         executor_pool = None
         hist_fetcher = None  # 新增
         try:

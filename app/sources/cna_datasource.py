@@ -1,16 +1,8 @@
-import akshare as ak
-import pandas as pd
-from utils.log_manager import get_logger
-from markets.market import Region
-from sources.data_source import DataSource, DataSourceType, DataSourceApiName, AbstractDataSourceAPI, FetchResult
-from sources.datasource_adapter import convert_symbol
-from sources.ifind.ifind_api import IfindApi, HIS_BATCH_SIZE_LIMIT, HIS_BATCH_SYMBOLS_LIMIT
+from typing import List
+from sources.data_source import DataSource, AbstractDataSourceAPI, FetchResult, QueryOptions
 from datetime import datetime
-from typing import Dict, List, cast
-from core.paraller_job_executor import ParallelJobExecutor, ParallelJob
-from core.process_pool.process_pool import ExProcessExecutorPool
-from core.process_pool.executor_task import ExectuorTaskCfg
 from sources.akshare.akshare_api_a_hist_sina import AKshareApiAHistricSina
+from utils.log_manager import get_logger
 
 logger = get_logger(__name__)
 
@@ -312,7 +304,7 @@ class CNAStockSource(DataSource):
         ]
         self.source_api_cursor = -1
 
-    def fetch_daily(self, symbols_str, start: datetime) -> FetchResult | None:
+    def fetch_daily(self, symbols_str, options: QueryOptions | None = None) -> FetchResult | None:
         self.source_api_cursor += 1
         if self.source_api_cursor >= len(self.source_api_list):
             self.source_api_cursor = 0
@@ -320,10 +312,8 @@ class CNAStockSource(DataSource):
         instance = self.source_api_list[self.source_api_cursor]
         
         try:
-            # instance = cast(instance, AbstractDataSourceAPI)
             source_api_name = instance.source_api_type.value
             logger.info(f"trying {source_api_name} API for {symbols_str} daily data since {start}")
-            options = {"start": start}
             return instance.fetch_hist(symbols_str, options)
         except Exception as e:
             logger.exception(f"trying from {source_api_name} failed: {symbols_str}, error={e}")

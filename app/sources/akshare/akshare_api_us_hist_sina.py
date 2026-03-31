@@ -3,7 +3,7 @@ import pandas as pd
 from utils.log_manager import get_logger
 from utils.common import ResultStatus
 from markets.market import Region
-from sources.data_source import DataSourceType, DataSourceApiName, AbstractDataSourceAPI, FetchResult
+from sources.data_source import DataSourceType, DataSourceApiName, AbstractDataSourceAPI, FetchResult, QueryOptions
 from sources.datasource_adapter import SymbolConverter, fix_preferred_symbol
 from datetime import datetime
 from core.paraller_job_executor import ParallelJob
@@ -36,7 +36,10 @@ class AKshareApiUSHistricSina(AbstractDataSourceAPI):
         df_filtered = df[mask].copy()
         return df_filtered
 
-    def fetch_hist(self, symbols_str: str, options: dict) -> FetchResult | None:
+    def fetch_hist(self, symbols_str: str, options: QueryOptions | None = None) -> FetchResult | None:
+        if options is None:
+            options = QueryOptions(start=pd.to_datetime("1900-01-01"))
+
         symbol_converter = SymbolConverter(DataSourceType.AKSHARE, Region.US, self.source_api_type, fix_preferred_symbol)
         failed_symbols = []
         result_data = {}
@@ -91,7 +94,7 @@ class AKshareApiUSHistricSina(AbstractDataSourceAPI):
             # 大量代码使用并行
             return self.fetch_hist_parallel(symbols_str, options, symbol_converter)
 
-    def fetch_hist_parallel(self, symbols_str: str, options: dict, symbol_converter: SymbolConverter) -> FetchResult | None:
+    def fetch_hist_parallel(self, symbols_str: str, options: QueryOptions, symbol_converter: SymbolConverter) -> FetchResult | None:
         executor_pool = None
         hist_fetcher = None
         try:

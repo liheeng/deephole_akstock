@@ -2,12 +2,11 @@
 
 import enum
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from typing import List, Dict, Any, Optional
 import pandas as pd
 from datetime import datetime
-from typing import List, Dict
 from utils.common import ResultStatus
-from sources.data_source import FetchResult
 
 # 每次最多获取 5000 条历史数据
 HIS_BATCH_SIZE_LIMIT = 10000
@@ -41,12 +40,28 @@ class DataSourceApiName(enum.Enum):
     IFIND_API = "ifind"
 
 
-class DataSource(ABC):
+class QueryOptions(Dict[str, Any]):
+    def __init__(
+        self,
+        start: datetime,
+        end: Optional[datetime] = None,
+        **kwargs
+    ):
+        # 先把固定字段存入字典
+        super().__init__(
+            start=start,
+            end=end,
+            **kwargs
+        )
 
-    @abstractmethod
-    def fetch_daily(self, symbols_str: str, start: datetime) -> FetchResult | None:
-        pass
+    @property
+    def start(self) -> datetime:
+        return self['start']
 
+    @property
+    def end(self) -> Optional[datetime]:
+        return self.get('end')
+    
 
 @dataclass
 class FetchResult:
@@ -55,6 +70,13 @@ class FetchResult:
     failed_symbols: List[str] | None = None
     message: str = ""
     error: str = ""
+
+
+class DataSource(ABC):
+
+    @abstractmethod
+    def fetch_daily(self, symbols_str: str, options: QueryOptions | None = None) -> FetchResult | None:
+        pass
 
 
 class AbstractDataSourceAPI(ABC):
@@ -66,6 +88,6 @@ class AbstractDataSourceAPI(ABC):
         pass
 
     @abstractmethod
-    def fetch_hist(self, symbols_str: str, options: dict) -> FetchResult:
+    def fetch_hist(self, symbols_str: str, options: QueryOptions | None = None) -> FetchResult:
         pass
 

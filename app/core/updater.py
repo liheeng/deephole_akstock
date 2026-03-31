@@ -7,7 +7,7 @@ from utils.time import random_sleep
 from utils.log_manager import get_logger
 from db.duckdb import DuckDBController
 from markets.market import Market
-from sources.data_source import DataSource, HIS_BATCH_SIZE_LIMIT, HIS_BATCH_SYMBOLS_LIMIT
+from sources.data_source import QueryOptions, FetchResult, DataSource, HIS_BATCH_SIZE_LIMIT, HIS_BATCH_SYMBOLS_LIMIT
 from utils.common import ResultStatus
 
 logger = get_logger(__name__)
@@ -29,7 +29,8 @@ class Updater:
     @retry(3)
     def fetch(self, market_name: str, source: DataSource, symbols, start: datetime, end: datetime | None = None) -> tuple[pd.DataFrame | None, list[str] | None]:
         symbols_str = symbols.join(",")
-        fetch_result = source.fetch_daily(symbols_str, start)
+        options = QueryOptions(start=start, end=end)
+        fetch_result: FetchResult | None = source.fetch_daily(symbols_str, options)
         if fetch_result is None:
             raise ValueError("fetch result is None") 
         
