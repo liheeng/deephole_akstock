@@ -12,12 +12,7 @@ class USDailySyncExecutor:
     def execute(self, job: Job):
         patch_requests()
         
-        Updater().run(USStockMarket())
+        Updater().run(USStockMarket(), job)
         
-        # market = job.params["market"]
-        # symbols = job.params.get("symbols", [])
-
-        # data = fetch_data(market, symbols)
-
         # return data
-        return "US daily sync completed"
+        return f"US daily sync completed, job= {job.id} - {job.type.value}"

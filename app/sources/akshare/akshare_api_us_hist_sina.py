@@ -14,7 +14,7 @@ from sources.parallel_hist_fetcher import ParallelHistFetcher
 logger = get_logger(__name__)
 
 
-class AKshareApiUSHistricSina(AbstractDataSourceAPI):
+class AKshareApiUSHistoricSina(AbstractDataSourceAPI):
     source_api_type: DataSourceApiName = DataSourceApiName.AKSHARE_SINA_API
     name = DataSourceApiName.AKSHARE_SINA_API.value
 

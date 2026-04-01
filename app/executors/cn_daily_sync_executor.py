@@ -12,12 +12,7 @@ class CNDailySyncExecutor:
     def execute(self, job: Job):
         patch_requests()
         
-        Updater().run(CNAStockMarket())
+        Updater().run(CNAStockMarket(), job)
         
-        # market = job.params["market"]
-        # symbols = job.params.get("symbols", [])
-
-        # data = fetch_data(market, symbols)
-
-        # return data
-        return "CN daily sync completed"
+        return f"CN daily sync completed, job= {job.id} - {job.type.value}"
+    

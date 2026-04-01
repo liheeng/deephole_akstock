@@ -12,12 +12,7 @@ class HKDailySyncExecutor:
     def execute(self, job: Job):
         patch_requests()
         
-        Updater().run(HongKongStockMarket())
+        Updater().run(HongKongStockMarket(), job)
         
-        # market = job.params["market"]
-        # symbols = job.params.get("symbols", [])
-
-        # data = fetch_data(market, symbols)
-
         # return data
-        return "HongKong daily sync completed"
+        return f"HongKong daily sync completed, job= {job.id} - {job.type.value}"

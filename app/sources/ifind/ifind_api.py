@@ -1,10 +1,11 @@
+import enum
 import requests
 import json
-import pandas as pd
 from datetime import datetime
+from sources.data_source import QueryOptions
 from sources.ifind.data_adapter import convert_to_df
-from utils.log_manager import get_logger
 from typing import Dict
+from utils.log_manager import get_logger
 
 logger = get_logger(__name__)
 
@@ -16,7 +17,59 @@ HIS_BATCH_SIZE_LIMIT = 10000
 HIS_BATCH_SYMBOLS_LIMIT = 500
 
 
-class IfindApi:
+class IFinDFuncInterval(enum.Enum):
+    D = "D"
+    W = "W"
+    M = "M"
+    Q = "Q"
+    Y = "Y"
+
+
+class IFinDFuncCPS(enum.Enum):
+    NO_ADJUST = "1"
+    QFQ = "2"
+    HFQ = "3"
+    VOLUME_QFQ = "4"
+    VOLUME_HFQ = "5"
+    BONUS_QFQ = "6"
+    BONUS_HFQ = "7"
+
+
+ADJUST_TYPE_MAP = {
+    "": IFinDFuncCPS.NO_ADJUST.value,
+    "qfq": IFinDFuncCPS.QFQ.value,
+    "hfq": IFinDFuncCPS.HFQ.value
+}
+
+
+class IFinDFuncCurrency(enum.Enum):
+    NONE = "YSHB"
+    RMB = "RMB"
+    USD = "MHB"
+    HKD = "GHB"
+
+
+CURRENCY_TYPE_MAP = {
+    "": IFinDFuncCurrency.NONE.value,
+    "rmb": IFinDFuncCurrency.RMB.value,
+    "usd": IFinDFuncCurrency.USD.value,
+    "hkd": IFinDFuncCurrency.HKD.value
+}
+
+
+def convert_function_params(options: QueryOptions) -> Dict[str, str]:
+    func_params: Dict[str, str] = {
+        "Interval": options.get("interval", IFinDFuncInterval.D.value),
+        "CPS": IFinDFuncCPS.QFQ.value,
+        "Currency": IFinDFuncCurrency.NONE.value,
+        "Fill": "Blank",
+    }
+    func_params["CPS"] = ADJUST_TYPE_MAP[options.get("adjust", "")]
+    # func_params["Currency"] = CURRENCY_TYPE_MAP[options.get("currency", "")]
+    return func_params
+
+
+class IFinDApi:
     _instance = None
     refresh_token: str
     access_token: str
@@ -69,7 +122,8 @@ class IfindApi:
                 "CPS": "2",
                 "Currency": "RMB",
                 "Fill": "Blank",
-            }) -> Dict[str, pd.DataFrame] | None:    # noqa
+            }
+        ) -> dict | None:    # noqa
         thsUrl = 'https://quantapi.51ifind.com/api/v1/cmd_history_quotation'
         thsHeaders = {"Content-Type":"application/json", "access_token": self.access_token}    # noqa
         thsPara = {

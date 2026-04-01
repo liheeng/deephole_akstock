@@ -4,6 +4,6 @@ from markets.us_stock import USStockMarket
 
 MARKETS = [
     CNAStockMarket(),
-    # HongKongStockMarket(),
-    # USStockMarket()
+    HongKongStockMarket(),
+    USStockMarket()
 ]

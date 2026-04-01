@@ -15,7 +15,7 @@ from sources.parallel_hist_fetcher import ParallelHistFetcher
 logger = get_logger(__name__)
 
 
-class AKshareApiAHistricSina(AbstractDataSourceAPI):
+class AKshareApiAHistoricSina(AbstractDataSourceAPI):
     source_api_type: DataSourceApiName = DataSourceApiName.AKSHARE_SINA_API
     name = DataSourceApiName.AKSHARE_SINA_API.value
 
@@ -87,7 +87,7 @@ class AKshareApiAHistricSina(AbstractDataSourceAPI):
         try:
             executor_pool = ExProcessExecutorPool(max_workers=4)
             task_cfg = ExectuorTaskCfg(
-                task_module_file="sources.akshare.akshare_worker_download",
+                task_module_file="sources.akshare.worker_akshare_api_a_hist_sina",
                 task_class_name="WorkerAkshareAHistSinaFetcher",
             )
             executor_pool.init_preinit_workers(task_cfg)

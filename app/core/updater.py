@@ -1,6 +1,7 @@
 import pandas as pd
 from datetime import date, datetime
 
+from core.job import Job
 from core.normalizer import normalize
 from utils.retry import retry
 from utils.time import random_sleep
@@ -27,8 +28,8 @@ class Updater:
         return r[0] if r else None
 
     @retry(3)
-    def fetch(self, market_name: str, source: DataSource, symbols, start: datetime, end: datetime | None = None) -> tuple[pd.DataFrame | None, list[str] | None]:
-        symbols_str = symbols.join(",")
+    def fetch(self, market_name: str, source: DataSource, symbols: list, start: datetime, end: datetime | None = None) -> tuple[pd.DataFrame | None, list[str] | None]:
+        symbols_str = ",".join(symbols)
         options = QueryOptions(start=start, end=end)
         fetch_result: FetchResult | None = source.fetch_daily(symbols_str, options)
         if fetch_result is None:
@@ -53,7 +54,7 @@ class Updater:
         
         return total_df, failed_symbols
         
-    def run(self, market: Market):
+    def run(self, market: Market, job: Job):
 
         # con = duckdb.connect(self.db_path)
 
@@ -75,20 +76,16 @@ class Updater:
             
             start = last.strftime("%Y%m%d") if last else "1990-01-01"  # type: ignore
             start = pd.to_datetime(start)
-        
-            _days = (end.date() - start.date()).days
-            _days = 1 if _days == 0 else _days
-            count = HIS_BATCH_SIZE_LIMIT // _days
-            count = HIS_BATCH_SYMBOLS_LIMIT if count > HIS_BATCH_SYMBOLS_LIMIT else count
-            last_index = next + count
-            if last_index > len(symbols):
-                last_index = len(symbols)
-            symbols = []
-            for symbol in symbols[next:last_index]:
-                symbols.append(symbol)
+            start_index = next
+            end_index = self.calculate_range(symbols, start_index, start, end)
+            next = end_index
+
+            select_symbols = []
+            for symbol in symbols[start_index:end_index]:
+                select_symbols.append(symbol)
                 
-            total_df, failed_symbols = self.fetch(market_name=market.name, source=source, symbols=symbols, start=start, end=end)
-            success_symbols = symbols if failed_symbols is None else [symbol for symbol in symbols if symbol not in failed_symbols]
+            total_df, failed_symbols = self.fetch(market_name=market.name, source=source, symbols=select_symbols, start=start, end=end)
+            success_symbols = select_symbols if failed_symbols is None else [symbol for symbol in select_symbols if symbol not in failed_symbols]
             
             # TODO ...
             # Need to save failed_symbols to DB or have a retry mechanism!!!
@@ -96,6 +93,7 @@ class Updater:
             if total_df is None or len(total_df) == 0:
                 continue
             
+            total_df = total_df.drop(columns=["update_time"], errors="ignore")
             number_of_rows = len(total_df)
 
             # Insert from the temporary table
@@ -112,6 +110,16 @@ class Updater:
             # result = con.execute(sql)
             
             inserted = df.rowcount if df.rowcount >= 0 else number_of_rows   # 👈 关键
-            logger.info(f"{market.name}-{success_symbols} inserted {inserted} rows")
+            logger.info(f"{market.name}-{success_symbols} \n -- inserted {inserted} rows")
 
             random_sleep()
+
+    def calculate_range(self, symbols, start_index, start, end):
+        _days = (end.date() - start.date()).days
+        _days = 1 if _days == 0 else _days
+        count = HIS_BATCH_SIZE_LIMIT // _days
+        count = HIS_BATCH_SYMBOLS_LIMIT if count > HIS_BATCH_SYMBOLS_LIMIT else count
+        end_index = start_index + count
+        if end_index > len(symbols):
+            end_index = len(symbols)
+        return end_index

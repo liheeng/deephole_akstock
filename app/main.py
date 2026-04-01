@@ -16,26 +16,26 @@ from utils.task_util import create_sync_cn_daily_task, create_sync_hk_daily_task
 # 用来安全退出
 running = True
 
+
 def stop(signum, frame):
     global running
     running = False
 
+
 # 注册 Ctrl+C 信号
 signal.signal(signal.SIGINT, stop)
 
+
 def main():
-    # # 👉 启用 UA 注入
-    # patch_requests()
-
-    # updater = Updater(DB)
-
-    # for market in MARKETS:
-    #     updater.run(market)
     api.init()
 
     # create sync CN daily task
-    task = create_sync_cn_daily_task()
-    # task = create_sync_hk_daily_task()
+    # task = create_sync_cn_daily_task()
+
+    # create sync HK daily task
+    task = create_sync_hk_daily_task()
+    
+    # create sync US daily task
     # task = create_sync_us_daily_task()
     
     api.run_task(task)
@@ -46,6 +46,7 @@ def main():
     print("主线程已启动，按 Ctrl+C 退出")
     while running:
         time.sleep(1)
+
 
 if __name__ == "__main__":
     main()

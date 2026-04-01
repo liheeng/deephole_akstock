@@ -16,7 +16,7 @@ from core.scheduler import run_task
 from core.worker import start_workers
 from db.duckdb import DuckDBController
 from core.error import TaskError
-from sources.ifind.ifind_api import IfindApi
+from sources.ifind.ifind_api import IFinDApi
 
 # !!! Register executors, any new executor needs to be import here,
 # it is very important,otherwise the API won't know how to handle
@@ -37,7 +37,7 @@ def init():
 
     # Init iFinD API
     try:
-        IfindApi(refresh_token=os.getenv("IFIND_REFRESH_TOKEN"))
+        IFinDApi(refresh_token=os.getenv("IFIND_REFRESH_TOKEN"))
         logger.info("iFinD API initialized")
     except Exception as e:
         logger.error(f"iFinD API is failed to initialize, error: str({e})")

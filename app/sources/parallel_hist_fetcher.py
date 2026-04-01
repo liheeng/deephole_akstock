@@ -48,7 +48,7 @@ class ParallelHistFetcher():
             adjust = options.get("adjust", "qfq")
             parallel_jobs.append(
                 ParallelJob(
-                    name=f"{DataSourceApiName.value} - {origin_symbol}",
+                    name=f"{self.api_type.value} - {origin_symbol}",
                     job_params={"origin_symbol": origin_symbol, "symbol": code, "start_date": start_date, "end_date": end_date, "adjust": adjust},
                     job_callback=self._on_job
                     # job_result_extra_callback=on_job_done,

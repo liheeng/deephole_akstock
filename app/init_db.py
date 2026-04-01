@@ -1,9 +1,9 @@
 import duckdb
 import os
 from db.db_common import DB
+from utils.common import is_running_in_docker
 DB_PATH = DB
 
-from utils.common import is_running_in_docker
 
 def init_db():
 
@@ -27,33 +27,56 @@ def init_db():
     print("Initializing database...")
 
     con.execute("""
-    CREATE TABLE stock_daily_new (
-        symbol VARCHAR,
-        market VARCHAR,
-        date DATE,
-
-        open DOUBLE,
-        high DOUBLE,
-        low DOUBLE,
-        close DOUBLE,
-
-        volume DOUBLE,
-        amount DOUBLE,
-
-        pct DOUBLE,
-        turnover DOUBLE,
-
-        update_time TIMESTAMP DEFAULT now()
+    CREATE TABLE stock_daily (
+        symbol VARCHAR,        -- 股票代码
+        symbol_name VARCHAR,          -- 股票名称
+        market VARCHAR,        -- 市场
+        date DATE,             -- 日期
+        open DOUBLE,           -- 开盘价
+        high DOUBLE,           -- 最高价
+        low DOUBLE,            -- 最低价
+        close DOUBLE,          -- 收盘价
+        volume DOUBLE,         -- 成交量
+        amount DOUBLE,         -- 成交额
+        pct DOUBLE,            -- 涨跌幅
+        turnover DOUBLE,       -- 换手率
+        adjust_mode VARCHAR DEFAULT 'none',   -- 复权模式
+        adjust_factor DOUBLE,    -- 复权因子
+        create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- 创建时间
+        update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP   -- 更新时间
     )
     """)
 
     con.execute("""
-    CREATE UNIQUE INDEX IF NOT EXISTS uniq_symbol_date
+    -- 表注释
+    COMMENT ON TABLE stock_daily IS '股票日线行情数据表';
+
+    -- 列注释
+    COMMENT ON COLUMN stock_daily.symbol IS '股票代码';
+    COMMENT ON COLUMN stock_daily.symbol_name IS '股票名称';
+    COMMENT ON COLUMN stock_daily.market IS '市场';
+    COMMENT ON COLUMN stock_daily.date IS '日期';
+    COMMENT ON COLUMN stock_daily.open IS '开盘价';
+    COMMENT ON COLUMN stock_daily.high IS '最高价';
+    COMMENT ON COLUMN stock_daily.low IS '最低价';
+    COMMENT ON COLUMN stock_daily.close IS '收盘价';
+    COMMENT ON COLUMN stock_daily.volume IS '成交量';
+    COMMENT ON COLUMN stock_daily.amount IS '成交额';
+    COMMENT ON COLUMN stock_daily.pct IS '涨跌幅';
+    COMMENT ON COLUMN stock_daily.turnover IS '换手率';
+    COMMENT ON COLUMN stock_daily.adjust_mode IS '复权模式';
+    COMMENT ON COLUMN stock_daily.adjust_factor IS '复权因子';
+    COMMENT ON COLUMN stock_daily.create_time IS '创建时间';
+    COMMENT ON COLUMN stock_daily.update_time IS '更新时间';
+    """)           
+
+    con.execute("""
+    CREATE UNIQUE INDEX IF NOT EXISTS uniq_sd_symbol_date
     ON stock_daily(symbol, date)
     """)
 
     con.execute("""
-    CREATE INDEX idx_market_date
+    CREATE INDEX idx_sd_market_date
     ON stock_daily(market, date)
     """)
 
