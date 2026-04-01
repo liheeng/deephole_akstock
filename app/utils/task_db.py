@@ -8,6 +8,7 @@ import uuid
 
 DB_PATH = DB
 
+
 def generate_task_id():
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     uid = uuid.uuid4().hex[:6]

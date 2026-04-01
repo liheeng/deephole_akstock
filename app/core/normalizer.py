@@ -22,11 +22,11 @@ def normalize(df, symbol, market):
     # Add missing optional columns with NaN if they don't exist
     if "pct" not in df.columns: 
         df["pct"] = None
-    if "turnover" not in df.columns: # 东财没有换手率数据
+    if "turnover" not in df.columns:   # 东财没有换手率数据
         df["turnover"] = None
-    if "volume" not in df.columns: # 腾讯没有成交量数据
+    if "volume" not in df.columns:   # 腾讯没有成交量数据
         df["volume"] = None
-    if "amount" not in df.columns: # 腾讯没有成交额数据
+    if "amount" not in df.columns:  # 腾讯没有成交额数据
         df["amount"] = None
 
     return df[

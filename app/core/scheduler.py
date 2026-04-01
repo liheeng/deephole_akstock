@@ -1,6 +1,5 @@
 # app/core/scheduler.py
 
-from collections import defaultdict
 from core.queue import job_queue
 from core.task import Task, TaskStatus
 from core.job import JobStatus
@@ -31,8 +30,8 @@ def run_task(task: Task) -> bool:
         logger.error(err)
         raise err
     
-    completed = set() # The completed set contains those jobs which is scheduled and be added into queue, and "ready to run".
-    job_map = {job.id: job for job in _task.jobs}
+    completed = set()   # The completed set contains those jobs which is scheduled and be added into queue, and "ready to run".
+    # job_map = {job.id: job for job in _task.jobs}
 
     while len(completed) < len(_task.jobs):
         for job in _task.jobs:

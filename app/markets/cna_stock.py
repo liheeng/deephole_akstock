@@ -7,6 +7,7 @@ from utils.log_manager import get_logger
 
 logger = get_logger(__name__)
 
+
 class CNAStockMarket(Market):
 
     region: Region = Region.CN

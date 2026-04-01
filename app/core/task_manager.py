@@ -26,6 +26,7 @@ def job_dag_ok(job: Job) -> bool:
 
     return rows[0] == 0
 
+
 def job_concurrency_ok(job: Job) -> bool:
     defn = JOB_DEFINITIONS[job.type]
 
@@ -39,6 +40,7 @@ def job_concurrency_ok(job: Job) -> bool:
     """, [defn.concurrency_key], fetch_mode="one")
 
     return row[0] < defn.max_concurrency
+
 
 def job_singleton_ok(job: Job) -> bool:
     defn = JOB_DEFINITIONS[job.type]
@@ -55,6 +57,7 @@ def job_singleton_ok(job: Job) -> bool:
 
     return row[0] == 0
 
+
 def job_retry_ok(job: Job) -> bool:
     return job.retry_count < job.retries
 
@@ -66,14 +69,17 @@ def job_can_run(job: Job) -> bool:
         and job_retry_ok(job)
     )
 
+
 def job_can_create(job):
     return job_singleton_ok(job)
+
 
 def task_is_allowed(task: Task) -> bool:
     for job in task.jobs:
         if not job_can_create(job):
             return False
     return True
+
 
 def task_can_run(task: Task) -> bool:
 
@@ -82,6 +88,7 @@ def task_can_run(task: Task) -> bool:
             return False
 
     return True
+
 
 def build_task(task_row: list, job_rows: list) -> Task | None:
     if not task_row:
@@ -128,6 +135,7 @@ def build_task(task_row: list, job_rows: list) -> Task | None:
 
     task.jobs = jobs
     return task
+
 
 class TaskManager:
     _instance = None

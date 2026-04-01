@@ -2,24 +2,27 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List
 import enum
-# from core.task import Task
+
 
 class JobType(enum.Enum):
-    CN_DAILY_SYNC = "cn_daily_sync" # 同步中国股票的日线数据
-    HK_DAILY_SYNC = "hk_daily_sync" # 同步香港股票的日线数据
-    US_DAILY_SYNC = "us_daily_sync" # 同步美国股票的日线数据
+    CN_DAILY_SYNC = "cn_daily_sync"   # 同步中国股票的日线数据
+    HK_DAILY_SYNC = "hk_daily_sync"   # 同步香港股票的日线数据
+    US_DAILY_SYNC = "us_daily_sync"   # 同步美国股票的日线数据
+
 
 class JobConcurrencyKey(enum.Enum):
     CN_DAILY_SYNC = "cn_daily_sync"
     HK_DAILY_SYNC = "hk_daily_sync"
     US_DAILY_SYNC = "us_daily_sync"
 
+
 @dataclass
 class JobDefinition:
     type: JobType
     concurrency_key: str
     max_concurrency: int
-    singleton: bool = False # whether only one instance of this job type can run at the same time across the whole system
+    singleton: bool = False   # whether only one instance of this job type can run at the same time across the whole system
+
 
 JOB_DEFINITIONS = {
     JobType.US_DAILY_SYNC: JobDefinition(
@@ -41,12 +44,15 @@ JOB_DEFINITIONS = {
         singleton=True
     ),
 }
+
+
 class JobStatus(enum.Enum):
-    CREATED = "CREATED" # indicates that the job is waiting to be executed
-    QUEUED = "QUEUED" # indicates the job is added into quequ and be waiting for execution
-    RUNNING = "RUNNING" # indicates that the job is currently being executed
-    SUCCESS = "SUCCESS" # indicates that the job has completed successfully
-    FAILED = "FAILED" # indicates that the job has completed with a failure
+    CREATED = "CREATED"   # indicates that the job is waiting to be executed
+    QUEUED = "QUEUED"   # indicates the job is added into quequ and be waiting for execution
+    RUNNING = "RUNNING"   # indicates that the job is currently being executed
+    SUCCESS = "SUCCESS"   # indicates that the job has completed successfully
+    FAILED = "FAILED"   # indicates that the job has completed with a failure
+
 
 @dataclass
 class Job:
@@ -67,6 +73,8 @@ class Job:
     message: str = ""
     error: str = ""
 
+    data_source: str = ""  # 数据源字段
+    
     def get_id(self):
         return self.id
 

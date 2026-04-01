@@ -158,8 +158,12 @@ if __name__ == "__main__":
     api = IFindHKHistoric()
     # res = api.fetch_hist("00700.HK,00001.HK", start)
     res = api.fetch_hist("1456.HK,1458.HK,1459.HK,1460.HK,1461.HK,1463.HK", start)
+    
+    total_rows = sum(len(df) for df in res.data.values()) if res and res.data else 0
+    logger.info(f"总共获取 {total_rows} 行数据")
+
     # 美股
-    api = IFindUSHistoric()
+    # api = IFindUSHistoric()
     # res = api.fetch_hist("AAPL.O,MSFT.O", start)
 
     print(res)

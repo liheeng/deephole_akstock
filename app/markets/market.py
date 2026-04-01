@@ -2,7 +2,7 @@ import enum
 from abc import ABC, abstractmethod
 from typing import List
 import pandas as pd
-from sources.data_source import DataSource
+from sources.data_source import DataSource, DataSourceApiName
 
 
 class Region(enum.Enum):
@@ -38,5 +38,5 @@ class Market(ABC):
         pass
 
     @abstractmethod
-    def get_source(self) -> DataSource:
+    def get_source(self, datasource_api: DataSourceApiName | None) -> DataSource:
         pass

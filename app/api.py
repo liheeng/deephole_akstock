@@ -2,7 +2,7 @@
 
 import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, WebSocket
+from fastapi import FastAPI, HTTPException, WebSocket, Query
 from fastapi.staticfiles import StaticFiles
 import subprocess
 import asyncio
@@ -15,8 +15,8 @@ from utils.task_util import create_sync_daily_task
 from core.scheduler import run_task
 from core.worker import start_workers
 from db.duckdb import DuckDBController
-from core.error import TaskError
 from sources.ifind.ifind_api import IFinDApi
+from sources.data_source import DataSourceApiName
 
 # !!! Register executors, any new executor needs to be import here,
 # it is very important,otherwise the API won't know how to handle
@@ -60,28 +60,23 @@ if is_running_in_docker():
 
 
 @app.get("/sync_daily/{sync_type}")
-def call_task(sync_type: str):
+def call_task(
+    sync_type: str,
+    # ✅ 正确：GET 请求用 Query 参数接收
+    data_source: str = Query(DataSourceApiName.IFIND_API.value, description="数据源：ifind/akshare.sina/akshare.eastmoney/akshare.tencent/yfinance")
+):
     try:
-        task = create_sync_daily_task(sync_type)
+        # 传入数据源
+        task = create_sync_daily_task(sync_type, data_source=DataSourceApiName(data_source))
         if task:
-
             if run_task(task):
-                return {"message": "started sync task-" + sync_type}
+                return {"message": f"started sync task {sync_type}, 数据源: {data_source}"}
             else:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"failed to start sync task-{sync_type}"
-                )
+                raise HTTPException(status_code=400, detail=f"启动任务失败")
         else:
-            return {"message": "invalid sync type-" + sync_type}
+            return {"message": f"无效的同步类型: {sync_type}"}
     except Exception as e:
-        if isinstance(e, TaskError):
-            return {"message": e.message}
-        else:    
-            raise HTTPException(
-                status_code=500,
-                detail=f"failed to run task-{sync_type}, error：{str(e)}"
-            )
+        raise HTTPException(status_code=500, detail=f"错误: {str(e)}")
 
 
 @app.get("/tasks")

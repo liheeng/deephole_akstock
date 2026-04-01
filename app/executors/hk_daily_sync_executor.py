@@ -6,6 +6,7 @@ from executors.base import register_executor
 from utils.http import patch_requests
 from core.updater import Updater
 
+
 @register_executor(JobType.HK_DAILY_SYNC.value)
 class HKDailySyncExecutor:
 

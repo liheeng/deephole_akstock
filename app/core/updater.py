@@ -1,6 +1,7 @@
 import pandas as pd
 from datetime import date, datetime
 
+from app.core import job
 from core.job import Job
 from core.normalizer import normalize
 from utils.retry import retry
@@ -8,7 +9,7 @@ from utils.time import random_sleep
 from utils.log_manager import get_logger
 from db.duckdb import DuckDBController
 from markets.market import Market
-from sources.data_source import QueryOptions, FetchResult, DataSource, HIS_BATCH_SIZE_LIMIT, HIS_BATCH_SYMBOLS_LIMIT
+from sources.data_source import DataSourceApiName, QueryOptions, FetchResult, DataSource, HIS_BATCH_SIZE_LIMIT, HIS_BATCH_SYMBOLS_LIMIT
 from utils.common import ResultStatus
 
 logger = get_logger(__name__)
@@ -57,8 +58,9 @@ class Updater:
     def run(self, market: Market, job: Job):
 
         # con = duckdb.connect(self.db_path)
-
-        source: DataSource = market.get_source()
+        datasource_api = DataSourceApiName(job.data_source) if job.data_source else None
+    
+        source: DataSource = market.get_source(datasource_api)
         symbols = market.get_symbol_list()
         symbol_len = len(symbols)
         _today = date.today()
