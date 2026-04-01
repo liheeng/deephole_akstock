@@ -8,8 +8,9 @@ import pandas as pd
 from datetime import datetime
 from utils.common import ResultStatus
 
-# 每次最多获取 5000 条历史数据
+# 每次最多获取 10000 条历史数据
 HIS_BATCH_SIZE_LIMIT = 10000
+# 每次最多获取 500 个股票的历史数据
 HIS_BATCH_SYMBOLS_LIMIT = 500
 
 
