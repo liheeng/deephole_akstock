@@ -1,4 +1,6 @@
 # app/cron_runner_hk.py
+import os
+
 import requests
 from core.job import JobType
 from utils.log_manager import get_logger
@@ -8,7 +10,8 @@ from sources.data_source import DataSourceApiName
 
 logger = get_logger(__name__)
 
-API = "http://akstock_api_service:8000" if is_running_in_docker() else "http://localhost:8000"
+API_PORT = os.getenv("API_PORT", "8000")
+API = "http://akstock_api_service:" + API_PORT if is_running_in_docker() else "http://localhost:" + API_PORT
 sync_hk_daily_url = f"{API}/sync_daily/" + JobType.HK_DAILY_SYNC.value
 
 logger.info(f"start HK cron task at {datetime.now()}")

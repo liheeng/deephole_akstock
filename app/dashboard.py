@@ -5,8 +5,10 @@ import time
 from sources.data_source import DataSourceApiName
 from utils.common import is_running_in_docker
 from core.job import JobType
+import os
 
-API = "http://akstock_api_service:8000" if is_running_in_docker() else "http://localhost:8000"
+API_PORT = os.getenv("API_PORT", "8000")
+API = "http://akstock_api_service:" + API_PORT if is_running_in_docker() else "http://localhost:" + API_PORT
 
 st.set_page_config(layout="wide")
 
