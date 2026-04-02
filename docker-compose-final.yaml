@@ -1,9 +1,9 @@
 version: "3.9"
 
 services:
-  _TEMP_DEEPHOLE_DB_INIT_SERVICE:
-    image: _TEMP_IMAGE_NAME_:_TEMP_IMAGE_VERSION
-    container_name: _TEMP_DEEPHOLE_DB_INIT_SERVICE
+  deephole_stock_db_init:
+    image: deephole-stock-data:1.3.2
+    container_name: deephole_stock_db_init
     build: .
     command: python /app/init_db.py
     volumes:
@@ -13,17 +13,17 @@ services:
     environment:
       - ENABLE_CRON=false
 
-  _TEMP_DEEPHOLE_API_SERVICE:
-    image: _TEMP_IMAGE_NAME_:_TEMP_IMAGE_VERSION
-    container_name: _TEMP_DEEPHOLE_API_SERVICE
+  deephole_stock_api_service:
+    image: deephole-stock-data:1.3.2
+    container_name: deephole_stock_api_service
     depends_on:
-      - _TEMP_DEEPHOLE_DB_INIT_SERVICE
+      - deephole_stock_db_init
     volumes:
       - ${DATA_VOLUME}:/data
       - ${LOG_VOLUME}:/logs
     environment:
       - TZ=${TIME_ZONE}
-      - API_SERVICE_NAME=_TEMP_DEEPHOLE_API_SERVICE
+      - API_SERVICE_NAME=deephole_stock_api_service
       - ENABLE_CRON=false
       - IFIND_REFRESH_TOKEN=${IFIND_REFRESH_TOKEN}
     ports:
@@ -31,39 +31,39 @@ services:
     command: uvicorn api:app --host 0.0.0.0 --port ${API_PORT}
     restart: unless-stopped
 
-  _TEMP_DEEPHOLE_FETCHER_SERVICE:
-    image: _TEMP_IMAGE_NAME_:_TEMP_IMAGE_VERSION
-    container_name: _TEMP_DEEPHOLE_FETCHER_SERVICE
+  deephole_stock_cron_fetcher:
+    image: deephole-stock-data:1.3.2
+    container_name: deephole_stock_cron_fetcher
     depends_on:
-      - _TEMP_DEEPHOLE_DB_INIT_SERVICE
+      - deephole_stock_db_init
     volumes:
       - ${DATA_VOLUME}:/data
       - ${LOG_VOLUME}:/logs
     environment:
       - TZ=${TIME_ZONE}
-      - API_SERVICE_NAME=_TEMP_DEEPHOLE_API_SERVICE
+      - API_SERVICE_NAME=deephole_stock_api_service
       - API_PORT=${API_PORT}
-      - DASHBOARD_SERVICE_NAME=_TEMP_DEEPHOLE_DASHBOARD_SERVICE
+      - DASHBOARD_SERVICE_NAME=deephole_stock_dashboard
       - DASHBOARD_PORT=${DASHBOARD_PORT}
-      - STOCK_FETCHER_SERVICE_NAME=_TEMP_DEEPHOLE_FETCHER_SERVICE
+      - STOCK_FETCHER_SERVICE_NAME=deephole_stock_cron_fetcher
       - ENABLE_CRON=true
       - CRON_SCHEDULE_CN=${CRON_SCHEDULE_CN}
       - CRON_SCHEDULE_HK=${CRON_SCHEDULE_HK}
       - CRON_SCHEDULE_US=${CRON_SCHEDULE_US}
     restart: unless-stopped
 
-  _TEMP_DEEPHOLE_DASHBOARD_SERVICE:
-    image: _TEMP_IMAGE_NAME_:_TEMP_IMAGE_VERSION
-    container_name: _TEMP_DEEPHOLE_DASHBOARD_SERVICE
+  deephole_stock_dashboard:
+    image: deephole-stock-data:1.3.2
+    container_name: deephole_stock_dashboard
     depends_on:
-      - _TEMP_DEEPHOLE_DB_INIT_SERVICE
-      - _TEMP_DEEPHOLE_API_SERVICE
+      - deephole_stock_db_init
+      - deephole_stock_api_service
     volumes:
       - ${DATA_VOLUME}:/data
       - ${LOG_VOLUME}:/logs
     environment:
       - TZ=${TIME_ZONE}
-      - API_SERVICE_NAME=_TEMP_DEEPHOLE_API_SERVICE
+      - API_SERVICE_NAME=deephole_stock_api_service
       - API_PORT=${API_PORT}
       - DASHBOARD_PORT=${DASHBOARD_PORT}
       - ENABLE_CRON=false

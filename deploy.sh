@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# 0. The IFIND_REFRESH_TOKEN environment variable must be set before running this script
+if [[ -z "${IFIND_REFRESH_TOKEN}" ]]; then
+    echo "❌ 错误：系统环境变量 $IFIND_REFRESH_TOKEN 未设置，请先设置"
+    exit 1
+fi
+
 # 1. 读取环境文件（支持传参，默认 .env.dev）
 ENV_FILE=${1:-.env.dev}
 set -o allexport
