@@ -9,8 +9,10 @@ from utils.common import is_running_in_docker
 from sources.data_source import DataSourceApiName
 
 logger = get_logger(__name__)
+
+API_SERVICE_NAME = os.getenv("API_SERVICE_NAME", "akstock_api_service")
 API_PORT = os.getenv("API_PORT", "8000")
-API = "http://akstock_api_service:" + API_PORT if is_running_in_docker() else "http://localhost:" + API_PORT
+API = "http://" + API_SERVICE_NAME + ":" + API_PORT if is_running_in_docker() else "http://localhost:" + API_PORT
 sync_cn_daily_url = f"{API}/sync_daily/" + JobType.CN_DAILY_SYNC.value
 
 logger.info(f"start CN cron task at {datetime.now()}")

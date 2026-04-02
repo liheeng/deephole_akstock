@@ -7,8 +7,11 @@ from utils.common import is_running_in_docker
 from core.job import JobType
 import os
 
+API_SERVICE_NAME = os.getenv("API_SERVICE_NAME", "akstock_api_service")
 API_PORT = os.getenv("API_PORT", "8000")
-API = "http://akstock_api_service:" + API_PORT if is_running_in_docker() else "http://localhost:" + API_PORT
+STOCK_FETCHER_SERVICE_NAME = os.getenv("STOCK_FETCHER_SERVICE_NAME", "akstock_stock_fetcher")
+
+API = "http://" + API_SERVICE_NAME + ":" + API_PORT if is_running_in_docker() else "http://localhost:" + API_PORT
 
 st.set_page_config(layout="wide")
 
@@ -264,7 +267,7 @@ elif menu == "WebConsole":
     st.header("Web Console")
     container = st.selectbox(
         "选择容器",
-        ["akstock_stock_fetcher", "akstock_api_service"],
+        [STOCK_FETCHER_SERVICE_NAME, API_SERVICE_NAME],
         key="container_select"
     )
     url = f"{API}/terminal/index.html?c={container}"

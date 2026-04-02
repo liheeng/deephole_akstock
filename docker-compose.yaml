@@ -1,77 +1,71 @@
 version: "3.9"
 
 services:
-
-  # 1. 数据库初始化（不跑 cron）
-  akstock_db_init:
-    image: akshare-stock:${IMAGE_VERSION}
+  _TEMP_DEEPHOLE_DB_INIT_SERVICE:
+    image: _TEMP_IMAGE_NAME_:_TEMP_IMAGE_VERSION
+    container_name: _TEMP_DEEPHOLE_DB_INIT_SERVICE
     build: .
-    container_name: akstock_db_init
     command: python /app/init_db.py
     volumes:
       - ${DATA_VOLUME}:/data
       - ${LOG_VOLUME}:/logs
     restart: "no"
     environment:
-      - ENABLE_CRON=false  # 👈 关键
+      - ENABLE_CRON=false
 
-  # 2. API 服务（不跑 cron）
-  akstock_api_service:
-    image: akshare-stock:${IMAGE_VERSION}
-    container_name: akstock_api_service
+  _TEMP_DEEPHOLE_API_SERVICE:
+    image: _TEMP_IMAGE_NAME_:_TEMP_IMAGE_VERSION
+    container_name: _TEMP_DEEPHOLE_API_SERVICE
     depends_on:
-      - akstock_db_init
+      - _TEMP_DEEPHOLE_DB_INIT_SERVICE
     volumes:
       - ${DATA_VOLUME}:/data
       - ${LOG_VOLUME}:/logs
     environment:
       - TZ=${TIME_ZONE}
-      - ENABLE_CRON=false  # 👈 关键
-      - IFIND_REFRESH_TOKEN
-      - API_PORT=${API_PORT}
+      - API_SERVICE_NAME=_TEMP_DEEPHOLE_API_SERVICE
+      - ENABLE_CRON=false
     ports:
-      - "${API_PORT}:${API_PORT}"   # 👈 从 .env 读取端口
-    command: uvicorn api:app --host 0.0.0.0 --port 8000
+      - "${API_PORT}:${API_PORT}"
+    command: uvicorn api:app --host 0.0.0.0 --port ${API_PORT}
     restart: unless-stopped
 
-  # 3. 【专门】定时抓取服务（只跑 cron）
-  akstock_stock_fetcher:
-    image: akshare-stock:${IMAGE_VERSION}
-    container_name: akstock_stock_fetcher
+  _TEMP_DEEPHOLE_FETCHER_SERVICE:
+    image: _TEMP_IMAGE_NAME_:_TEMP_IMAGE_VERSION
+    container_name: _TEMP_DEEPHOLE_FETCHER_SERVICE
     depends_on:
-      - akstock_db_init
+      - _TEMP_DEEPHOLE_DB_INIT_SERVICE
     volumes:
       - ${DATA_VOLUME}:/data
       - ${LOG_VOLUME}:/logs
     environment:
       - TZ=${TIME_ZONE}
-      - ENABLE_CRON=true       # 👈 只有这个开启 cron
-      # 每个市场独立的 cron 调度规则（支持外部通过 .env 配置）
-      - CRON_SCHEDULE_CN=${CRON_SCHEDULE_CN:-"0 18 * * *"}
-      - CRON_SCHEDULE_HK=${CRON_SCHEDULE_HK:-"0 19 * * *"}
-      - CRON_SCHEDULE_US=${CRON_SCHEDULE_US:-"0 8 * * *"}
+      - API_SERVICE_NAME=_TEMP_DEEPHOLE_API_SERVICE
+      - DASHBOARD_SERVICE_NAME=_TEMP_DEEPHOLE_DASHBOARD_SERVICE
+      - STOCK_FETCHER_SERVICE_NAME=_TEMP_DEEPHOLE_FETCHER_SERVICE
+      - ENABLE_CRON=true
+      - CRON_SCHEDULE_CN=${CRON_SCHEDULE_CN}
+      - CRON_SCHEDULE_HK=${CRON_SCHEDULE_HK}
+      - CRON_SCHEDULE_US=${CRON_SCHEDULE_US}
     restart: unless-stopped
 
-  # 4. Dashboard（不跑 cron）
-  akstock_dashboard:
-    image: akshare-stock:${IMAGE_VERSION}
-    container_name: akstock_dashboard
+  _TEMP_DEEPHOLE_DASHBOARD_SERVICE:
+    image: _TEMP_IMAGE_NAME_:_TEMP_IMAGE_VERSION
+    container_name: _TEMP_DEEPHOLE_DASHBOARD_SERVICE
     depends_on:
-      - akstock_db_init
-      - akstock_api_service
+      - _TEMP_DEEPHOLE_DB_INIT_SERVICE
+      - _TEMP_DEEPHOLE_API_SERVICE
     volumes:
       - ${DATA_VOLUME}:/data
       - ${LOG_VOLUME}:/logs
     environment:
       - TZ=${TIME_ZONE}
-      - ENABLE_CRON=false  # 👈 关键
-      - DASHBOARD_PORT=${DASHBOARD_PORT}
+      - API_SERVICE_NAME=_TEMP_DEEPHOLE_API_SERVICE
+      - ENABLE_CRON=false
     ports:
       - "${DASHBOARD_PORT}:${DASHBOARD_PORT}"   # 👈 从 .env 读取端口
-    command: streamlit run dashboard.py --server.port 8501 --server.address 0.0.0.0
+    command: streamlit run dashboard.py --server.port ${DASHBOARD_PORT} --server.address 0.0.0.0
     restart: unless-stopped
-
-
 
 volumes:
   duckdb_data:

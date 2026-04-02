@@ -1,11 +1,31 @@
 #!/bin/bash
 
+# 1. 读取环境文件（支持传参，默认 .env.dev）
+ENV_FILE=${1:-.env.dev}
 set -o allexport
-source .env.dev
+source "$ENV_FILE"
 set +o allexport
 
-docker build -t akshare-stock:"${IMAGE_VERSION}" .
-docker compose --env-file .env.dev up akstock_db_init
-docker compose --env-file .env.dev up -d akstock_stock_fetcher
-docker compose --env-file .env.dev up -d akstock_api_service
-docker compose --env-file .env.dev up -d akstock_dashboard
+# 2. 文件定义
+COMPOSE_TPL="docker-compose.yaml"
+COMPOSE_FINAL="docker-compose-final.yaml"
+
+# 3. 干净复制
+rm -f "$COMPOSE_FINAL"
+cp "$COMPOSE_TPL" "$COMPOSE_FINAL"
+
+# 4. 安全替换（mac + Linux 通用，绝对不炸！）
+sed -i.bak "s|_TEMP_IMAGE_NAME_|$_TEMP_IMAGE_NAME_|g" "$COMPOSE_FINAL"
+sed -i.bak "s|_TEMP_IMAGE_VERSION|$_TEMP_IMAGE_VERSION|g" "$COMPOSE_FINAL"
+sed -i.bak "s|_TEMP_DEEPHOLE_DB_INIT_SERVICE|$_TEMP_DEEPHOLE_DB_INIT_SERVICE|g" "$COMPOSE_FINAL"
+sed -i.bak "s|_TEMP_DEEPHOLE_API_SERVICE|$_TEMP_DEEPHOLE_API_SERVICE|g" "$COMPOSE_FINAL"
+sed -i.bak "s|_TEMP_DEEPHOLE_FETCHER_SERVICE|$_TEMP_DEEPHOLE_FETCHER_SERVICE|g" "$COMPOSE_FINAL"
+sed -i.bak "s|_TEMP_DEEPHOLE_DASHBOARD_SERVICE|$_TEMP_DEEPHOLE_DASHBOARD_SERVICE|g" "$COMPOSE_FINAL"
+
+# 5. 删除备份文件
+rm -f "${COMPOSE_FINAL}.bak"
+
+# 6. 部署
+docker build -t "${_TEMP_IMAGE_NAME_}:${_TEMP_IMAGE_VERSION}" .
+docker compose -f "$COMPOSE_FINAL" --env-file "$ENV_FILE" down
+docker compose -f "$COMPOSE_FINAL" --env-file "$ENV_FILE" up -d

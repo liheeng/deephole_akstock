@@ -1,8 +1,8 @@
 #!/bin/bash
-
+ENV_FILE=${1:-.env.dev}
 set -o allexport
-source .env.dev
+source "$ENV_FILE"
 set +o allexport
 
-docker compose --env-file .env.dev down
-docker rmi akshare-stock:"${IMAGE_VERSION}"
+docker compose -f docker-compose-final.yaml --env-file "$ENV_FILE" down
+docker rmi -f "${_TEMP_IMAGE_NAME_}:${_TEMP_IMAGE_VERSION}"
