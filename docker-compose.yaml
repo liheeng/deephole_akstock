@@ -45,7 +45,10 @@ services:
     environment:
       - TZ=${TIME_ZONE}
       - ENABLE_CRON=true       # 👈 只有这个开启 cron
-      - CRON_SCHEDULE=${CRON_SCHEDULE}
+      # 每个市场独立的 cron 调度规则（支持外部通过 .env 配置）
+      - CRON_SCHEDULE_CN=${CRON_SCHEDULE_CN:-"0 18 * * *"}
+      - CRON_SCHEDULE_HK=${CRON_SCHEDULE_HK:-"0 19 * * *"}
+      - CRON_SCHEDULE_US=${CRON_SCHEDULE_US:-"0 8 * * *"}
     restart: unless-stopped
 
   # 4. Dashboard（不跑 cron）

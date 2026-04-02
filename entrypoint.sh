@@ -16,13 +16,38 @@ if [ "$ENABLE_CRON" != "true" ]; then
 fi
 
 # 下面只有 ENABLE_CRON=true 的容器才会运行
-CRON_SCHEDULE=${CRON_SCHEDULE:-"0 18 * * *"}
+# 每个市场独立的 cron 调度规则（默认值可根据需求调整）
+CRON_SCHEDULE_CN=${CRON_SCHEDULE_CN:-"0 18 * * *"}
+CRON_SCHEDULE_HK=${CRON_SCHEDULE_HK:-"0 19 * * *"}
+CRON_SCHEDULE_US=${CRON_SCHEDULE_US:-"0 8 * * *"}  
 mkdir -p /logs
 
-echo "$CRON_SCHEDULE cd /app && python /app/cron_runner.py >> /logs/cron_\$(date +\%Y\%m\%d).log 2>&1" > /app/crontab
+# 清空 crontab 文件（避免重复）
+> /app/crontab
+
+# 写入 CN 市场 cron 任务
+if [ -n "$CRON_SCHEDULE_CN" ]; then
+  echo "$CRON_SCHEDULE_CN cd /app && python /app/cron/cron_runner_cn.py >> /logs/cron_cn_\$(date +\%Y\%m\%d).log 2>&1" >> /app/crontab
+fi
+
+# 写入 HK 市场 cron 任务
+if [ -n "$CRON_SCHEDULE_HK" ]; then
+  echo "$CRON_SCHEDULE_HK cd /app && python /app/cron_runner_hk.py >> /logs/cron_hk_\$(date +\%Y\%m\%d).log 2>&1" >> /app/crontab
+fi
+
+# 写入 US 市场 cron 任务
+if [ -n "$CRON_SCHEDULE_US" ]; then
+  echo "$CRON_SCHEDULE_US cd /app && python /app/cron/cron_runner_us.py >> /logs/cron_us_\$(date +\%Y\%m\%d).log 2>&1" >> /app/crontab
+fi
+
+# 打印 cron 配置（便于调试）
 echo "=============================="
-echo "CRON SCHEDULE: $CRON_SCHEDULE"
+echo "CRON SCHEDULE CN: $CRON_SCHEDULE_CN"
+echo "CRON SCHEDULE HK: $CRON_SCHEDULE_HK"
+echo "CRON SCHEDULE US: $CRON_SCHEDULE_US"
+echo "------------------------------"
 cat /app/crontab
 echo "=============================="
 
+# 启动 cron
 exec /usr/local/bin/supercronic /app/crontab
