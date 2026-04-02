@@ -1,7 +1,7 @@
 import requests
 from typing import List
 import pandas as pd
-from sources.data_source import DataSource
+from sources.data_source import DataSource, DataSourceApiName
 from sources.us_datasource import USStockSource
 from markets.market import SymbolType
 from markets.market import Region, Market
@@ -61,8 +61,8 @@ class USStockMarket(Market):
     def get_symbol_list(self) -> List[str]:
         return self.get_nyse_symbol_list() + self.get_nasdaq_symbol_list() + self.get_amex_symbol_list()
 
-    def get_source(self) -> DataSource:
-        return USStockSource()
+    def get_source(self, datasource_api: DataSourceApiName | None) -> DataSource:
+        return USStockSource(data_source_api=datasource_api)
 
     def identify_symbol_type(self, code: str) -> SymbolType:
         if code.startswith('^'):

@@ -1,5 +1,4 @@
 # app/dashboard.py
-
 import streamlit as st
 import requests
 import time
@@ -14,23 +13,23 @@ st.set_page_config(layout="wide")
 # 🎯 左侧菜单
 menu = st.sidebar.radio(
     "菜单",
-    ["Tasks", "Sync CN Daily", "Sync HK Daily", "Sync US Daily", "Logs", "WebConsole"]
+    ["Tasks", "Sync CN Daily", "Sync HK Daily", "Sync US Daily", "Logs", "WebConsole"],
+    key="main_menu"  # 加唯一key避免缓存
 )
 
 st.title("📊 Stock Data Dashboard")
 
 
-# dashboard.py 里的触发函数
-def trigger_sync(st, job_type: JobType, data_source_api: str):
-    if st.button("🚀 执行同步"):
+# 触发同步函数（修复按钮缓存问题）
+def trigger_sync(st, job_type: JobType, data_source_api: str, page_key: str):
+    # 给按钮加页面专属key，切换页面后自动重置
+    if st.button("🚀 执行同步", key=f"sync_btn_{page_key}"):
         with st.spinner("正在触发任务..."):
             try:
-                # ✅ 正确：GET 请求用 params 传递查询参数
                 res = requests.get(
                     url=f"{API}/sync_daily/{job_type.value}",
-                    params={"data_source_api": data_source_api}  # 👈 这是正确方式
+                    params={"data_source_api": data_source_api}
                 )
-
                 if res.status_code == 200:
                     st.success(f"✅ 任务触发成功 | 数据源：{data_source_api}")
                     st.json(res.json())
@@ -41,19 +40,48 @@ def trigger_sync(st, job_type: JobType, data_source_api: str):
 
 
 # ----------------------------
-# 🧩 Tasks 页面（自动刷新 + 不展开显示完整状态 + 匹配你的枚举）
+# 🧩 Tasks 页面（修复所有问题版）
 # ----------------------------
 if menu == "Tasks":
     st.header("任务列表")
     
+    # 侧边栏：筛选 + 刷新配置
+    st.sidebar.markdown("---")
+    st.sidebar.caption("🔍 任务筛选")
+    
+    # 所有可选状态（严格匹配TaskStatus枚举）
+    all_status = [
+        "ALL", "CREATED", "SUBMITTED", "RUNNING", 
+        "SUSPENDED", "SUCCESS", "FAILED", "PARTIAL_SUCCESS"
+    ]
+    selected_status = st.sidebar.selectbox(
+        "按任务状态筛选",
+        all_status,
+        index=0,
+        key="task_status_filter"
+    )
+
     # 自动刷新配置
-    refresh_interval = st.sidebar.number_input("自动刷新间隔（秒）", min_value=1, max_value=60, value=5, step=1, key="task_refresh")
-    auto_refresh = st.sidebar.checkbox("开启自动刷新", value=True, key="auto_refresh_tasks")
+    refresh_interval = st.sidebar.number_input(
+        "自动刷新间隔（秒）",
+        min_value=1, max_value=60, value=5, step=1,
+        key="task_refresh_interval"
+    )
+    auto_refresh = st.sidebar.checkbox(
+        "开启自动刷新",
+        value=True,
+        key="auto_refresh_tasks"
+    )        
+    
+    if st.button("🔄 刷新", key="tasks_btn"):
+        st.rerun()
 
-    # 占位符：无闪烁刷新
     task_placeholder = st.empty()
-
     while True:
+        if task_placeholder:
+            task_placeholder.empty()
+            
+        task_placeholder = st.empty()
         with task_placeholder.container():
             try:
                 resp = requests.get(f"{API}/tasks")
@@ -62,17 +90,27 @@ if menu == "Tasks":
                 st.error(f"获取任务失败: {str(e)}")
                 tasks = []
 
-            if not tasks:
-                st.warning("暂无任务")
+            # ✅ 修复问题1：严格过滤，只保留符合条件的任务
+            filtered_tasks = []
+            if selected_status == "ALL":
+                filtered_tasks = tasks
             else:
-                for task in tasks:
+                for t in tasks:
+                    task_status = t.get("status", "").strip().upper()
+                    if task_status == selected_status:
+                        filtered_tasks.append(t)
+
+            if not filtered_tasks:
+                st.warning(f"暂无【{selected_status}】状态的任务")
+            else:
+                st.success(f"共找到 {len(filtered_tasks)} 个任务 (筛选：{selected_status})")
+                
+                for task in filtered_tasks:
                     task_id = task["id"]
-                    status = task["status"].strip().upper()  # 确保匹配枚举
+                    status = task["status"].strip().upper()
                     desc = task["description"] or "无描述"
 
-                    # ===============================
-                    # 🔥 完全匹配你的 TaskStatus 枚举
-                    # ===============================
+                    # 任务状态图标匹配
                     if status == "CREATED":
                         status_icon = "⚪"
                         status_text = "已创建"
@@ -98,8 +136,7 @@ if menu == "Tasks":
                         status_icon = "⚫"
                         status_text = status
 
-                    # 标题直接显示：图标 + 状态 + ID + 描述
-                    # 不展开就能看到！
+                    # 任务主展开项
                     with st.expander(f"{status_icon} {status_text} | ID:{task_id} | {desc}"):
                         col1, col2 = st.columns(2)
                         with col1:
@@ -113,81 +150,120 @@ if menu == "Tasks":
                         with col2:
                             st.markdown("### 关联 Jobs")
                             jobs = task.get("jobs", [])
-                            st.dataframe(jobs, use_container_width=True) if jobs else st.info("无 Job")
+                            if not jobs:
+                                st.info("无 Job")
+                            else:
+                                for job in jobs:
+                                    job_id = job.get("id", "unknown")
+                                    job_name = job.get("name", f"Job-{job_id}")
+                                    job_type = job.get("type", job.get("job_type", "N/A"))
+                                    job_status = job.get("status", "N/A").strip().upper()
+
+                                    # Job 状态图标（严格匹配JobStatus枚举）
+                                    if job_status == "CREATED":
+                                        j_icon = "⚪"
+                                        j_text = "已创建"
+                                    elif job_status == "QUEUED":
+                                        j_icon = "🔵"
+                                        j_text = "排队中"
+                                    elif job_status == "RUNNING":
+                                        j_icon = "🟡"
+                                        j_text = "运行中"
+                                    elif job_status == "SUCCESS":
+                                        j_icon = "🟢"
+                                        j_text = "成功"
+                                    elif job_status == "FAILED":
+                                        j_icon = "🔴"
+                                        j_text = "失败"
+                                    else:
+                                        j_icon = "⚫"
+                                        j_text = job_status
+
+                                    # ✅ 修复问题3：状态文案移到图标后，顺序：图标+状态 | 名称 | 类型
+                                    with st.expander(f"{j_icon} {j_text} | {job_name} | {job_type}"):
+                                        st.markdown("#### 📄 Job 详情")
+                                        st.write(f"ID: `{job.get('id')}`")
+                                        st.write(f"状态: **{job.get('status')}**")
+                                        st.write(f"类型: {job.get('job_type', 'N/A')}")
+                                        st.write(f"开始时间: {job.get('start_time', 'N/A')}")
+                                        st.write(f"结束时间: {job.get('stop_time', 'N/A')}")
+                                        st.write(f"消息: {job.get('message', 'N/A')}")
                         st.divider()
 
         if not auto_refresh:
             break
         time.sleep(refresh_interval)
+        
 
 # ----------------------------
-# 🧩 Sync CN Daily 页面
+# 🧩 Sync CN Daily 页面（修复按钮缓存）
 # ----------------------------
 elif menu == "Sync CN Daily":
     st.header("同步中国A股市场日线数据")
-    # 新增数据源选择下拉框
     data_source = st.selectbox(
         "选择数据源",
-        [DataSourceApiName.IFIND_API.value, DataSourceApiName.AKSHARE_SINA_API.value],  # 可根据实际支持的数据源扩展
-        index=0,  # 默认选中ifind
-        help="选择要同步数据的数据源"
+        [DataSourceApiName.IFIND_API.value, DataSourceApiName.AKSHARE_SINA_API.value],
+        index=0,
+        help="选择要同步数据的数据源",
+        key="cn_data_source"
     )
-    trigger_sync(st, JobType.CN_DAILY_SYNC, data_source)
+    # ✅ 修复问题2：加页面专属key，切换页面后按钮自动重置
+    trigger_sync(st, JobType.CN_DAILY_SYNC, data_source, page_key="cn")
+
 
 # ----------------------------
-# 🧩 Sync HK Daily 页面
+# 🧩 Sync HK Daily 页面（修复按钮缓存）
 # ----------------------------
 elif menu == "Sync HK Daily":
     st.header("同步香港股市场日线数据")
-    # 新增数据源选择下拉框
     data_source = st.selectbox(
         "选择数据源",
-        [DataSourceApiName.IFIND_API.value, DataSourceApiName.AKSHARE_SINA_API.value],  # 美股可适配专属数据源
+        [DataSourceApiName.IFIND_API.value, DataSourceApiName.AKSHARE_SINA_API.value],
         index=0,
-        help="选择要同步数据的数据源"
+        help="选择要同步数据的数据源",
+        key="hk_data_source"
     )
-    trigger_sync(st, JobType.HK_DAILY_SYNC, data_source)
+    trigger_sync(st, JobType.HK_DAILY_SYNC, data_source, page_key="hk")
+
 
 # ----------------------------
-# 🧩 Sync US Daily 页面
+# 🧩 Sync US Daily 页面（修复按钮缓存）
 # ----------------------------
 elif menu == "Sync US Daily":
     st.header("同步美国股市场日线数据")
-    # 新增数据源选择下拉框
     data_source = st.selectbox(
         "选择数据源",
-        [DataSourceApiName.IFIND_API.value, DataSourceApiName.AKSHARE_SINA_API.value],  # 美股可适配专属数据源
+        [DataSourceApiName.IFIND_API.value, DataSourceApiName.AKSHARE_SINA_API.value],
         index=0,
-        help="选择要同步数据的数据源"
+        help="选择要同步数据的数据源",
+        key="us_data_source"
     )
-    trigger_sync(st, JobType.US_DAILY_SYNC, data_source)
+    trigger_sync(st, JobType.US_DAILY_SYNC, data_source, page_key="us")
+
 
 # ----------------------------
-# 🧩 Logs 页面（重点🔥）
+# 🧩 Logs 页面
 # ----------------------------
 elif menu == "Logs":
     st.header("日志")
-
-    if st.button("查看日志"):
-
+    if st.button("查看日志", key="log_btn"):
         placeholder = st.empty()
-
         while True:
             res = requests.get(f"{API}/logs/tail")
             logs = res.json().get("logs", [])
-
             placeholder.text("".join(logs))
-
             time.sleep(5)
 
+
+# ----------------------------
+# 🧩 WebConsole 页面
+# ----------------------------
 elif menu == "WebConsole":
     st.header("Web Console")
-
     container = st.selectbox(
         "选择容器",
-        ["akstock_stock_fetcher", "akstock_api_service"]
+        ["akstock_stock_fetcher", "akstock_api_service"],
+        key="container_select"
     )
-
     url = f"{API}/terminal/index.html?c={container}"
-
     st.components.v1.iframe(url, height=600)

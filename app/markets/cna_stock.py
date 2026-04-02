@@ -1,6 +1,6 @@
 import akshare as ak
 from typing import List
-from sources.data_source import DataSource
+from sources.data_source import DataSource, DataSourceApiName
 from sources.cna_datasource import CNAStockSource
 from markets.market import Region, Market
 from utils.log_manager import get_logger
@@ -38,5 +38,5 @@ class CNAStockMarket(Market):
     def get_symbol_list(self) -> List[str]:
         return self.get_shanghai_symbol_list() + self.get_shenzhen_symbol_list()
 
-    def get_source(self) -> DataSource:
-        return CNAStockSource()
+    def get_source(self, datasource_api: DataSourceApiName | None) -> DataSource:
+        return CNAStockSource(data_source_api=datasource_api)

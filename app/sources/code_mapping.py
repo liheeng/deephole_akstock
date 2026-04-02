@@ -1,7 +1,12 @@
 import re
+
 from sources.data_source import DataSourceType, DataSourceApiName
 from markets.market import Region, ExchangeType
 from utils.common import safe_format
+from utils.log_manager import get_logger
+
+logger = get_logger(__name__)
+
 # 数据源格式定义（已修复缩进 + 结构）
 DATA_SOURCE_FORMAT = {
     "ifind": {
@@ -58,10 +63,14 @@ def build_symbol(
     source = data_source.value.lower()
     region = region_type.value.lower()
     api = api_type.value.split(".")[-1].lower() if api_type else None
-
-    if ExchangeType(exchange) is None:
-        raise Exception(f"未知股票代码：{symbol}, 非法的交易所：{exchange}")
     
+    try:
+        if ExchangeType(exchange) is None:
+            raise Exception(f"未知股票代码：{symbol}, 非法的交易所：{exchange}")
+    except Exception as e:
+        logger.error(f"Error occurred while building symbol for {symbol}: {e}")
+        raise
+
     # ========================
     # 第一步：基础格式化
     # ========================

@@ -1,7 +1,6 @@
 import pandas as pd
 from datetime import date, datetime
 
-from app.core import job
 from core.job import Job
 from core.normalizer import normalize
 from utils.retry import retry
@@ -85,7 +84,11 @@ class Updater:
             select_symbols = []
             for symbol in symbols[start_index:end_index]:
                 select_symbols.append(symbol)
-                
+            
+            if len(select_symbols) == 0:
+                logger.warning(f"No symbols to fetch for {market.name}")
+                continue
+
             total_df, failed_symbols = self.fetch(market_name=market.name, source=source, symbols=select_symbols, start=start, end=end)
             success_symbols = select_symbols if failed_symbols is None else [symbol for symbol in select_symbols if symbol not in failed_symbols]
             
@@ -124,4 +127,7 @@ class Updater:
         end_index = start_index + count
         if end_index > len(symbols):
             end_index = len(symbols)
+        # Add at least one symbol to fetch to avoid infinite loop when start date is very close to end date
+        if end_index == start_index:
+            end_index = start_index + 1
         return end_index

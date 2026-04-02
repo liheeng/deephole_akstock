@@ -93,6 +93,7 @@ class BaseIFindHistoric(AbstractDataSourceAPI):
         _symbol = symbol_converter.convert(s.strip())
         return _symbol   # 转换失败则返回原始标的
 
+
 # ============================
 # 子类 1：A股历史数据（继承父类）
 # ============================
@@ -125,6 +126,7 @@ class IFindHKHistoric(BaseIFindHistoric):
         if _symbol.startswith("0"):
             _symbol = _symbol[1:]  # 去掉前导零
         return _symbol   # 转换失败则返回原始标的
+
 
 # ============================
 # 子类 3：美股历史数据

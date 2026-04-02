@@ -1,6 +1,6 @@
 import akshare as ak
 from typing import List
-from sources.data_source import DataSource
+from sources.data_source import DataSource, DataSourceApiName
 from sources.hk_datasource import HKStockSource
 from markets.market import Region, Market
 from utils.log_manager import get_logger
@@ -24,5 +24,5 @@ class HongKongStockMarket(Market):
         
         return df
 
-    def get_source(self) -> DataSource:
-        return HKStockSource()
+    def get_source(self, datasource_api: DataSourceApiName | None) -> DataSource:
+        return HKStockSource(data_source_api=datasource_api)
