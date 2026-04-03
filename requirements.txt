@@ -9,7 +9,9 @@ uvicorn
 
 streamlit
 
+python-multipart
 python-dotenv
 loguru
+openpyxl
 
 websockets

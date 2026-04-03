@@ -1,11 +1,12 @@
 # app/dashboard.py
+import os
+import io
 import streamlit as st
 import requests
 import time
 from sources.data_source import DataSourceApiName
 from utils.common import is_running_in_docker
 from core.job import JobType
-import os
 
 API_SERVICE_NAME = os.getenv("API_SERVICE_NAME", "akstock_api_service")
 API_PORT = os.getenv("API_PORT", "8000")
@@ -15,10 +16,10 @@ API = "http://" + API_SERVICE_NAME + ":" + API_PORT if is_running_in_docker() el
 
 st.set_page_config(layout="wide")
 
-# 🎯 左侧菜单
+# 🎯 左侧菜单 - 新增 Export Data 选项
 menu = st.sidebar.radio(
     "菜单",
-    ["Tasks", "Sync CN Daily", "Sync HK Daily", "Sync US Daily", "Logs", "WebConsole"],
+    ["Tasks", "Sync CN Daily", "Sync HK Daily", "Sync US Daily", "Export Data", "Logs", "WebConsole"],
     key="main_menu"  # 加唯一key避免缓存
 )
 
@@ -42,6 +43,67 @@ def trigger_sync(st, job_type: JobType, data_source_api: str, page_key: str):
                     st.error(f"❌ 任务失败：{res.text}")
             except Exception as e:
                 st.error(f"❌ 请求异常：{str(e)}")
+
+
+def show_export_page(st):
+    st.subheader("📤 股票数据导出（超大文件安全版）")
+
+    ALL_COLS = [
+        "symbol", "symbol_name", "market", "date",
+        "open", "high", "low", "close", "volume", "amount",
+        "pct", "turnover", "adjust_mode", "adjust_factor"
+    ]
+
+    selected_cols = st.multiselect("选择字段", ALL_COLS, default=ALL_COLS)
+    where_sql = st.text_input("WHERE 条件", placeholder="market='CN' AND date>='2025-01-01'")
+    export_format = st.radio("导出格式", ["csv", "parquet"], horizontal=True)
+
+    if st.button("🚀 开始导出"):
+        if not selected_cols:
+            st.warning("请至少选择一个字段！")
+            return
+
+        with st.spinner("正在获取数据..."):
+            try:
+                # ======================
+                # 调用 API（内部端口）
+                # ======================
+                resp = requests.post(
+                    f"{API}/export/stream",
+                    json={
+                        "columns": selected_cols,
+                        "where_sql": where_sql,
+                        "export_format": export_format
+                    },
+                    stream=True
+                )
+
+                if resp.status_code != 200:
+                    st.error(f"导出失败：{resp.text}")
+                    return
+
+                # ======================
+                # 关键：流式写入 BytesIO（不爆内存）
+                # ======================
+                buffer = io.BytesIO()
+                for chunk in resp.iter_content(chunk_size=1024 * 1024):
+                    buffer.write(chunk)
+                buffer.seek(0)
+
+                # ======================
+                # 提供正常下载（绝对不报错）
+                # ======================
+                filename = f"stock_daily.{export_format}"
+                st.success(f"✅ 导出完成！共 {len(buffer.getvalue()) / 1024 / 1024:.2f} MB")
+
+                st.download_button(
+                    label=f"📥 下载 {filename}",
+                    data=buffer,
+                    file_name=filename
+                )
+
+            except Exception as e:
+                st.error(f"错误：{str(e)}")
 
 
 # ----------------------------
@@ -245,6 +307,11 @@ elif menu == "Sync US Daily":
     )
     trigger_sync(st, JobType.US_DAILY_SYNC, data_source, page_key="us")
 
+# ----------------------------
+# 🧩 Export Data 页面（新增）
+# ----------------------------
+elif menu == "Export Data":
+    show_export_page(st)
 
 # ----------------------------
 # 🧩 Logs 页面

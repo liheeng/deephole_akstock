@@ -1,11 +1,17 @@
 # app/api.py
 
 import os
-from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, WebSocket, Query
+import io
+import csv
+import time
+from typing import Optional, List
+from contextlib import asynccontextmanager, closing
+from fastapi import FastAPI, HTTPException, WebSocket, Query, Request
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import StreamingResponse
 import subprocess
 import asyncio
+from pydantic import BaseModel
 
 from core.task_manager import task_manager
 from db.db_common import DB
@@ -27,14 +33,13 @@ import executors.us_daily_sync_exectuor    # noqa
 
 logger = get_logger(__name__)
 
+# Init DuckDB 
+db_controller = DuckDBController(db_path=DB)
+logger.info("DuckDB connection initialized")
+
 
 def init():
     logger.info("API service is starting up")
-
-    # Init DuckDB 
-    DuckDBController(db_path=DB)
-    logger.info("DuckDB connection initialized")
-
     # Init iFinD API
     try:
         IFinDApi(refresh_token=os.getenv("IFIND_REFRESH_TOKEN"))
@@ -72,7 +77,7 @@ def call_task(
             if run_task(task):
                 return {"message": f"started sync task {sync_type}, 数据源: {data_source}"}
             else:
-                raise HTTPException(status_code=400, detail=f"启动任务失败")
+                raise HTTPException(status_code=400, detail="启动任务失败")
         else:
             return {"message": f"无效的同步类型: {sync_type}"}
     except Exception as e:
@@ -95,7 +100,6 @@ def get_task(task_id: str):
     return task_manager.load_task(task_id)
 
 
-
 @app.get("/logs/tail")
 def tail_logs(n: int = 50):
 
@@ -110,6 +114,56 @@ def tail_logs(n: int = 50):
     return {"logs": lines[-n:]}
 
 
+class ExportRequest(BaseModel):
+    columns: List[str]
+    where_sql: Optional[str] = None
+    export_format: str = "csv"
+
+
+@app.post("/export/stream")
+async def export_stream(req: ExportRequest):
+    cols = req.columns
+    where = req.where_sql
+    fmt = req.export_format.lower()
+
+    def generate():
+        # 🔥 安全关闭连接
+        with closing(db_controller._get_connection()) as con:
+            sql = f"SELECT {','.join(cols)} FROM stock_daily"
+            if where and where.strip():
+                sql += f" WHERE {where.strip()}"
+
+            # CSV
+            if fmt == "csv":
+                yield ','.join(cols) + '\n'
+                res = con.execute(sql)
+                while True:
+                    rows = res.fetchmany(10000)
+                    if not rows:
+                        break
+                    for r in rows:
+                        yield ','.join(str(x) if x is not None else '' for x in r) + '\n'
+
+            # PARQUET
+            elif fmt == "parquet":
+                tmp = f"/tmp/exp_{int(time.time()*1000)}.parquet"
+                try:
+                    con.execute(f"COPY ({sql}) TO '{tmp}' (FORMAT PARQUET)")
+                    with open(tmp, "rb") as f:
+                        while chunk := f.read(1024 * 1024):
+                            yield chunk
+                finally:
+                    if os.path.exists(tmp):
+                        os.remove(tmp)
+
+    media_type = "text/csv" if fmt == "csv" else "application/octet-stream"
+    return StreamingResponse(
+        generate(),
+        media_type=media_type,
+        headers={"Content-Disposition": f"attachment; filename=stock_daily.{fmt}"}
+    )
+
+    
 @app.websocket("/ws/terminal/{container}")
 async def terminal_ws(websocket: WebSocket, container: str):
 
