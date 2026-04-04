@@ -95,18 +95,68 @@ def init_db():
     ('FUT', 'Futures')
     """)
 
-    # con.execute("""
-    # CREATE TABLE IF NOT EXISTS task_log (
-    # id BIGINT,
-    # task_id TEXT,
-    # task_name TEXT,
-    # source TEXT,
-    # status TEXT,
-    # start_time TIMESTAMP,
-    # end_time TIMESTAMP,
-    # duration DOUBLE,
-    # message TEXT)
-    # """)
+    con.execute("""
+    CREATE TABLE stock_indicators (
+        symbol VARCHAR,
+        date DATE,
+
+        ma5 DOUBLE,
+        ma10 DOUBLE,
+        ma20 DOUBLE,
+        ma60 DOUBLE,
+        ma120 DOUBLE,
+
+        rsi14 DOUBLE,
+        atr14 DOUBLE,
+
+        boll_mid DOUBLE,
+        boll_up DOUBLE,
+        boll_down DOUBLE,
+
+        create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+        PRIMARY KEY (symbol, date)
+    );
+    """)
+
+    con.execute("""
+    CREATE TABLE stock_factors (
+        symbol VARCHAR,
+        date DATE,
+
+        -- ===== 趋势类 =====
+        ma5_above_ma20 BOOLEAN,
+        ma20_above_ma60 BOOLEAN,
+        close_above_ma20 BOOLEAN,
+
+        -- ===== 动量类 =====
+        rsi_overbought BOOLEAN,   -- RSI > 70
+        rsi_oversold BOOLEAN,     -- RSI < 30
+
+        -- ===== 突破类 =====
+        breakout_20d BOOLEAN,     -- 突破20日新高
+        breakdown_20d BOOLEAN,    -- 跌破20日新低
+
+        -- ===== 波动类 =====
+        atr_high_vol BOOLEAN,     -- ATR 高波动
+        boll_upper_break BOOLEAN,
+        boll_lower_break BOOLEAN,
+
+        -- ===== 成交量 =====
+        vol_spike BOOLEAN,        -- 放量
+        vol_ma5_above_ma20 BOOLEAN,
+
+        -- ===== 连续性 =====
+        up_3days BOOLEAN,
+        down_3days BOOLEAN,
+
+        create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+        PRIMARY KEY (symbol, date)
+    );
+    """)
     
     con.execute("""
     CREATE TABLE IF NOT EXISTS tasks (

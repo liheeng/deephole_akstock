@@ -38,14 +38,4 @@ class StrategyPortfolio:
         )
         print("time:", time.time() - t0)
 
-        t0 = time.time()
-        pf = vbt.Portfolio.from_signals(
-            close=data["close"],
-            entries=final_entries,
-            exits=final_exits,
-            init_cash=init_cash,
-            freq=freq,
-        )
-        print("time:", time.time() - t0)
-        
         return pf
