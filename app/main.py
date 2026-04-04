@@ -11,7 +11,7 @@ import api
 import time
 import signal
 
-from app.sources.data_source import DataSourceApiName
+from sources.data_source import DataSourceApiName
 from utils.task_util import create_sync_cn_daily_task, create_sync_hk_daily_task, create_sync_us_daily_task
 
 # 用来安全退出

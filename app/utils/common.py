@@ -3,6 +3,7 @@ import random
 import os
 import enum
 
+
 def is_running_in_docker() -> bool:
     # 方法1：检查 .dockerenv 文件（最准）
     if os.path.exists("/.dockerenv"):
@@ -15,9 +16,9 @@ def is_running_in_docker() -> bool:
         pass
     return False
 
+
 def random_sleep():
     time.sleep(random.uniform(0.5, 1.5))
-
 
 
 def batch_sleep(i):
