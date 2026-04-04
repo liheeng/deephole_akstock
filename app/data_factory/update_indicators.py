@@ -67,7 +67,6 @@ class IndicatorUpdater():
                 WHERE  d.market = '{region.value.upper()}'
                 GROUP BY d.symbol
                 """, fetch_mode="all")
-        # symbols = [s[0] for s in symbols]
 
         symbols = []
         for symbol, daily_max, ind_max in rows:
@@ -90,7 +89,7 @@ class IndicatorUpdater():
                 SELECT MAX(date)
                 FROM stock_indicators
                 WHERE symbol = '{symbol}'
-            """, fetch_mode="one")[0]
+            """, fetch_mode="one")
 
             # 2. Python层：安全取值
             if result and result[0] is not None:

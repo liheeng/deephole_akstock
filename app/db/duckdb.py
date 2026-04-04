@@ -73,16 +73,17 @@ class DuckDBController:
         con = self._get_connection()
         try:
             result = con.execute(sql, params)
-            if fetch_mode == "one":
-                data = result.fetchone()
-            elif fetch_mode == "all":
-                data = result.fetchall()
-            elif fetch_mode == "df":
-                data = result.df()
+            if result:
+                if fetch_mode == "one":
+                    data = result.fetchone()
+                elif fetch_mode == "all":
+                    data = result.fetchall()
+                elif fetch_mode == "df":
+                    data = result.df()
             else:
                 data = result
 
-            if callback:
+            if result and callback:
                 return callback(data)
             return data
         finally:
@@ -100,16 +101,17 @@ class DuckDBController:
             con = self._get_connection()
             try:
                 result = con.execute(sql, params)
-                if fetch_mode == "one":
-                    res = result.fetchone()
-                elif fetch_mode == "all":
-                    res = result.fetchall()
-                elif fetch_mode == "df":
-                    res = result.df()
+                if result:
+                    if fetch_mode == "one":
+                        res = result.fetchone()
+                    elif fetch_mode == "all":
+                        res = result.fetchall()
+                    elif fetch_mode == "df":
+                        res = result.df()
                 else:
                     res = result
 
-                if callback:
+                if result and callback:
                     return callback(res)
                 return res
             finally:

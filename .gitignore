@@ -3,6 +3,7 @@
 data/
 logs/
 
+**/logs/
 **/output.prof
 
 # 忽略 所有目录下的 __pycache__ 文件夹
