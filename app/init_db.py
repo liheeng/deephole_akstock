@@ -157,7 +157,32 @@ def init_db():
         PRIMARY KEY (symbol, date)
     );
     """)
-    
+
+    con.execute("""
+    CREATE TABLE stock_minute (
+        symbol VARCHAR,             -- 股票代码（如 sz000001）
+        symbol_name VARCHAR,        -- 股票名称
+        market VARCHAR,             -- 市场 sh/sz
+        period INT,                 -- 分钟周期：1/5/15/30/60
+        trade_time DATETIME,        -- 分时时间（精确到分钟）
+        open DOUBLE,                -- 开盘价
+        high DOUBLE,                -- 最高价
+        low DOUBLE,                 -- 最低价
+        close DOUBLE,                -- 收盘价
+        volume DOUBLE,               -- 成交量
+        amount DOUBLE,               -- 成交额
+        pct DOUBLE,                  -- 涨跌幅（相对于上一根K线）
+        adjust_mode VARCHAR DEFAULT 'none',  -- 复权模式
+        adjust_factor DOUBLE,        -- 复权因子
+        
+        create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        
+         -- 分钟线唯一索引：股票 + 周期 + 时间
+        UNIQUE (symbol, period, trade_time)
+    );
+    """)
+
     con.execute("""
     CREATE TABLE IF NOT EXISTS tasks (
     id VARCHAR PRIMARY KEY,

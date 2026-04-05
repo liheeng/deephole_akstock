@@ -40,29 +40,66 @@ class DataSourceApiName(enum.Enum):
     YFINANCE_API = "yfinance"   # yfinance
     IFIND_API = "ifind"
 
+class StartPriority(enum.Enum):
+    """
+        There is a start_priority in QueryOptions, if the value is DATABASE, then 
+        while fetching symbol data from market/source, the start_date will use the 
+        latest date between actual symbol's last date in datebase and the specified start date
+    """
+    DATABASE = 1
+    USER_SPECIFIED = 2
+
 
 class QueryOptions(Dict[str, Any]):
     def __init__(
         self,
         start: datetime,
         end: Optional[datetime] = None,
+        start_priority: StartPriority = StartPriority.DATABASE,
+        support_parallel: bool = False,
         **kwargs
     ):
-        # 先把固定字段存入字典
+        # 注意：你之前拼写错误 start_prirorty → start_priority
         super().__init__(
             start=start,
             end=end,
+            start_priority=start_priority,  # ✅ 修复拼写
+            support_parallel=support_parallel,
             **kwargs
         )
 
     @property
     def start(self) -> datetime:
-        return self['start']
+        return self.get("start")
+
+    @start.setter
+    def start(self, value: datetime):
+        self["start"] = value
+
+    @property
+    def start_priority(self) -> StartPriority:
+        return self.get("start_priority")
+
+    @start_priority.setter
+    def start_priority(self, value: StartPriority):
+        self["start_priority"] = value
 
     @property
     def end(self) -> Optional[datetime]:
-        return self.get('end')
-    
+        return self.get("end")
+
+    @end.setter
+    def end(self, value: Optional[datetime]):
+        self["end"] = value
+
+    @property
+    def support_parallel(self) -> bool:
+        return self.get("support_parallel")
+
+    @support_parallel.setter
+    def support_parallel(self, value: bool):
+        self["support_parallel"] = value
+
 
 @dataclass
 class FetchResult:
@@ -74,6 +111,8 @@ class FetchResult:
 
 
 class DataSource(ABC):
+    
+    data_source_api: DataSourceApiName
 
     @abstractmethod
     def fetch_daily(self, symbols_str: str, options: QueryOptions | None = None) -> FetchResult | None:

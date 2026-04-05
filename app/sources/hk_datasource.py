@@ -15,7 +15,7 @@ class HKStockSource(DataSource):
         super().__init__()
         self.source_api_list = [
             IFindHKHistoric(),
-            # AKshareApiHKHistricSina()
+            AKshareApiHKHistricSina()
             # AKshareEastQuotationHKSource,
             # AKshareEastMoneyHKSource
         ]

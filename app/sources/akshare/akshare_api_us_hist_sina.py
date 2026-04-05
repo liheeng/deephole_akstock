@@ -46,7 +46,7 @@ class AKshareApiUSHistoricSina(AbstractDataSourceAPI):
         symbols = symbols_str.split(",")
 
         # 少量代码串行，大量并行
-        if len(symbols) < 20:
+        if not options.support_parallel or len(symbols) < 20:
             for symbol in symbols:
                 try:
                     # 美股代码转换 + 优先代码修复

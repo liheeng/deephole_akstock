@@ -1,6 +1,7 @@
 akshare
 easyquotation
 yfinance
+duckdb
 pandas
 
 fastapi
@@ -13,6 +14,6 @@ python-dotenv
 loguru
 openpyxl
 
-vectorbt
+# vectorbt
 
 websockets

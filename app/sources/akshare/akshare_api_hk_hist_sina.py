@@ -47,7 +47,7 @@ class AKshareApiHKHistricSina(AbstractDataSourceAPI):
         failed_symbols = []
         result_data = {}
         symbols = symbols_str.split(",")
-        if len(symbols) < 20:
+        if not options.support_parallel or len(symbols) < 20:
             for symbol in symbols:
                 try:
                     # 转换港股代码

@@ -14,8 +14,8 @@ class CNAStockSource(DataSource):
     def __init__(self, data_source_api: DataSourceApiName | None = None):
         super().__init__()
         self.source_api_list = [
-            IFindAHistoric()
-            # AKshareApiAHistoricSina()
+            IFindAHistoric(),
+            AKshareApiAHistoricSina()
             # AKshareTencentCNASource()
         ]
         self.source_api_cursor = -1

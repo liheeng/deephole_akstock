@@ -80,6 +80,8 @@ class DuckDBController:
                     data = result.fetchall()
                 elif fetch_mode == "df":
                     data = result.df()
+                else:
+                    data = result
             else:
                 data = result
 
@@ -108,6 +110,8 @@ class DuckDBController:
                         res = result.fetchall()
                     elif fetch_mode == "df":
                         res = result.df()
+                    else:
+                        res = result
                 else:
                     res = result
 

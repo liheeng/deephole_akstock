@@ -4,16 +4,19 @@ import pandas as pd
 from utils.log_manager import get_logger
 from utils.common import ResultStatus
 from markets.market import Region
-from sources.data_source import DataSourceType, DataSourceApiName, AbstractDataSourceAPI, FetchResult, QueryOptions
+from sources.data_source import DataSourceType, DataSourceApiName, AbstractDataSourceAPI, FetchResult, QueryOptions, StartPriority
 from sources.datasource_adapter import SymbolConverter
 from datetime import datetime
 from core.paraller_job_executor import ParallelJob
 from core.process_pool.process_pool import ExProcessExecutorPool
 from core.process_pool.executor_task import ExectuorTaskCfg
 from sources.parallel_hist_fetcher import ParallelHistFetcher
+import db.stock_daily_util as stock_daily
+from db.duckdb import DuckDBController
 
 logger = get_logger(__name__)
 
+db = DuckDBController()
 
 class AKshareApiAHistoricSina(AbstractDataSourceAPI):
     source_api_type: DataSourceApiName = DataSourceApiName.AKSHARE_SINA_API
@@ -36,11 +39,15 @@ class AKshareApiAHistoricSina(AbstractDataSourceAPI):
         failed_symbols = []
         result_data = {}
         symbols = symbols_str.split(",")
-        if len(symbols) < 20:
+        if not options.support_parallel or len(symbols) < 20:
             for symbol in symbols:
                 try:
                     code = symbol_converter.convert(symbol)
                     start_date = options.get("start", pd.to_datetime("19000101"))
+                    if options.start_priority == StartPriority.DATABASE:
+                        last_date = stock_daily.get_last_date(db, symbol)
+                        start_date = last_date if last_date else start_date
+
                     end_date = options.get('end', datetime.now())
                     adjust = options.get("adjust", "qfq")
 
@@ -96,6 +103,10 @@ class AKshareApiAHistoricSina(AbstractDataSourceAPI):
                 executor = executor_pool.acquire(block=True)
                 task_cfg.task_params = job.job_params.copy()
                 return executor.run(task_cfg, timeout=10)
+
+            if options.start_priority == StartPriority.DATABASE:
+                symbols_last_dates = stock_daily.get_last_dates(db, symbols_str)
+                options['symbols_last_dates'] = symbols_last_dates
 
             hist_fetcher = ParallelHistFetcher(
                 symbols_str=symbols_str,

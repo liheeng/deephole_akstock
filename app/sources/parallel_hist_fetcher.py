@@ -1,7 +1,7 @@
 import pandas as pd
 from utils.log_manager import get_logger
 from markets.market import Region
-from sources.data_source import DataSourceType, DataSourceApiName
+from sources.data_source import DataSourceType, DataSourceApiName, StartPriority
 from sources.datasource_adapter import SymbolConverter
 from datetime import datetime
 from core.paraller_job_executor import ParallelJobExecutor, ParallelJob
@@ -41,9 +41,15 @@ class ParallelHistFetcher():
                    options: dict, 
                    symbol_converter: SymbolConverter): 
         parallel_jobs = []
+        symbols_last_dates = options.get("symbols_last_dates", {})
+
         for origin_symbol in symbols_str.split(","):
             code = symbol_converter.convert(origin_symbol)
             start_date = options.get("start", pd.to_datetime("1900-01-01"))
+            if options.start_priority == StartPriority.DATABASE:
+                last_date = symbols_last_dates.get(origin_symbol)
+                start_date = last_date if last_date else start_date
+
             end_date = options.get("end", datetime.now())
             adjust = options.get("adjust", "qfq")
             parallel_jobs.append(
