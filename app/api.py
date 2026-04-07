@@ -68,7 +68,7 @@ if is_running_in_docker():
 def call_task(
     sync_type: str,
     # ✅ 正确：GET 请求用 Query 参数接收
-    data_source: str = Query(DataSourceApiName.IFIND_API.value, description="数据源：ifind/akshare.sina/akshare.eastmoney/akshare.tencent/yfinance")
+    data_source: str = Query(DataSourceApiName.AKSHARE_SINA_API.value, description="数据源：ifind/akshare.sina/akshare.eastmoney/akshare.tencent/yfinance")
 ):
     try:
         # 传入数据源

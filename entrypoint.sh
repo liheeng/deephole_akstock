@@ -27,17 +27,17 @@ mkdir -p /logs
 
 # 写入 CN 市场 cron 任务
 if [ -n "$CRON_SCHEDULE_CN" ]; then
-  echo "$CRON_SCHEDULE_CN cd /app && python /app/cron/cron_runner_cn.py >> /logs/cron_cn_\$(date +\%Y\%m\%d).log 2>&1" >> /app/crontab
+  echo "$CRON_SCHEDULE_CN export PYTHONPATH=/app && cd /app && python /app/cron/cron_runner_cn.py >> /logs/cron_cn_\$(date +\%Y\%m\%d).log 2>&1" >> /app/crontab
 fi
 
 # 写入 HK 市场 cron 任务
 if [ -n "$CRON_SCHEDULE_HK" ]; then
-  echo "$CRON_SCHEDULE_HK cd /app && python /app/cron_runner_hk.py >> /logs/cron_hk_\$(date +\%Y\%m\%d).log 2>&1" >> /app/crontab
+  echo "$CRON_SCHEDULE_HK export PYTHONPATH=/app && cd /app && python /app/cron/cron_runner_hk.py >> /logs/cron_hk_\$(date +\%Y\%m\%d).log 2>&1" >> /app/crontab
 fi
 
 # 写入 US 市场 cron 任务
 if [ -n "$CRON_SCHEDULE_US" ]; then
-  echo "$CRON_SCHEDULE_US cd /app && python /app/cron/cron_runner_us.py >> /logs/cron_us_\$(date +\%Y\%m\%d).log 2>&1" >> /app/crontab
+  echo "$CRON_SCHEDULE_US export PYTHONPATH=/app && cd /app && python /app/cron/cron_runner_us.py >> /logs/cron_us_\$(date +\%Y\%m\%d).log 2>&1" >> /app/crontab
 fi
 
 # 打印 cron 配置（便于调试）

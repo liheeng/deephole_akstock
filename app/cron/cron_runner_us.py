@@ -19,7 +19,7 @@ logger.info(f"start US cron task at {datetime.now()}")
 
 response = requests.get(
     url=sync_us_daily_url,
-    params={"data_source_api": DataSourceApiName.IFIND_API.value}
+    params={"data_source": DataSourceApiName.AKSHARE_SINA_API.value}
 )
 
 # 日志/打印结果
