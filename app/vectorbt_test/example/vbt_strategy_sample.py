@@ -27,12 +27,13 @@ def print_trades(pf):
 
 if __name__ == "__main__":
     db_controller = DuckDBController(db_path="../data/stock.duckdb")
-    df = get_symbol_data(db_controller, "603259.SH", "2025-01-01", "2026-01-01")
+    df = get_symbol_data(db_controller, "603259.SH", "2024-01-01", "2026-03-31")
     df['date'] = pd.to_datetime(df['date'])
     df = df.set_index('date')
     df = df.sort_index()
 
     ma20 = MASignal(20)
+    ma60 = MASignal(60)
     boll = BollSignal(20, 2)
     macd = MACDSignal()
     rsi = RSISignal(14)
@@ -50,8 +51,8 @@ if __name__ == "__main__":
     trend_strategy = BaseStrategy(
         "trend",
         buy_trigger=Trigger(buy_signal_expr(ma5)),
-        sell_trigger=Trigger(sell_signal_expr(boll))
-        # sell_trigger=Trigger(sell_signal_expr(macd) | sell_signal_expr(rsi))
+        # sell_trigger=Trigger(sell_signal_expr(boll))
+        sell_trigger=Trigger(sell_signal_expr(macd) | sell_signal_expr(rsi) | sell_signal_expr(breakout))
         # sell_trigger=Trigger(sell_signal_expr(macd))
         # sell_trigger=Trigger(sell_signal_expr(macd) | sell_signal_expr(ma20)) -- 效果一般
         

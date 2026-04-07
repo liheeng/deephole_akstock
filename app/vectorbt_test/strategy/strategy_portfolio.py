@@ -36,6 +36,6 @@ class StrategyPortfolio:
             init_cash=init_cash,
             freq=freq,
         )
-        print("time:", time.time() - t0)
+        print("vectorbt run time:", time.time() - t0)
 
         return pf

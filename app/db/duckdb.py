@@ -14,7 +14,7 @@ class DuckDBController:
     _lock = threading.Lock()
     db_path: str
 
-    def __new__(cls, db_path: str | None = None):
+    def __new__(cls, db_path: str | None = None, read_only=False):
         if cls._instance is None:
             if not db_path:
                 raise ValueError(f"Missing argument db_path!")
@@ -22,8 +22,8 @@ class DuckDBController:
             cls._instance.db_path = db_path
         return cls._instance
 
-    def _get_connection(self):
-        return duckdb.connect(self.db_path)
+    def _get_connection(self, read_only=False):
+        return duckdb.connect(self.db_path, read_only=read_only)
 
     def write(
         self,
@@ -70,7 +70,7 @@ class DuckDBController:
         增强版读取：支持 fetch_mode + callback
         fetch_mode: None / 'one' / 'all' / 'df'
         """
-        con = self._get_connection()
+        con = self._get_connection(read_only=True)
         try:
             result = con.execute(sql, params)
             if result:
