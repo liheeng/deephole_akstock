@@ -32,6 +32,6 @@ sed -i.bak "s|_TEMP_DEEPHOLE_DASHBOARD_SERVICE|$_TEMP_DEEPHOLE_DASHBOARD_SERVICE
 rm -f "${COMPOSE_FINAL}.bak"
 
 # 6. 部署
-docker build -t "${_TEMP_IMAGE_NAME_}:${_TEMP_IMAGE_VERSION}" .
+docker build  -t "${_TEMP_IMAGE_NAME_}:${_TEMP_IMAGE_VERSION}" .
 docker compose -f "$COMPOSE_FINAL" --env-file "$ENV_FILE" down
 docker compose -f "$COMPOSE_FINAL" --env-file "$ENV_FILE" up -d

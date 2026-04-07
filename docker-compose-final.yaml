@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   deephole_stock_db_init:
-    image: deephole-stock-data:1.3.2
+    image: deephole-stock-data:1.3.3
     container_name: deephole_stock_db_init
     build: .
     command: python /app/init_db.py
@@ -14,7 +14,7 @@ services:
       - ENABLE_CRON=false
 
   deephole_stock_api_service:
-    image: deephole-stock-data:1.3.2
+    image: deephole-stock-data:1.3.3
     container_name: deephole_stock_api_service
     depends_on:
       - deephole_stock_db_init
@@ -32,7 +32,7 @@ services:
     restart: unless-stopped
 
   deephole_stock_cron_fetcher:
-    image: deephole-stock-data:1.3.2
+    image: deephole-stock-data:1.3.3
     container_name: deephole_stock_cron_fetcher
     depends_on:
       - deephole_stock_db_init
@@ -53,7 +53,7 @@ services:
     restart: unless-stopped
 
   deephole_stock_dashboard:
-    image: deephole-stock-data:1.3.2
+    image: deephole-stock-data:1.3.3
     container_name: deephole_stock_dashboard
     depends_on:
       - deephole_stock_db_init
