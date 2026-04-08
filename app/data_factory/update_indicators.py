@@ -13,33 +13,72 @@ class IndicatorUpdater():
     def calculate_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
         df = df.sort_values("date")
 
+        close = df["close"]
+        high = df["high"]
+        low = df["low"]
+        volume = df["volume"]
+
         # ===== MA =====
-        df["ma5"] = df["close"].rolling(5).mean()
-        df["ma10"] = df["close"].rolling(10).mean()
-        df["ma20"] = df["close"].rolling(20).mean()
-        df["ma60"] = df["close"].rolling(60).mean()
-        df["ma120"] = df["close"].rolling(120).mean()
+        df["ma5"] = close.rolling(5).mean()
+        df["ma10"] = close.rolling(10).mean()
+        df["ma20"] = close.rolling(20).mean()
+        df["ma60"] = close.rolling(60).mean()
+        df["ma120"] = close.rolling(120).mean()
+
+        # ===== EMA =====
+        df["ema12"] = close.ewm(span=12, adjust=False).mean()
+        df["ema26"] = close.ewm(span=26, adjust=False).mean()
+
+        # ===== MACD =====
+        df["macd"] = df["ema12"] - df["ema26"]
+        df["macd_signal"] = df["macd"].ewm(span=9, adjust=False).mean()
+        df["macd_hist"] = df["macd"] - df["macd_signal"]
 
         # ===== RSI =====
-        delta = df["close"].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
+        delta = close.diff()
+        gain = delta.clip(lower=0).rolling(14).mean()
+        loss = (-delta.clip(upper=0)).rolling(14).mean()
         rs = gain / loss
         df["rsi14"] = 100 - (100 / (1 + rs))
 
         # ===== ATR =====
-        high_low = df["high"] - df["low"]
-        high_close = (df["high"] - df["close"].shift()).abs()
-        low_close = (df["low"] - df["close"].shift()).abs()
+        high_low = high - low
+        high_close = (high - close.shift()).abs()
+        low_close = (low - close.shift()).abs()
         tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
         df["atr14"] = tr.rolling(14).mean()
 
         # ===== Bollinger =====
-        mid = df["close"].rolling(20).mean()
-        std = df["close"].rolling(20).std()
+        mid = close.rolling(20).mean()
+        std = close.rolling(20).std()
         df["boll_mid"] = mid
         df["boll_up"] = mid + 2 * std
         df["boll_down"] = mid - 2 * std
+
+        # ===== KDJ =====
+        low_n = low.rolling(9).min()
+        high_n = high.rolling(9).max()
+        rsv = (close - low_n) / (high_n - low_n) * 100
+
+        df["k"] = rsv.ewm(alpha=1/3).mean()
+        df["d"] = df["k"].ewm(alpha=1/3).mean()
+        df["j"] = 3 * df["k"] - 2 * df["d"]
+
+        # ===== Volume =====
+        df["vol_ma5"] = volume.rolling(5).mean()
+        df["vol_ma10"] = volume.rolling(10).mean()
+
+        # ===== OBV =====
+        direction = close.diff().apply(lambda x: 1 if x > 0 else (-1 if x < 0 else 0))
+        df["obv"] = (direction * volume).fillna(0).cumsum()
+
+        # ===== Returns =====
+        df["ret_1d"] = close.pct_change(1)
+        df["ret_5d"] = close.pct_change(5)
+        df["ret_20d"] = close.pct_change(20)
+
+        # ===== Price Position =====
+        df["pct_from_ma20"] = (close - df["ma20"]) / df["ma20"]
 
         return df
 
@@ -106,12 +145,12 @@ class IndicatorUpdater():
                     ORDER BY date
                 """, fetch_mode="df")
             else:
-                # 取最近 200 天 + 新数据（用于 rolling）
+                # 取最近 250 天 + 新数据（用于 rolling）
                 df = self.db.read(f"""
                     SELECT *
                     FROM stock_daily
                     WHERE symbol = '{symbol}'
-                    AND date >= DATE '{last_date}' - INTERVAL 200 DAY
+                    AND date >= DATE '{last_date}' - INTERVAL 250 DAY
                     ORDER BY date
                 """, fetch_mode="df")
 
@@ -130,19 +169,52 @@ class IndicatorUpdater():
             df = df[[
                 "symbol", "date",
                 "ma5", "ma10", "ma20", "ma60", "ma120",
+                "ema12", "ema26",
                 "rsi14", "atr14",
-                "boll_mid", "boll_up", "boll_down"
+                "k", "d", "j",
+                "boll_mid", "boll_up", "boll_down",
+                "vol_ma5", "vol_ma10",
+                "obv",
+                "ret_1d", "ret_5d", "ret_20d",
+                "pct_from_ma20"
             ]]
             rows = len(df)
 
             sql = """
                 INSERT OR IGNORE INTO stock_indicators (
                     symbol, date,
+
                     ma5, ma10, ma20, ma60, ma120,
+                    ema12, ema26,
+
+                    macd, macd_signal, macd_hist,
+
                     rsi14, atr14,
-                    boll_mid, boll_up, boll_down
+
+                    k, d, j,
+
+                    boll_mid, boll_up, boll_down,
+
+                    vol_ma5, vol_ma10,
+                    obv,
+
+                    ret_1d, ret_5d, ret_20d,
+
+                    pct_from_ma20
                 )
-                SELECT symbol, date, ma5, ma10, ma20, ma60, ma120, rsi14, atr14, boll_mid, boll_up, boll_down FROM temp_df
+                SELECT
+                    symbol, date,
+                    ma5, ma10, ma20, ma60, ma120,
+                    ema12, ema26,
+                    macd, macd_signal, macd_hist,
+                    rsi14, atr14,
+                    k, d, j,
+                    boll_mid, boll_up, boll_down,
+                    vol_ma5, vol_ma10,
+                    obv,
+                    ret_1d, ret_5d, ret_20d,
+                    pct_from_ma20
+                FROM temp_df
             """
             df = self.db.write(
                 df, sql=sql, view_name="temp_df"

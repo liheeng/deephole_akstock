@@ -6,11 +6,11 @@ from utils.log_manager import get_logger
 logger = get_logger(__name__)
 
 
-class FactorUpdater():
+class SignalsUpdater():
     def __init__(self, db: DuckDBController):
         self.db = db
 
-    def calculate_factors(self, df: pd.DataFrame) -> pd.DataFrame:
+    def calculate_signals(self, df: pd.DataFrame) -> pd.DataFrame:
         df = df.sort_values("date")
 
         # ===== 趋势 =====
@@ -60,7 +60,7 @@ class FactorUpdater():
 
         return df
 
-    def update_factors(self, region: Region | None = None):
+    def update_signals(self, region: Region | None = None):
         if region is None:
             rows = self.db.read(
                 """SELECT 
@@ -68,7 +68,7 @@ class FactorUpdater():
                     MAX(d.date) AS daily_max_date,
                     MAX(i.date) AS ind_max_date
                 FROM stock_daily d
-                LEFT JOIN stock_factors i
+                LEFT JOIN stock_signals i
                 ON d.symbol = i.symbol
                 GROUP BY d.symbol
                 """, fetch_mode="all")
@@ -79,7 +79,7 @@ class FactorUpdater():
                     MAX(d.date) AS daily_max_date,
                     MAX(i.date) AS ind_max_date
                 FROM stock_daily d
-                LEFT JOIN stock_factors i
+                LEFT JOIN stock_signals i
                 ON d.symbol = i.symbol
                 WHERE  d.market = '{region.value.upper()}'
                 GROUP BY d.symbol
@@ -101,7 +101,7 @@ class FactorUpdater():
             # 1️⃣ factor 表最后日期
             result = self.db.read(f"""
                 SELECT MAX(date)
-                FROM stock_factors
+                FROM stock_signals
                 WHERE symbol = '{symbol}'
             """, fetch_mode="one")
 
@@ -135,7 +135,7 @@ class FactorUpdater():
             if len(df) == 0:
                 continue
 
-            df = self.calculate_factors(df)
+            df = self.calculate_signals(df)
 
             # 3️⃣ 只保留新增
             if last_date is not None:
@@ -165,7 +165,7 @@ class FactorUpdater():
             rows = len(df)
 
             sql = """
-                INSERT OR IGNORE INTO stock_factors (
+                INSERT OR IGNORE INTO stock_signals (
                     symbol, date,
                     ma5_above_ma20, ma20_above_ma60, close_above_ma20,
                     rsi_overbought, rsi_oversold,
@@ -181,17 +181,17 @@ class FactorUpdater():
                 df, sql=sql, view_name="temp_df"
             )
 
-            logger.info(f"Updated factors for {symbol} - inserted rows: {rows}")
+            logger.info(f"Updated signals for {symbol} - inserted rows: {rows}")
 
     def update_by_markets(self):
         for region in Region:
-            logger.info(f"Updating factors for region: {region.value.upper()}")
-            self.update_factors(region)
+            logger.info(f"Updating signals for region: {region.value.upper()}")
+            self.update_signals(region)
 
-        logger.info("Finished updating factors for all regions")
+        logger.info("Finished updating signals for all regions")
 
 
 if __name__ == "__main__":
     db = DuckDBController("../data/stock.duckdb")
-    updater = FactorUpdater(db)
+    updater = SignalsUpdater(db)
     updater.update_by_markets()

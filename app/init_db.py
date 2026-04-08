@@ -97,31 +97,89 @@ def init_db():
 
     con.execute("""
     CREATE TABLE stock_indicators (
-        symbol VARCHAR,
-        date DATE,
+        -- ==============================
+        -- 基础字段
+        -- ==============================
+        symbol VARCHAR,              -- 股票代码
+        date DATE,                   -- 交易日期
 
-        ma5 DOUBLE,
-        ma10 DOUBLE,
-        ma20 DOUBLE,
-        ma60 DOUBLE,
-        ma120 DOUBLE,
+        -- ==============================
+        -- 趋势类（Trend Indicators）
+        -- ==============================
+        ma5 DOUBLE,                  -- 5日简单移动平均（短期趋势）
+        ma10 DOUBLE,                 -- 10日均线
+        ma20 DOUBLE,                 -- 20日均线（中短期趋势）
+        ma60 DOUBLE,                 -- 60日均线（中期趋势）
+        ma120 DOUBLE,                -- 120日均线（长期趋势）
 
-        rsi14 DOUBLE,
-        atr14 DOUBLE,
+        ema12 DOUBLE,                -- 12日指数移动平均（更敏感）
+        ema26 DOUBLE,                -- 26日指数移动平均
 
-        boll_mid DOUBLE,
-        boll_up DOUBLE,
-        boll_down DOUBLE,
+        -- ==============================
+        -- MACD（趋势 + 动量）
+        -- ==============================
+        macd DOUBLE,                 -- DIF = EMA12 - EMA26
+        macd_signal DOUBLE,          -- DEA = MACD的9日EMA
+        macd_hist DOUBLE,            -- 柱状图 = macd - macd_signal（动量强弱）
 
-        create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        -- ==============================
+        -- 动量类（Momentum）
+        -- ==============================
+        rsi14 DOUBLE,                -- RSI(14)，超买超卖指标（0~100）
 
+        k DOUBLE,                    -- KDJ中的K值（短期动量）
+        d DOUBLE,                    -- KDJ中的D值（平滑K）
+        j DOUBLE,                    -- J = 3K - 2D（更敏感）
+
+        -- ==============================
+        -- 波动率（Volatility）
+        -- ==============================
+        atr14 DOUBLE,                -- ATR(14)，真实波动幅度（无方向）
+
+        boll_mid DOUBLE,             -- 布林带中轨（20日均线）
+        boll_up DOUBLE,              -- 布林带上轨（mid + 2σ）
+        boll_down DOUBLE,            -- 布林带下轨（mid - 2σ）
+
+        -- ==============================
+        -- 成交量类（Volume）
+        -- ==============================
+        vol_ma5 DOUBLE,              -- 5日成交量均值（短期资金活跃度）
+        vol_ma10 DOUBLE,             -- 10日成交量均值
+
+        obv DOUBLE,                  -- OBV（On Balance Volume，资金流向）
+
+        -- ==============================
+        -- 收益率（Returns）
+        -- ==============================
+        ret_1d DOUBLE,               -- 1日收益率
+        ret_5d DOUBLE,               -- 5日收益率（短期动量）
+        ret_20d DOUBLE,              -- 20日收益率（中期动量）
+
+        -- ==============================
+        -- 价格位置（Position / Mean Reversion）
+        -- ==============================
+        pct_from_ma20 DOUBLE,        -- 收盘价相对MA20偏离 (close - ma20) / ma20
+
+        -- ==============================
+        -- 系统字段
+        -- ==============================
+        create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- 创建时间
+        update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- 更新时间
+
+        -- ==============================
+        -- 主键
+        -- ==============================
         PRIMARY KEY (symbol, date)
     );
     """)
 
     con.execute("""
-    CREATE TABLE stock_factors (
+    CREATE INDEX idx_stock_indicators_symbol_date
+    ON stock_indicators(symbol, date);
+    """)
+
+    con.execute("""
+    CREATE TABLE stock_signals (
         symbol VARCHAR,
         date DATE,
 
@@ -156,6 +214,95 @@ def init_db():
 
         PRIMARY KEY (symbol, date)
     );
+    """)
+
+    con.execute("""
+    CREATE INDEX idx_stock_signals_symbol_date
+    ON stock_signals(symbol, date);
+    """)
+
+    con.execute("""
+    CREATE TABLE stock_factor_scores (
+        symbol VARCHAR,
+        date DATE,
+
+        -- ==============================
+        -- 趋势因子（Trend）
+        -- ==============================
+        trend_ma5 DOUBLE,           -- (close - ma5) / ma5（超短趋势）
+        trend_ma10 DOUBLE,          -- (close - ma10) / ma10（短期趋势）
+        trend_ma20 DOUBLE,          -- 中短期趋势
+        trend_ma60 DOUBLE,          -- 中期趋势
+        trend_macd DOUBLE,          -- MACD动量
+                
+        -- ==============================
+        -- 动量因子（Momentum）
+        -- ==============================
+        mom_5d DOUBLE,
+        mom_20d DOUBLE,
+        mom_60d DOUBLE,
+        rsi_factor DOUBLE,
+
+        -- ==============================
+        -- 波动率（Volatility）
+        -- ==============================
+        vol_atr DOUBLE,
+        vol_boll_width DOUBLE,
+
+        -- ==============================
+        -- 成交量（Volume）
+        -- ==============================
+        vol_ratio DOUBLE,
+        obv_slope DOUBLE,
+
+        -- ==============================
+        -- 价格位置
+        -- ==============================
+        price_position DOUBLE,
+
+        -- ==============================
+        -- 聚合评分
+        -- ==============================
+        trend_score DOUBLE,
+        momentum_score DOUBLE,
+        volatility_score DOUBLE,
+        volume_score DOUBLE,
+        composite_score DOUBLE,
+
+        -- ===== 趋势增强 =====
+        trend_acceleration DOUBLE,        -- ma5 - ma10（趋势加速）
+
+        -- ===== 信号（Signal Layer）=====
+        acc_signal BOOLEAN,               -- 趋势加速 > 0
+        trend_strong BOOLEAN,             -- 多头排列
+        trend_weak BOOLEAN,               -- 空头排列
+
+        -- ===== 动量增强 =====
+        momentum_acceleration DOUBLE,     -- mom_5d - mom_20d
+        momentum_strong BOOLEAN,
+
+        -- ===== 波动过滤 =====
+        low_volatility BOOLEAN,           -- 低波动（适合突破）
+        high_volatility BOOLEAN,          -- 高波动（风险）
+
+        -- ===== 成交量增强 =====
+        volume_spike BOOLEAN,             -- 放量确认
+        volume_trend BOOLEAN,             -- 持续放量
+
+        -- ===== 综合信号 =====
+        breakout_confirm BOOLEAN,         -- 突破 + 放量 + 趋势
+        reversal_signal BOOLEAN,           -- 超跌反弹
+                        
+        create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+        PRIMARY KEY (symbol, date)
+    );
+    """)
+
+    con.execute("""
+    CREATE INDEX idx_stock_factor_scores_symbol_date
+    ON stock_factor_scores(symbol, date);
     """)
 
     con.execute("""
