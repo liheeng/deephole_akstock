@@ -24,7 +24,7 @@ class AKshareApiHKHistricSina(AbstractDataSourceAPI):
         df_new["symbol"] = symbol
         # 保持和A股一致的列顺序
         return df_new[[
-            "symbol", "date", "open", "high", "low", "close", "volume", "amount", "turnover"
+            "symbol", "date", "open", "high", "low", "close", "volume"
         ]]
 
     def filter_date_range(self, df: pd.DataFrame, start_date: datetime, end_date: datetime) -> pd.DataFrame:

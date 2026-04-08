@@ -272,6 +272,7 @@ class DuckDBService:
         self.stop_event.set()
         self.write_queue.join()
 
+
 # ==============================
 # 【使用示例】
 # ==============================

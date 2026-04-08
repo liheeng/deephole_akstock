@@ -4,6 +4,7 @@ from datetime import datetime
 data_volume = "/data" if is_running_in_docker() else "./data"
 DB = data_volume + "/stock.duckdb"
 
+
 def safe_time(v: str):
     """
     判断 v 的类型：
