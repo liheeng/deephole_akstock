@@ -5,9 +5,9 @@ from vectorbt_test.signals.rsi_signal import RSISignal
 from vectorbt_test.strategy.strategy_portfolio import StrategyPortfolio
 from vectorbt_test.signals.ma_signal import MASignal
 from vectorbt_test.signals.boll_signal import BollSignal
-from vectorbt_test.strategy.base_strategy import BaseStrategy
-from vectorbt_test.strategy.score_strategy import ScoreStrategy
-from vectorbt_test.engine.signal_expr import SignalGroup, score_signal_expr
+from vectorbt_test.strategy.factor_strategy import FactorStrategy
+from vectorbt_test.core.factor import Factor
+from vectorbt_test.core.signal_expr import score_signal_expr
 
 from db.duckdb import DuckDBController
 from db.stock_daily_util import get_symbol_data
@@ -42,9 +42,9 @@ if __name__ == "__main__":
 
     # 趋势策略, 适合趋势明显的股票
     ma5 = MASignal(5)
-    trend_strategy = ScoreStrategy(
+    trend_strategy = FactorStrategy(
         "trend",
-        signals=SignalGroup(score_signal_expr(ma5) + score_signal_expr(macd))
+        factors=[Factor(name="trend_factor", expr=score_signal_expr(ma5, 0.7) + score_signal_expr(macd, 0.3))]
         # sell_signals=Trigger(sell_signal_expr(boll))
         # sell_signals=SignalGroup(score_signal_expr(macd) + score_signal_expr(rsi) + score_signal_expr(breakout))
         # sell_signals=Trigger(sell_signal_expr(macd))
@@ -56,7 +56,8 @@ if __name__ == "__main__":
         strategies=[
             trend_strategy
         ],
-        strategy_weights=[0.4, 0.3, 0.3]
+        # strategy_weights=[0.4, 0.3, 0.3]
+        strategy_weights=[1.0],
     )
 
     pf = portfolio.run(df)

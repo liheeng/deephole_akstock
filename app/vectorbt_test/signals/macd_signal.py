@@ -1,7 +1,7 @@
 import pandas as pd
 import vectorbt as vbt
 import numpy as np
-from .base_signal import BaseSignal
+from ..core.base_signal import BaseSignal
 
 
 class MACDSignal(BaseSignal):

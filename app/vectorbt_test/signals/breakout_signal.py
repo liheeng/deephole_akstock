@@ -2,7 +2,7 @@
 
 import pandas as pd
 import numpy as np
-from .base_signal import BaseSignal
+from ..core.base_signal import BaseSignal
 
 # 规则：
 # 突破 N 日最高 → 买

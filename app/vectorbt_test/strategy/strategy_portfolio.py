@@ -2,20 +2,23 @@ import time
 from typing import List
 import pandas as pd
 import vectorbt as vbt
-from vectorbt_test.strategy.base_strategy import BaseStrategy
+from vectorbt_test.core.base_strategy import BaseStrategy
+from vectorbt_test.engine.signal_engine import SignalEngine
 
 
 class StrategyPortfolio:
-    def __init__(self, strategies: List[BaseStrategy], strategy_weights: List[float] = [1.0], threshold: tuple[float, float] = (0, 0)):
+    def __init__(self, strategies: List[BaseStrategy], strategy_weights: List[float] | None = None, buy_threshold: float = 0.0, sell_threshold: float = 0.0):
         self.strategies = strategies
-        self.strategy_weights = strategy_weights or [1.0] * len(strategies)
-        self.threshold = threshold
+        self.strategy_weights = strategy_weights or [1.0 / len(self.strategies)] * len(self.strategies)
+        self.buy_threshold = buy_threshold
+        self.sell_threshold = sell_threshold
 
     def run(self, data: pd.DataFrame, freq: str = "1D", init_cash: float = 100000) -> vbt.Portfolio:
         alpha = None
 
+        signals_engine = SignalEngine()
         for strat, w in zip(self.strategies, self.strategy_weights):
-            score = strat.score(data)
+            score = strat.score(data, signals_engine)
 
             weighted = score * w
 
@@ -25,8 +28,8 @@ class StrategyPortfolio:
                 alpha += weighted
 
         # 👉 统一决策
-        final_entries = alpha > self.threshold[0]
-        final_exits = alpha < self.threshold[1]
+        final_entries = alpha > self.buy_threshold
+        final_exits = alpha < self.sell_threshold
 
         t0 = time.time()
         pf = vbt.Portfolio.from_signals(

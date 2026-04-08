@@ -5,9 +5,9 @@ from vectorbt_test.signals.rsi_signal import RSISignal
 from vectorbt_test.strategy.strategy_portfolio import StrategyPortfolio
 from vectorbt_test.signals.ma_signal import MASignal
 from vectorbt_test.signals.boll_signal import BollSignal
-from vectorbt_test.strategy.base_strategy import BaseStrategy
 from vectorbt_test.strategy.rule_strategy import RuleStrategy
-from vectorbt_test.engine.signal_expr import SignalGroup, buy_signal_expr, sell_signal_expr
+from vectorbt_test.core.factor import Factor
+from vectorbt_test.core.signal_expr import buy_signal_expr, sell_signal_expr
 
 from db.duckdb import DuckDBController
 from db.stock_daily_util import get_symbol_data
@@ -51,9 +51,11 @@ if __name__ == "__main__":
     ma5 = MASignal(5)
     trend_strategy = RuleStrategy(
         "trend",
-        buy_signals=SignalGroup(buy_signal_expr(ma5)),
+        factors=[
+            Factor(name="buy_factor", expr=buy_signal_expr(ma5)),
+            Factor(name="sell_factor", expr=sell_signal_expr(macd) | sell_signal_expr(rsi) | sell_signal_expr(breakout))
+        ]
         # sell_signals=Trigger(sell_signal_expr(boll))
-        sell_signals=SignalGroup(sell_signal_expr(macd) | sell_signal_expr(rsi) | sell_signal_expr(breakout))
         # sell_signals=Trigger(sell_signal_expr(macd))
         # sell_signals=Trigger(sell_signal_expr(macd) | sell_signal_expr(ma20)) -- 效果一般
         

@@ -2,7 +2,7 @@
 import pandas as pd
 import numpy as np
 import vectorbt as vbt
-from .base_signal import BaseSignal
+from ..core.base_signal import BaseSignal
 
 
 class BollSignal(BaseSignal):

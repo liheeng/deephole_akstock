@@ -2,7 +2,7 @@ import enum
 from abc import ABC, abstractmethod
 from typing import List
 import pandas as pd
-from vectorbt_test.signals.base_signal import BaseSignal
+from vectorbt_test.core.base_signal import BaseSignal
 
 
 class SignalValue(enum.Enum):
@@ -99,14 +99,15 @@ class NotExpr(BaseExpr):
 
 
 class ScoreSignalExpr(BaseExpr):
-    def __init__(self, signal: BaseSignal):
+    def __init__(self, signal: BaseSignal, weight: float = 1.0):
         self.signal = signal
+        self.weight = weight
 
     def signals(self) -> List[BaseSignal]:
         return [self.signal]
     
     def evaluate(self, signal_values: dict) -> pd.Series:
-        return signal_values[self.signal.name]
+        return signal_values[self.signal.name] * self.weight
 
 
 class BinaryScoreExpr(BaseExpr):
@@ -160,21 +161,5 @@ def sell_signal_expr(signal: BaseSignal) -> BaseExpr:
     return SignalExpr(signal, signal_value=SignalValue.SELL)
 
 
-def score_signal_expr(signal: BaseSignal) -> BaseExpr:
-    return ScoreSignalExpr(signal)
-
-
-class SignalGroup:
-    def __init__(self, expr: BaseExpr):
-        self.expr = expr
-
-    def signals(self):
-        return self.expr.signals()
-    
-    def check(self, signal_values: dict) -> pd.Series:
-        # Update signal values before evaluation
-        return self.expr.evaluate(signal_values)
-    
-    def score(self, signal_values):
-        return self.expr.evaluate(signal_values)
-    
+def score_signal_expr(signal: BaseSignal, weight: float = 1.0) -> BaseExpr:
+    return ScoreSignalExpr(signal, weight=weight)
