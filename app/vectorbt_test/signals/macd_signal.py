@@ -1,5 +1,6 @@
 import pandas as pd
 import vectorbt as vbt
+import numpy as np
 from .base_signal import BaseSignal
 
 
@@ -14,7 +15,6 @@ class MACDSignal(BaseSignal):
         self.signal = signal
 
     def generate(self, df) -> pd.Series:
-        
         macd = vbt.MACD.run(
             df["close"],
             fast_window=self.fast,
@@ -25,12 +25,20 @@ class MACDSignal(BaseSignal):
         m = macd.macd
         s = macd.signal
 
-        signal_series = pd.Series(0, index=df.index)
+        hist = m - s
 
+        # ===== 1️⃣ 基础趋势强度 =====
+        score = hist / (hist.rolling(20).std() + 1e-9)
+
+        # ===== 2️⃣ 交叉检测 =====
         cross_up = (m > s) & (m.shift(1) <= s.shift(1))
         cross_down = (m < s) & (m.shift(1) >= s.shift(1))
 
-        signal_series[cross_up] = 1
-        signal_series[cross_down] = -1
+        # ===== 3️⃣ 交叉增强（关键）=====
+        score[cross_up] += 1.0
+        score[cross_down] -= 1.0
 
-        return signal_series
+        # ===== 4️⃣ 压缩范围 =====
+        score = np.tanh(score)
+
+        return score

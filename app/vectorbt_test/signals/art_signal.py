@@ -1,6 +1,7 @@
 # signals/atr_signal.py
 
 import pandas as pd
+import numpy as np
 import vectorbt as vbt
 from .base_signal import BaseSignal
 
@@ -26,12 +27,11 @@ class ATRSignal(BaseSignal):
             window=self.period
         ).atr
 
-        signal = pd.Series(0, index=df.index)
+        atr_ma = atr.rolling(20).mean()
 
-        # ATR 上升 → 买
-        signal[atr > atr.shift(1)] = 1
+        # 波动强度
+        score = (atr - atr_ma) / (atr_ma + 1e-9)
 
-        # ATR 下降 → 卖
-        signal[atr < atr.shift(1)] = -1
+        score = np.tanh(score)
 
-        return signal
+        return score

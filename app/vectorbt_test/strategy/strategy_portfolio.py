@@ -2,31 +2,31 @@ import time
 from typing import List
 import pandas as pd
 import vectorbt as vbt
-from vectorbt_test.strategy.strategy_base import BaseStrategy
+from vectorbt_test.strategy.base_strategy import BaseStrategy
 
 
 class StrategyPortfolio:
-    def __init__(self, strategies: List[BaseStrategy], weights: List[float] = [1]):
+    def __init__(self, strategies: List[BaseStrategy], strategy_weights: List[float] = [1.0], threshold: tuple[float, float] = (0, 0)):
         self.strategies = strategies
-        self.weights = weights or [1.0] * len(strategies)
+        self.strategy_weights = strategy_weights or [1.0] * len(strategies)
+        self.threshold = threshold
 
     def run(self, data: pd.DataFrame, freq: str = "1D", init_cash: float = 100000) -> vbt.Portfolio:
-        combined_signal = None
+        alpha = None
 
-        for strat, w in zip(self.strategies, self.weights):
-            entries, exits = strat.run(data)
+        for strat, w in zip(self.strategies, self.strategy_weights):
+            score = strat.score(data)
 
-            signal = entries.astype(int) - exits.astype(int)
+            weighted = score * w
 
-            weighted_signal = signal * w
-
-            if combined_signal is None:
-                combined_signal = weighted_signal
+            if alpha is None:
+                alpha = weighted
             else:
-                combined_signal += weighted_signal
+                alpha += weighted
 
-        final_entries = combined_signal > 0
-        final_exits = combined_signal < 0
+        # 👉 统一决策
+        final_entries = alpha > self.threshold[0]
+        final_exits = alpha < self.threshold[1]
 
         t0 = time.time()
         pf = vbt.Portfolio.from_signals(

@@ -4,12 +4,16 @@ from vectorbt_test.signals.rsi_signal import RSISignal
 from vectorbt_test.strategy.strategy_portfolio import StrategyPortfolio
 from vectorbt_test.signals.ma_signal import MASignal
 from vectorbt_test.signals.boll_signal import BollSignal
-from vectorbt_test.strategy.strategy_base import BaseStrategy
-from vectorbt_test.engine.signal_expr import Trigger, buy_signal_expr, sell_signal_expr
+from vectorbt_test.strategy.rule_strategy import RuleStrategy
+from vectorbt_test.engine.signal_expr import SignalGroup, buy_signal_expr, sell_signal_expr
 
 from db.duckdb import DuckDBController
 from db.stock_daily_util import get_symbol_data
 import pandas as pd
+
+from concurrent.futures import ProcessPoolExecutor, as_completed
+import os
+
 
 def run_single_backtest(symbol, db_path):
     try:
@@ -29,10 +33,10 @@ def run_single_backtest(symbol, db_path):
         breakout = BreakoutSignal(50)
 
         # === strategy ===
-        strategy = BaseStrategy(
+        strategy = RuleStrategy(
             "trend",
-            buy_trigger=Trigger(buy_signal_expr(ma5)),
-            sell_trigger=Trigger(
+            buy_signals=SignalGroup(buy_signal_expr(ma5)),
+            sell_signals=SignalGroup(
                 sell_signal_expr(macd) |
                 sell_signal_expr(rsi) |
                 sell_signal_expr(breakout)
@@ -41,7 +45,7 @@ def run_single_backtest(symbol, db_path):
 
         portfolio = StrategyPortfolio(
             strategies=[strategy],
-            weights=[1.0]
+            strategy_weights=[1.0]
         )
 
         pf = portfolio.run(df)
@@ -60,11 +64,6 @@ def run_single_backtest(symbol, db_path):
         print(f"❌ {symbol} error: {e}")
         return None
     
-
-
-
-from concurrent.futures import ProcessPoolExecutor, as_completed
-import os
 
 def run_all_backtests(db_path, max_workers=16):
     db_controller = DuckDBController(db_path=db_path)

@@ -1,5 +1,7 @@
 # signals/boll_signal.py
 import pandas as pd
+import numpy as np
+import vectorbt as vbt
 from .base_signal import BaseSignal
 
 
@@ -12,21 +14,21 @@ class BollSignal(BaseSignal):
         self.period = period
         self.std = std
 
-    def generate(self, data: pd.DataFrame) -> pd.Series:
-        close = data["close"]
+    def generate(self, df: pd.DataFrame) -> pd.Series:
+        bb = vbt.BBANDS.run(
+            df["close"],
+            window=self.period,
+            std=self.std
+        )
 
-        ma = close.rolling(self.period).mean()
-        std = close.rolling(self.period).std()
+        mid = bb.middle
+        up = bb.upper
+        down = bb.lower
 
-        upper = ma + self.std * std
-        lower = ma - self.std * std
+        # 距离中轨的标准化位置
+        score = (df["close"] - mid) / (up - down + 1e-9)
 
-        signal = pd.Series(0, index=data.index)
+        # 压缩
+        score = np.tanh(score * 2)
 
-        # 突破下轨 → 买入
-        signal[close < lower] = 1
-
-        # 突破上轨 → 卖出
-        signal[close > upper] = -1
-
-        return signal
+        return score

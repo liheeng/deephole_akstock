@@ -1,6 +1,7 @@
 # signals/volume_signal.py
 
 import pandas as pd
+import numpy as np
 from .base_signal import BaseSignal
 
 # 规则示例：
@@ -18,14 +19,20 @@ class VolumeSignal(BaseSignal):
         self.multiplier = multiplier
 
     def generate(self, df: pd.DataFrame):
-        vol_ma = df["volume"].rolling(self.period).mean()
+        vol = df["volume"]
+        vol_ma = vol.rolling(self.period).mean()
 
-        signal = pd.Series(0, index=df.index)
+        # ===== 1️⃣ 相对成交量 =====
+        ratio = vol / (vol_ma + 1e-9)
 
-        # 放量
-        signal[df["volume"] > vol_ma * self.multiplier] = 1
+        # ===== 2️⃣ 围绕 multiplier 做中心化 =====
+        # multiplier = 1.5 → 只有超过才强
+        raw = ratio - self.multiplier
 
-        # 极度缩量
-        signal[df["volume"] < vol_ma * 0.5] = -1
+        # ===== 3️⃣ 对称化（让缩量也有负值）=====
+        raw = raw / self.multiplier
 
-        return signal
+        # ===== 4️⃣ 压缩范围 =====
+        score = np.tanh(raw * 2)
+
+        return score

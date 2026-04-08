@@ -1,6 +1,7 @@
 # signals/breakout_signal.py
 
 import pandas as pd
+import numpy as np
 from .base_signal import BaseSignal
 
 # 规则：
@@ -20,12 +21,11 @@ class BreakoutSignal(BaseSignal):
         high_n = df["high"].rolling(self.period).max()
         low_n = df["low"].rolling(self.period).min()
 
-        signal = pd.Series(0, index=df.index)
+        mid = (high_n + low_n) / 2
 
-        # 突破前N日最高
-        signal[df["close"] > high_n.shift(1)] = 1
+        # 在区间中的位置
+        score = (df["close"] - mid) / (high_n - low_n + 1e-9)
 
-        # 跌破前N日最低
-        signal[df["close"] < low_n.shift(1)] = -1
+        score = np.tanh(score * 2)
 
-        return signal
+        return score

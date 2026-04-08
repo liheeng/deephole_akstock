@@ -5,8 +5,9 @@ from vectorbt_test.signals.rsi_signal import RSISignal
 from vectorbt_test.strategy.strategy_portfolio import StrategyPortfolio
 from vectorbt_test.signals.ma_signal import MASignal
 from vectorbt_test.signals.boll_signal import BollSignal
-from vectorbt_test.strategy.strategy_base import BaseStrategy
-from vectorbt_test.engine.signal_expr import Trigger, buy_signal_expr, sell_signal_expr
+from vectorbt_test.strategy.base_strategy import BaseStrategy
+from vectorbt_test.strategy.rule_strategy import RuleStrategy
+from vectorbt_test.engine.signal_expr import SignalGroup, buy_signal_expr, sell_signal_expr
 
 from db.duckdb import DuckDBController
 from db.stock_daily_util import get_symbol_data
@@ -27,7 +28,7 @@ def print_trades(pf):
 
 if __name__ == "__main__":
     db_controller = DuckDBController(db_path="../data/stock.duckdb")
-    df = get_symbol_data(db_controller, "603259.SH", "2024-01-01", "2026-03-31")
+    df = get_symbol_data(db_controller, "603259.SH", "2025-01-01", "2026-03-31")
     df['date'] = pd.to_datetime(df['date'])
     df = df.set_index('date')
     df = df.sort_index()
@@ -40,37 +41,37 @@ if __name__ == "__main__":
     breakout = BreakoutSignal(50)
 
     # 趋势策略
-    # trend_strategy = BaseStrategy(
+    # trend_strategy = RuleStrategy(
     #     "trend",
-    #     buy_trigger=Trigger(buy_signal_expr(ma20) & buy_signal_expr(macd)),
-    #     sell_trigger=Trigger(sell_signal_expr(macd))
+    #     buy_signals=Trigger(buy_signal_expr(ma20) & buy_signal_expr(macd)),
+    #     sell_signals=Trigger(sell_signal_expr(macd))
     # )
 
     # 趋势策略, 适合趋势明显的股票
     ma5 = MASignal(5)
-    trend_strategy = BaseStrategy(
+    trend_strategy = RuleStrategy(
         "trend",
-        buy_trigger=Trigger(buy_signal_expr(ma5)),
-        # sell_trigger=Trigger(sell_signal_expr(boll))
-        sell_trigger=Trigger(sell_signal_expr(macd) | sell_signal_expr(rsi) | sell_signal_expr(breakout))
-        # sell_trigger=Trigger(sell_signal_expr(macd))
-        # sell_trigger=Trigger(sell_signal_expr(macd) | sell_signal_expr(ma20)) -- 效果一般
+        buy_signals=SignalGroup(buy_signal_expr(ma5)),
+        # sell_signals=Trigger(sell_signal_expr(boll))
+        sell_signals=SignalGroup(sell_signal_expr(macd) | sell_signal_expr(rsi) | sell_signal_expr(breakout))
+        # sell_signals=Trigger(sell_signal_expr(macd))
+        # sell_signals=Trigger(sell_signal_expr(macd) | sell_signal_expr(ma20)) -- 效果一般
         
     )
 
     # # 震荡策略, 适合区间震荡的股票
     # ma5 = MASignal(5)
-    # trend_strategy = BaseStrategy(
+    # trend_strategy = RuleStrategy(
     #     "trend",
-    #     buy_trigger=Trigger(buy_signal_expr(ma5)),
-    #     sell_trigger=Trigger(sell_signal_expr(ma5))
+    #     buy_signals=Trigger(buy_signal_expr(ma5)),
+    #     sell_signals=Trigger(sell_signal_expr(ma5))
     # )
 
     portfolio = StrategyPortfolio(
         strategies=[
             trend_strategy
         ],
-        weights=[0.4, 0.3, 0.3]
+        strategy_weights=[0.4, 0.3, 0.3]
     )
 
     pf = portfolio.run(df)

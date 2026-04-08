@@ -20,26 +20,33 @@ class BaseExpr(ABC):
     def evaluate(self, signal_values: dict) -> pd.Series:
         pass
 
+    # ===== 布尔运算 =====
     def __and__(self, other: "BaseExpr") -> "BaseExpr":
         return AndExpr(self, other)
 
-    def And(self, other: "BaseExpr") -> "BaseExpr":
-        return AndExpr(self, other)
-    
     def __or__(self, other: "BaseExpr") -> "BaseExpr":
         return OrExpr(self, other)
 
-    def Or(self, other: "BaseExpr") -> "BaseExpr":
-        return OrExpr(self, other)
-    
-    def __not__(self) -> "BaseExpr":
-        return NotExpr(self)
-    
-    def Not(self) -> "BaseExpr":
-        return NotExpr(self)
-    
     def __invert__(self):
         return NotExpr(self)
+
+    def _to_expr(self, other):
+        if isinstance(other, BaseExpr):
+            return other
+        return ConstExpr(other)
+
+    # ===== 数值运算（新增）=====
+    def __add__(self, other: "BaseExpr") -> "BaseExpr":
+        return AddExpr(self, self._to_expr(other))
+
+    def __sub__(self, other: "BaseExpr") -> "BaseExpr":
+        return SubExpr(self, self._to_expr(other))
+
+    def __mul__(self, other: "BaseExpr") -> "BaseExpr":
+        return MulExpr(self, self._to_expr(other))
+
+    def __truediv__(self, other: "BaseExpr") -> "BaseExpr":
+        return DivExpr(self, self._to_expr(other))
 
 
 # 叶子节点：单个信号的表达式
@@ -91,6 +98,60 @@ class NotExpr(BaseExpr):
         return ~self.expr.evaluate(signal_values)
 
 
+class ScoreSignalExpr(BaseExpr):
+    def __init__(self, signal: BaseSignal):
+        self.signal = signal
+
+    def signals(self) -> List[BaseSignal]:
+        return [self.signal]
+    
+    def evaluate(self, signal_values: dict) -> pd.Series:
+        return signal_values[self.signal.name]
+
+
+class BinaryScoreExpr(BaseExpr):
+    def __init__(self, left: BaseExpr, right: BaseExpr):
+        self.left = left
+        self.right = right
+
+    def signals(self):
+        return list(set(self.left.signals() + self.right.signals()))
+
+
+class AddExpr(BinaryScoreExpr):
+    def evaluate(self, signal_values):
+        return self.left.evaluate(signal_values) + self.right.evaluate(signal_values)
+
+
+class SubExpr(BinaryScoreExpr):
+    def evaluate(self, signal_values):
+        return self.left.evaluate(signal_values) - self.right.evaluate(signal_values)
+
+
+class MulExpr(BinaryScoreExpr):
+    def evaluate(self, signal_values):
+        return self.left.evaluate(signal_values) * self.right.evaluate(signal_values)
+
+
+class DivExpr(BinaryScoreExpr):
+    def evaluate(self, signal_values):
+        right = self.right.evaluate(signal_values)
+        return self.left.evaluate(signal_values) / right.replace(0, 1e-9)
+
+
+class ConstExpr(BaseExpr):
+    def __init__(self, value: float):
+        self.value = value
+
+    def signals(self):
+        return []
+
+    def evaluate(self, signal_values):
+        # 用任意一个 index
+        any_series = next(iter(signal_values.values()))
+        return pd.Series(self.value, index=any_series.index)
+
+
 def buy_signal_expr(signal: BaseSignal) -> BaseExpr:
     return SignalExpr(signal, signal_value=SignalValue.BUY)
 
@@ -99,7 +160,11 @@ def sell_signal_expr(signal: BaseSignal) -> BaseExpr:
     return SignalExpr(signal, signal_value=SignalValue.SELL)
 
 
-class Trigger:
+def score_signal_expr(signal: BaseSignal) -> BaseExpr:
+    return ScoreSignalExpr(signal)
+
+
+class SignalGroup:
     def __init__(self, expr: BaseExpr):
         self.expr = expr
 
@@ -109,3 +174,7 @@ class Trigger:
     def check(self, signal_values: dict) -> pd.Series:
         # Update signal values before evaluation
         return self.expr.evaluate(signal_values)
+    
+    def score(self, signal_values):
+        return self.expr.evaluate(signal_values)
+    
