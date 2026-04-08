@@ -72,7 +72,6 @@ class AKshareApiHKHistricSina(AbstractDataSourceAPI):
                         df = self.normalize(df, symbol)
                         result_data[symbol] = df  # 仅成功时赋值
                     else:
-                        result_data[symbol] = None  # 空数据标记
                         failed_symbols.append(symbol)  # 加入失败列表
 
                 except Exception as e:
@@ -127,11 +126,12 @@ class AKshareApiHKHistricSina(AbstractDataSourceAPI):
             
             # 统计失败的symbol
             failed_symbols = [sym for sym, df in result_data.items() if df is None or df.empty]
-            
+            success_data = {sym: df for sym, df in result_data.items() if df is not None and not df.empty}
+
             # 构建FetchResult返回
             fr = FetchResult(
                 status=ResultStatus.SUCCESS,
-                data=result_data,
+                data=success_data,
                 failed_symbols=failed_symbols
             )
             if len(failed_symbols) == len(symbols_str.split(",")):

@@ -43,7 +43,7 @@ def worker_loop():
         except Exception as e:
             task_manager.update_job_status(job, JobStatus.FAILED)
             job.error = str(e)
-            logger.error(f"Job failed: {job.id}, error={e}")
+            logger.exception(f"Job failed: {job.id}, error={e}")
             print(f"Job failed: {job.id}, {e}")
         finally:
             task_manager.release_concurrency_slot(job)

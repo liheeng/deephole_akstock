@@ -71,7 +71,6 @@ class AKshareApiUSHistoricSina(AbstractDataSourceAPI):
                         df = self.normalize(df, symbol)
                         result_data[symbol] = df
                     else:
-                        result_data[symbol] = None
                         failed_symbols.append(symbol)
 
                 except Exception as e:
@@ -124,10 +123,11 @@ class AKshareApiUSHistoricSina(AbstractDataSourceAPI):
 
             result_data = hist_fetcher.run()
             failed_symbols = [sym for sym, df in result_data.items() if df is None or df.empty]
+            success_data = {sym: df for sym, df in result_data.items() if df is not None and not df.empty}
 
             fr = FetchResult(
                 status=ResultStatus.SUCCESS,
-                data=result_data,
+                data=success_data,
                 failed_symbols=failed_symbols
             )
             if len(failed_symbols) == len(symbols_str.split(",")):
