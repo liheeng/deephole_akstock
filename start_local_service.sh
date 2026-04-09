@@ -1,6 +1,15 @@
 #!/bin/bash
+workpath=$1
 
-cd /home/pi/git/stock/deephole_akstock || exit
+if [ -z "$workpath" ]; then
+    workpath=$(pwd)
+fi
+
+cd "${workpath}" || exit
+
+# kill existing services
+ps aux | grep "streamlit" | grep -v grep | awk '{print $2}' | xargs kill -9
+ps aux | grep "uvicorn" | grep -v grep | awk '{print $2}' | xargs kill -9
 
 export PYTHONPATH=./app
 
