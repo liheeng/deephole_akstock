@@ -6,12 +6,16 @@ from sources.us_datasource import USStockSource
 from markets.market import SymbolType
 from markets.market import Region, Market
 from utils.log_manager import get_logger
+import akshare as ak
+from db.duckdb import DuckDBController
 
 logger = get_logger(__name__)
 
 NYSE_LIST_FILE = "https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/nyse/nyse_full_tickers.json"
 NASDAQ_LIST_URL = "https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/nasdaq/nasdaq_full_tickers.json"
 AMEX_LIST_URL = "https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/amex/amex_full_tickers.json"
+
+db = DuckDBController()
 
 
 class USStockMarket(Market):
@@ -58,7 +62,36 @@ class USStockMarket(Market):
 
         return df
 
+    def _get_symbol_list_from_sina(self) -> List[str]:
+        us_spot_df = ak.stock_us_spot()
+        if us_spot_df is None:
+            raise Exception("Failed to fetch symbols from Sina")
+
+        # Save US symbols
+        sql = "CREATE OR REPLACE TABLE sina_us_spot AS SELECT * FROM temp_df"
+        db.write(df=us_spot_df, sql=sql)
+        
+        return (us_spot_df["symbol"].astype(str) + "." + us_spot_df["market"]).tolist()
+
+    def get_symbol_list_from_sina(self) -> List[str] | None:
+        try:
+            logger.info("Trying to fetch symbols from Sina")
+            return self._get_symbol_list_from_sina()
+        except Exception as e:
+            logger.error(f"Failed to fetch symbols from Sina: {e}")
+            # try to read from sina_us_sport table
+            symbol_df = db.read("SELECT symbol, market from sina_us_spot", fetch_mode="df")
+            if len(symbol_df) != 0:
+                logger.info(f"Fetched {len(symbol_df)} symbols from sina_us_spot table")
+                return (symbol_df["symbol"].astype(str) + "." + symbol_df["market"]).tolist()
+        return None
+
     def get_symbol_list(self) -> List[str]:
+        symbols_list = self.get_symbol_list_from_sina()
+        if symbols_list is not None:
+            logger.info(f"Fetched {len(symbols_list)} symbols from Sina")
+            return symbols_list
+        logger.warning("Failed to fetch symbols from Sina and local database, trying to fetch from github")
         return self.get_nyse_symbol_list() + self.get_nasdaq_symbol_list() + self.get_amex_symbol_list()
 
     def get_source(self, datasource_api: DataSourceApiName | None) -> DataSource:

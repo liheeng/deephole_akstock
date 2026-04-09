@@ -26,7 +26,7 @@ class SymbolConverter:
         data_source: DataSourceType,
         region_type: Region,
         api_type: Optional[DataSourceApiName] = None,
-        aftercall: Callable[[str], str] | None = None
+        aftercall: Callable[[str, "SymbolConverter"], str] | None = None
     ):
         """
         初始化符号转换器（除 symbol 外的参数作为构造参数）
@@ -39,7 +39,7 @@ class SymbolConverter:
         self.api_type = api_type
         self.aftercall = aftercall
 
-    def convert(self, symbol: str, aftercall: Callable[[str], str] | None = None) -> str:
+    def convert(self, symbol: str, aftercall: Callable[[str, "SymbolConverter"], str] | None = None) -> str:
         """
         转换单个股票代码（symbol 作为方法参数）
         :param symbol: 原始股票代码
@@ -48,15 +48,15 @@ class SymbolConverter:
         # 调用你原有的构建方法
         code = build_symbol(symbol, self.data_source, self.region_type, self.api_type)
         
-        # 美股特殊处理
-        if self.region_type == Region.US:
-            if self.data_source == DataSourceType.YFINANCE:
-                code = fix_preferred_symbol(code, "-")
-            elif self.data_source == DataSourceType.IFIND:
-                code = fix_preferred_symbol(code, ".")
+        # # 美股特殊处理
+        # if self.region_type == Region.US:
+        #     if self.data_source == DataSourceType.YFINANCE:
+        #         code = fix_preferred_symbol(code, "-")
+        #     elif self.data_source == DataSourceType.IFIND:
+        #         code = fix_preferred_symbol(code, ".")
         
         if self.aftercall:
-            code = self.aftercall(code)
+            code = self.aftercall(code, self)
             
-        return aftercall(code) if aftercall else code
+        return aftercall(code, self) if aftercall else code
     

@@ -4,7 +4,7 @@ from utils.log_manager import get_logger
 from utils.common import ResultStatus
 from markets.market import Region
 from sources.data_source import DataSourceType, DataSourceApiName, AbstractDataSourceAPI, FetchResult, QueryOptions
-from sources.datasource_adapter import SymbolConverter, fix_preferred_symbol
+from sources.datasource_adapter import SymbolConverter
 from datetime import datetime
 from core.paraller_job_executor import ParallelJob
 from core.process_pool.process_pool import ExProcessExecutorPool
@@ -12,6 +12,23 @@ from core.process_pool.executor_task import ExectuorTaskCfg
 from sources.parallel_hist_fetcher import ParallelHistFetcher
 
 logger = get_logger(__name__)
+
+
+def clean_us_sina_symbol(code: str) -> str:
+    # 1. 斜杠转横杠
+    s = code.replace('/', '-')
+    
+    # 2. 去掉 ^ 及后面所有内容
+    s = s.split('^')[0]
+        
+    # 4. 去空格（防止意外）
+    s = s.strip()
+    
+    return s
+
+
+def fix_symbol_for_sina_us(code: str, converter: SymbolConverter) -> str:
+    return clean_us_sina_symbol(code)
 
 
 class AKshareApiUSHistoricSina(AbstractDataSourceAPI):
@@ -40,7 +57,7 @@ class AKshareApiUSHistoricSina(AbstractDataSourceAPI):
         if options is None:
             options = QueryOptions(start=pd.to_datetime("1900-01-01"))
 
-        symbol_converter = SymbolConverter(DataSourceType.AKSHARE, Region.US, self.source_api_type, fix_preferred_symbol)
+        symbol_converter = SymbolConverter(DataSourceType.AKSHARE, Region.US, self.source_api_type, fix_symbol_for_sina_us)
         failed_symbols = []
         result_data = {}
         symbols = symbols_str.split(",")
