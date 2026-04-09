@@ -1,6 +1,17 @@
 import pandas as pd
 
 
+def handle_multi_index(df: pd.DataFrame) -> tuple[pd.DataFrame, bool]:
+    df['date'] = pd.to_datetime(df['date'])
+    # ===== 多股票处理 =====
+    is_multi = df["symbol"].nunique() > 1
+    if is_multi:
+        df = df.set_index(["date", "symbol"]).sort_index()
+    else:
+        df = df.set_index("date").sort_index()
+    return df, is_multi
+
+
 def normalize_cross_section(alpha: pd.Series) -> pd.Series:
     return alpha.groupby(level=0).transform(
         lambda x: (x - x.mean()) / (x.std() + 1e-9)

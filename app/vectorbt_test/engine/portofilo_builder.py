@@ -1,7 +1,7 @@
 from vectorbt_test.core.factor import Factor
 from vectorbt_test.core.signal_expr import BaseExpr
 from vectorbt_test.strategy.factor_strategy import FactorStrategy
-from vectorbt_test.strategy.strategy_portfolio import StrategyPortfolio
+from vectorbt_test.strategy.strategy_portfolio import StrategyPortfolio, PortfolioParameters
 from typing import Dict, List, Any
 from .signal_builder import ExprParser
 
@@ -9,7 +9,7 @@ from .signal_builder import ExprParser
 class PortfolioBuilder:
     strategies: List[Dict[str, Any]] 
     strategy_weights: List[float] | None
-    run_params: Dict[str, Any]
+    portfolio_params: PortfolioParameters | None
     _current_strategy: Dict[str, Any] | None
     _current_factor: Dict[str, Any] | None
     
@@ -17,7 +17,7 @@ class PortfolioBuilder:
         self.name = name
         self.strategies = []
         self.strategy_weights = None
-        self.run_params = {}
+        self.portfolio_params = None
 
         self._current_strategy = None
         self._current_factor = None
@@ -69,8 +69,8 @@ class PortfolioBuilder:
         self.strategy_weights = weights
         return self
 
-    def set_run_parameters(self, **kwargs):
-        self.run_params = kwargs
+    def set_portfolio_params(self, params: PortfolioParameters):
+        self.portfolio_params = params
         return self
     
     def build(self):
@@ -91,12 +91,8 @@ class PortfolioBuilder:
                 )
             )
 
-        freq = self.run_params.get("freq", "1D")
-        init_cash = self.run_params.get("init_cash", 100000)
-
         return StrategyPortfolio(
             strategies=strategies_obj,
             strategy_weights=self.strategy_weights,
-            freq=freq,
-            init_cash=init_cash
+            portfolio_params=self.portfolio_params
         )

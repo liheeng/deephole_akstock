@@ -16,6 +16,20 @@ def get_symbol_data(db, symbol: str, start_date: str = None, end_date: str = Non
     return db.read(sql, fetch_mode='df')
 
 
+def get_symbols_data(db, symbols_str: str, start_date: str = None, end_date: str = None) -> pd.DataFrame:
+    
+    start = start_date if start_date else "1990-01-01"
+    end = end_date if end_date else datetime.now().strftime("%Y-%m-%d")
+    # 切割并清洗股票代码
+    symbols = [s.strip() for s in symbols_str.split(",") if s.strip()]
+    
+    # 关键：给每个 symbol 加上单引号！
+    quoted_symbols = [f"'{sym}'" for sym in symbols]
+    in_clause = ",".join(quoted_symbols)  # 变成 '000001','000002'
+    sql = f"SELECT * FROM stock_daily WHERE symbol IN ({in_clause}) and date>='{start}' and date<='{end}' ORDER BY date"
+    return db.read(sql, fetch_mode='df')
+
+
 def get_last_date(db, symbol: str) -> datetime | None:
     r = db.read(
         "SELECT max(date) FROM stock_daily WHERE symbol=?", 
