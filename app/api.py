@@ -12,6 +12,7 @@ from fastapi.responses import StreamingResponse
 import subprocess
 import asyncio
 from pydantic import BaseModel
+import pandas as pd
 
 from core.task_manager import task_manager
 from db.db_common import DB
@@ -112,6 +113,41 @@ def tail_logs(n: int = 50):
         lines = f.readlines()
 
     return {"logs": lines[-n:]}
+
+
+class SQLQuery(BaseModel):
+    sql: str
+
+
+@app.post("/execute_sql")
+def execute_sql(query: SQLQuery):
+    try:
+        logger.info("received request for executing sql: %s", query.sql)
+
+        sql = query.sql.strip().lower()
+
+        if sql.startswith("select") or sql.startswith("with"):
+            df = db_controller.read(sql=query.sql, fetch_mode="df")
+        else:
+            df = db_controller.execute(sql=query.sql, fetch_mode="df")
+            # return {"status": "success", "data": None, "columns": []}
+
+        if df is None or len(df) == 0:
+            return {"status": "success", "data": None, "columns": []}
+
+        # ✅ 关键修复
+        import json
+        data = json.loads(df.to_json(orient="records", date_format="iso"))
+
+        return {
+            "status": "success",
+            "data": data,
+            "columns": df.columns.tolist()
+        }
+
+    except Exception as e:
+        logger.exception(f"failed to execute sql: {query.sql}")
+        return {"status": "error", "message": str(e)}
 
 
 class ExportRequest(BaseModel):

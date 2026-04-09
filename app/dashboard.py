@@ -7,6 +7,7 @@ import time
 from sources.data_source import DataSourceApiName
 from utils.common import is_running_in_docker
 from core.job import JobType
+import pandas as pd
 
 API_SERVICE_NAME = os.getenv("API_SERVICE_NAME", "akstock_api_service")
 API_PORT = os.getenv("API_PORT", "8000")
@@ -19,7 +20,7 @@ st.set_page_config(layout="wide")
 # 🎯 左侧菜单 - 新增 Export Data 选项
 menu = st.sidebar.radio(
     "菜单",
-    ["Tasks", "Sync CN Daily", "Sync HK Daily", "Sync US Daily", "Export Data", "Logs", "WebConsole"],
+    ["Tasks", "Sync CN Daily", "Sync HK Daily", "Sync US Daily", "Export Data", "Logs", "SQL Executor", "WebConsole"],
     key="main_menu"  # 加唯一key避免缓存
 )
 
@@ -326,6 +327,34 @@ elif menu == "Logs":
             placeholder.text("".join(logs))
             time.sleep(5)
 
+
+# SQL executor
+elif menu == "SQL Executor":
+    st.header("📊 SQL 在线查询工具")
+    st.subheader("输入 SQL 语句，直接查看结果")
+
+    # 输入框
+    sql = st.text_area("输入 SQL 语句", height=180, value="SELECT * FROM stock_daily LIMIT 10;")
+
+    # 执行按钮
+    if st.button("🚀 执行查询"):
+        if not sql.strip():
+            st.warning("请输入 SQL")
+        else:
+            with st.spinner("执行中..."):
+                resp = requests.post(f"{API}/execute_sql", json={"sql": sql})
+                # 先打印看返回了什么（关键！）
+                st.write("状态码:", resp.status_code)
+                st.code("返回内容:\n" + resp.text[:500])  # 看真实错误
+
+                result = resp.json()
+
+                if result["status"] == "success":
+                    df = pd.DataFrame(result["data"])
+                    st.success(f"查询成功，共 {len(df)} 条数据")
+                    st.dataframe(df, use_container_width=True)
+                else:
+                    st.error(f"执行失败：{result['message']}")
 
 # ----------------------------
 # 🧩 WebConsole 页面
