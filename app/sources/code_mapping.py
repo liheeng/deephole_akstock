@@ -58,7 +58,7 @@ def build_symbol(
     api_type: DataSourceApiName | None = None
 ):
     # 拆解 code 和 exchange
-    code = symbol.split(".")[0]
+    code = symbol.rsplit(".", 1)[0]
     exchange = symbol.split(".")[-1]
     source = data_source.value.lower()
     region = region_type.value.lower()

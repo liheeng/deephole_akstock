@@ -31,13 +31,13 @@ def main():
     api.init()
 
     # create sync CN daily task
-    task = create_sync_cn_daily_task(DataSourceApiName.AKSHARE_SINA_API)
+    # task = create_sync_cn_daily_task(DataSourceApiName.AKSHARE_SINA_API)
 
     # create sync HK daily task
     # task = create_sync_hk_daily_task(DataSourceApiName.AKSHARE_SINA_API)
     
     # create sync US daily task
-    # task = create_sync_us_daily_task(DataSourceApiName.AKSHARE_SINA_API)
+    task = create_sync_us_daily_task(DataSourceApiName.AKSHARE_SINA_API)
     
     api.run_task(task)
 
