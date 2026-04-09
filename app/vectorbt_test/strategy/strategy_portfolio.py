@@ -7,18 +7,30 @@ from vectorbt_test.engine.signal_engine import SignalEngine
 
 
 class StrategyPortfolio:
-    def __init__(self, strategies: List[BaseStrategy], strategy_weights: List[float] | None = None, buy_threshold: float = 0.0, sell_threshold: float = 0.0):
+    def __init__(self, 
+                 strategies: List[BaseStrategy], 
+                 strategy_weights: List[float] | None = None, 
+                 buy_threshold: float = 0.0, 
+                 sell_threshold: float = 0.0, 
+                 freq: str = "1D", 
+                 init_cash: float = 100000):
         self.strategies = strategies
         self.strategy_weights = strategy_weights or [1.0 / len(self.strategies)] * len(self.strategies)
         self.buy_threshold = buy_threshold
         self.sell_threshold = sell_threshold
+        self.freq = freq
+        self.init_cash = init_cash
 
-    def run(self, data: pd.DataFrame, freq: str = "1D", init_cash: float = 100000) -> vbt.Portfolio:
+    def run(self, df: pd.DataFrame, freq: str = "1D", init_cash: float = 100000) -> vbt.Portfolio:
+        # if df["symbol"].nunique() > 1:
+        #     df["date"] = pd.to_datetime(df["date"])
+        #     df = df.set_index(["date", "symbol"]).sort_index()
+
         alpha = None
 
         signals_engine = SignalEngine()
         for strat, w in zip(self.strategies, self.strategy_weights):
-            score = strat.score(data, signals_engine)
+            score = strat.score(df, signals_engine)
 
             weighted = score * w
 
@@ -33,11 +45,11 @@ class StrategyPortfolio:
 
         t0 = time.time()
         pf = vbt.Portfolio.from_signals(
-            close=data["close"],
+            close=df["close"],
             entries=final_entries,
             exits=final_exits,
-            init_cash=init_cash,
-            freq=freq,
+            init_cash=init_cash or self.init_cash,
+            freq=freq or self.freq,
         )
         print("vectorbt run time:", time.time() - t0)
 

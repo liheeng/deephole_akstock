@@ -22,20 +22,24 @@ class RuleStrategy(BaseStrategy):
     
     def run(self, data: pd.DataFrame, signal_engine: SignalEngine | None = None) -> tuple[pd.Series, pd.Series]:
         # 1️⃣ 收集 signals
-        buy_signals = self.buy_factor.signals()
-        sell_signals = self.sell_factor.signals()
+        # ===== 收集所有 signals =====
+        all_signals = []
+        for factor in self.factors:
+            all_signals.extend(factor.signals())
+
+        # 去重（关键）
+        unique_signals = list({s.name: s for s in all_signals}.values())
 
         # 2️⃣ 生成 engine
         s_engine = signal_engine or SignalEngine()
         # 3️⃣ 生成 signal values which are vectorized (pd.Series)
-        result = s_engine.generate(
+        signal_values = s_engine.generate(
             data=data,
-            signals_list=[buy_signals, sell_signals],
-            normalize=True)
-        buy_vals, sell_vals = result[0], result[1]
-
+            signals=unique_signals,
+            normalize=True
+        )
         # 4️⃣ 生成 entry / exit
-        entries = self.buy_factor.check(buy_vals)
-        exits = self.sell_factor.check(sell_vals)
+        entries = self.buy_factor.check(signal_values)
+        exits = self.sell_factor.check(signal_values)
 
         return entries, exits

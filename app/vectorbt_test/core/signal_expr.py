@@ -48,6 +48,24 @@ class BaseExpr(ABC):
     def __truediv__(self, other: "BaseExpr") -> "BaseExpr":
         return DivExpr(self, self._to_expr(other))
 
+    # ===== 比较运算 =====
+    def __gt__(self, other):
+        return GreaterExpr(self, self._to_expr(other))
+
+    def __lt__(self, other):
+        return LessExpr(self, self._to_expr(other))
+
+    def __ge__(self, other):
+        return GreaterEqualExpr(self, self._to_expr(other))
+
+    def __le__(self, other):
+        return LessEqualExpr(self, self._to_expr(other))
+
+    def __eq__(self, other):
+        return EqualExpr(self, self._to_expr(other))
+
+    def __ne__(self, other):
+        return NotEqualExpr(self, self._to_expr(other))
 
 # 叶子节点：单个信号的表达式
 class SignalExpr(BaseExpr):
@@ -62,6 +80,45 @@ class SignalExpr(BaseExpr):
         series = signal_values[self.signal.name]
         return series == self.signal_value.value
 
+
+class CompareExpr(BaseExpr):
+    def __init__(self, left: BaseExpr, right: BaseExpr):
+        self.left = left
+        self.right = right
+
+    def signals(self):
+        return list({s.name: s for s in self.left.signals() + self.right.signals()}.values())
+    
+
+class GreaterExpr(CompareExpr):
+    def evaluate(self, signal_values):
+        return (self.left.evaluate(signal_values) > self.right.evaluate(signal_values)).astype(int)
+
+
+class LessExpr(CompareExpr):
+    def evaluate(self, signal_values):
+        return (self.left.evaluate(signal_values) < self.right.evaluate(signal_values)).astype(int)
+
+
+class GreaterEqualExpr(CompareExpr):
+    def evaluate(self, signal_values):
+        return (self.left.evaluate(signal_values) >= self.right.evaluate(signal_values)).astype(int)
+
+
+class LessEqualExpr(CompareExpr):
+    def evaluate(self, signal_values):
+        return (self.left.evaluate(signal_values) <= self.right.evaluate(signal_values)).astype(int)
+
+
+class EqualExpr(CompareExpr):
+    def evaluate(self, signal_values):
+        return (self.left.evaluate(signal_values) == self.right.evaluate(signal_values)).astype(int)
+
+
+class NotEqualExpr(CompareExpr):
+    def evaluate(self, signal_values):
+        return (self.left.evaluate(signal_values) != self.right.evaluate(signal_values)).astype(int)
+    
 
 class AndExpr(BaseExpr):
     def __init__(self, left: "BaseExpr", right: "BaseExpr"):
@@ -162,4 +219,8 @@ def sell_signal_expr(signal: BaseSignal) -> BaseExpr:
 
 
 def score_signal_expr(signal: BaseSignal, weight: float = 1.0) -> BaseExpr:
+    return ScoreSignalExpr(signal, weight=weight)
+
+
+def S_Expr(signal: BaseSignal, weight: float = 1.0) -> BaseExpr:
     return ScoreSignalExpr(signal, weight=weight)
