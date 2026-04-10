@@ -356,6 +356,17 @@ elif menu == "SQL Executor":
                 else:
                     st.error(f"执行失败：{result['message']}")
 
+elif menu == "Backtest":
+    st.header("📊 Backtest"
+    
+    nodes = requests.get(f"{API}/backtest/funcs/nodes").json()
+
+    for group, items in nodes.items():
+        st.subheader(group)
+
+        for item in items:
+            st.write(f"{item['name']} - {item['desc']}"))
+    
 # ----------------------------
 # 🧩 WebConsole 页面
 # ----------------------------

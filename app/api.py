@@ -24,6 +24,7 @@ from core.worker import start_workers
 from db.duckdb import DuckDBController
 from sources.ifind.ifind_api import IFinDApi
 from sources.data_source import DataSourceApiName
+from vectorbt_test.core.registry import NodeRegistry
 
 # !!! Register executors, any new executor needs to be import here,
 # it is very important,otherwise the API won't know how to handle
@@ -199,6 +200,9 @@ async def export_stream(req: ExportRequest):
         headers={"Content-Disposition": f"attachment; filename=stock_daily.{fmt}"}
     )
 
+@app.get("/nodes")
+def get_nodes():
+    return NodeRegistry.to_dict()
     
 @app.websocket("/ws/terminal/{container}")
 async def terminal_ws(websocket: WebSocket, container: str):
