@@ -1,27 +1,55 @@
-from vectorbt_test.core.factors import FactorNode   
+from vectorbt_test.core.factors import FactorNode
+from vectorbt_test.core.strategy import Strategy, StrategyMode
+from typing import List
 
 
-class HybridStrategy:
-    def __init__(self, factor: FactorNode, threshold=0, top_n=None):
-        self.factor = factor
-        self.threshold = threshold
+class HybridStrategy(Strategy):
+
+    def __init__(self, factors: List[FactorNode], mode=StrategyMode.AUTO, top_n=10, threshold=0):
+        self.factors = factors
+        self.mode = mode
         self.top_n = top_n
+        self.threshold = threshold
+    
+    def generate(self, data, cache):
+        # ===== 1. 合成 alpha =====
+        alpha = None
+        for f in self.factors:
+            s = f.score(data, cache)
+            alpha = s if alpha is None else alpha + s
 
-    def generate(self, data, cache, context: dict | None = None):
-        f = self.factor.score(data, cache, context)
+        # ===== 2. 判断模式 =====
+        mode = self.mode
 
-        # 1️⃣ 过滤垃圾信号（关键）
-        mask = f > self.threshold
+        if mode == StrategyMode.AUTO:
+            mode = StrategyMode.CROSS_SECTION if self.data_adapter.is_cross_section else StrategyMode.TIME_SERIES
 
-        # 2️⃣ rank（如果多标的）
-        if self.top_n:
-            ranks = f.rank(axis=1, ascending=False)
-            mask &= (ranks <= self.top_n)
+        # ===== 3. 分支 =====
+        if mode == StrategyMode.TIME_SERIES:
+            return self._ts_strategy(alpha)
 
-        # 3️⃣ score 加权
-        weights = f * mask
+        else:
+            return self._cs_strategy(alpha)
+        
+    def _ts_strategy(self, alpha):
+        entries = alpha > self.threshold
+        exits   = alpha < -self.threshold
 
-        # 4️⃣ normalize
-        weights = weights.div(weights.abs().sum(axis=1), axis=0)
+        return {
+            "type": "signal",
+            "entries": entries,
+            "exits": exits
+        }
+    
+    def _cs_strategy(self, alpha):
+        ranks = self.data_adapter.cs_rank(alpha, ascending=False)
 
-        return weights
+        mask = ranks <= self.top_n
+
+        weights = (self.top_n - ranks + 1).where(mask, 0)
+        weights = self.data_adapter.cs_normalize(weights).fillna(0)
+
+        return {
+            "type": "weight",
+            "weights": weights
+        }

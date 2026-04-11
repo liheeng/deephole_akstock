@@ -1,7 +1,7 @@
 import pandas as pd
 
 
-def handle_multi_index(df: pd.DataFrame) -> tuple[pd.DataFrame, bool]:
+def adjust_data_index(df: pd.DataFrame) -> tuple[pd.DataFrame, bool]:
     df['date'] = pd.to_datetime(df['date'])
     # ===== 多股票处理 =====
     is_multi = df["symbol"].nunique() > 1
@@ -26,7 +26,6 @@ def maybe_normalize(alpha: pd.Series) -> pd.Series:
             return normalize_cross_section(alpha)
 
     return alpha
-
 
 
 def top_n(alpha: pd.Series, n: int) -> pd.Series:

@@ -1,63 +1,66 @@
-import time
 from dataclasses import dataclass
 from typing import List
 import pandas as pd
 import vectorbt as vbt
-from vectorbt_test.core.base_strategy import BaseStrategy
-from vectorbt_test.engine.signal_engine import SignalEngine
-from vectorbt_test.utils.quota_funcs import handle_multi_index
+from vectorbt_test.core.strategy import Strategy
+from vectorbt_test.utils.quota_funcs import adjust_data_index
 
+
+def orthogonalize_factors(factors: List[pd.DataFrame]):
+    ortho = []
+
+    for f in factors:
+        f_new = f.copy()
+
+        for prev in ortho:
+            # 投影
+            beta = (f_new * prev).sum(axis=1) / (prev * prev).sum(axis=1)
+            beta = beta.replace([float("inf"), -float("inf")], 0).fillna(0)
+
+            f_new = f_new - prev.mul(beta, axis=0)
+
+        ortho.append(f_new)
+
+    return ortho
 
 @dataclass
 class PortfolioParameters:
     freq: str
     init_cash: float
-    buy_threshold: float | None
-    sell_threshold: float | None
     top_n: int | None
     hold_days: int
 
 
-class StrategyPortfolio:
+class StrategyPortfolioV2:
     def __init__(self, 
-                 strategies: List[BaseStrategy], 
+                 strategies: List[Strategy], 
                  strategy_weights: List[float] | None = None, 
                  portfolio_params: PortfolioParameters | None = None):
         self.strategies = strategies
         self.strategy_weights = strategy_weights or [1.0 / len(self.strategies)] * len(self.strategies)
-        self.buy_threshold = portfolio_params.buy_threshold if portfolio_params else 0
-        self.sell_threshold = portfolio_params.sell_threshold if portfolio_params else 0
         self.freq = portfolio_params.freq if portfolio_params else "1D"
         self.init_cash = portfolio_params.init_cash if portfolio_params else 100000
         self.top_n = portfolio_params.top_n if portfolio_params else None
         self.hold_days = portfolio_params.hold_days if portfolio_params else 1
 
     def run(self, df: pd.DataFrame, freq: str = "1D", init_cash: float = 100000):
-        df, is_multi = handle_multi_index(df)
+        df, is_multi = adjust_data_index(df)
 
         alpha = None
-        signals_engine = SignalEngine()
+        cache = {}
 
+        # ===== 合成 alpha =====
         for strat, w in zip(self.strategies, self.strategy_weights):
-            score = strat.score(df, signals_engine)
-            weighted = score * w
-            alpha = weighted if alpha is None else alpha + weighted
+            score = strat.generate(df, cache)
+            alpha = score * w if alpha is None else alpha + score * w
 
-        # ===== TopN =====
-        if is_multi and self.top_n:
-            rank = alpha.groupby(level=0).rank(ascending=False)
+        weights = alpha
 
-            final_entries = rank <= self.top_n
-            final_exits = ~(rank <= self.top_n)
-
-            # ===== 持仓周期（强烈推荐）=====
-            if getattr(self, "hold_days", 1) > 1:
-                for i in range(1, self.hold_days):
-                    final_entries |= final_entries.shift(i)
-
-        else:
-            final_entries = alpha > self.buy_threshold
-            final_exits = alpha < self.sell_threshold
+        # ===== 调仓频率（rebalance）=====
+        if self.hold_days > 1:
+            weights = weights.copy()
+            weights.iloc[::self.hold_days] = weights.iloc[::self.hold_days]
+            weights = weights.ffill()
 
         # ===== 转 vectorbt =====
         def to_vbt(series):
@@ -67,13 +70,23 @@ class StrategyPortfolio:
             return series
 
         close = to_vbt(df["close"])
-        entries = to_vbt(final_entries)
-        exits = to_vbt(final_exits)
+        weights = to_vbt(weights).fillna(0)
+
+        # 计算变化量（核心）
+        delta = weights - weights.shift(1).fillna(0)
+
+        threshold = 0.01 # 1%
+        entries = delta > threshold
+        exits = delta < -threshold
+
+        size = delta.where(entries | exits, 0).abs()
 
         pf = vbt.Portfolio.from_signals(
             close=close,
             entries=entries,
             exits=exits,
+            size=size,
+            size_type="percent",
             init_cash=init_cash or self.init_cash,
             freq=freq or self.freq,
         )

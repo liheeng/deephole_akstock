@@ -1,6 +1,6 @@
 
-from vectorbt_test.strategy.strategy_portfolio_v2 import StrategyPortfolioV2
-from vectorbt_test.strategy.multi_factors_strategy import MultiFactorStrategy
+from app.vectorbt_test.strategy.archieve.strategy_portfolio_v2 import StrategyPortfolioV2
+from app.vectorbt_test.strategy.archieve.multi_factors_strategy import MultiFactorStrategy
 from vectorbt_test.core.factors import FactorNode
 from vectorbt_test.core.node_builder import NodeBuilder
 
@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
 
     nb = NodeBuilder()
-    factor_expr = nb.build("ma5")
+    factor_expr = nb.build("ma5 * 1")
 
     trend_strategy = MultiFactorStrategy(
         factors=[FactorNode(name="trend_factor", expr=factor_expr)] 

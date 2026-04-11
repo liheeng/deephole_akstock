@@ -43,7 +43,14 @@ def cs_zscore(x):
 
 
 def is_cross_section(x):
-    return isinstance(x.index, pd.MultiIndex) or isinstance(x, pd.DataFrame)
+    if isinstance(x.index, pd.MultiIndex):
+        # 判断每个时间点是否有多个资产
+        return x.index.get_level_values(0).nunique() < len(x)
+
+    if isinstance(x, pd.DataFrame):
+        return x.shape[1] > 1
+
+    return False
 
 
 def orthogonalize_factors(factors: List[pd.DataFrame]):
@@ -65,3 +72,4 @@ def orthogonalize_factors(factors: List[pd.DataFrame]):
         ortho.append(f_new)
 
     return ortho
+

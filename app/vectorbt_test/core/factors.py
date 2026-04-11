@@ -1,7 +1,7 @@
 from .expr import Expr
 from .node import Node, NodeType
 import pandas as pd
-from vectorbt_test.utils.cs import cs_zscore
+from vectorbt_test.utils.cs import cs_zscore, cs_rank
 
 
 class FactorNode(Node):
