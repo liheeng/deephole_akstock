@@ -1,5 +1,5 @@
 import pandas as pd
-from vectorbt_test.core.factors import FactorNode
+from vectorbt_test.core.factor import FactorNode
 from typing import List
 from vectorbt_test.core.strategy import Strategy
 from vectorbt_test.utils.cs import cs_rank, cs_normalize, orthogonalize_factors

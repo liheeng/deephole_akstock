@@ -1,7 +1,7 @@
 from vectorbt_test.core.factor import Factor
 from vectorbt_test.core.signal_expr import BaseExpr
-from app.vectorbt_test.strategy.archieve.factor_strategy import FactorStrategy
-from app.vectorbt_test.strategy.archieve.strategy_portfolio_v2 import StrategyPortfolio, PortfolioParameters
+from vectorbt_test.strategy.archieve.factor_strategy import FactorStrategy
+from vectorbt_test.strategy.archieve.strategy_portfolio_v2 import StrategyPortfolio, PortfolioParameters
 from typing import Dict, List, Any
 from .signal_builder import ExprParser
 

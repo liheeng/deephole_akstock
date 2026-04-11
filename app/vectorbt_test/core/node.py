@@ -29,7 +29,20 @@ class Node:
     def compute(self, data: pd.DataFrame, cache: dict, context: dict | None = None):
         raise NotImplementedError
 
+    def slope(self):
+        return SlopeNode(self)
 
+
+class SlopeNode(Node):
+    def __init__(self, node):
+        super().__init__(node.type)
+        self.node = node
+
+    def compute(self, data, cache, context):
+        x = self.node.compute(data, cache, context)
+        return x.diff()
+
+    
 # =========================
 # DB Node（优先用数据库）
 # =========================

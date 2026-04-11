@@ -1,10 +1,10 @@
 from vectorbt_test.signals.breakout_signal import BreakoutSignal
 from vectorbt_test.signals.macd_signal import MACDSignal
 from vectorbt_test.signals.rsi_signal import RSISignal
-from app.vectorbt_test.strategy.archieve.strategy_portfolio_v2 import StrategyPortfolio
+from vectorbt_test.strategy.archieve.strategy_portfolio_v2 import StrategyPortfolio
 from vectorbt_test.signals.ma_signal import MASignal
 from vectorbt_test.signals.boll_signal import BollSignal
-from app.vectorbt_test.strategy.archieve.rule_strategy import RuleStrategy
+from vectorbt_test.strategy.archieve.rule_strategy import RuleStrategy
 from vectorbt_test.core.factor import Factor
 from vectorbt_test.core.signal_expr import buy_signal_expr, sell_signal_expr
 

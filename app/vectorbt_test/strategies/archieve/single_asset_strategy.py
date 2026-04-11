@@ -1,4 +1,4 @@
-from vectorbt_test.core.factors import FactorNode
+from vectorbt_test.core.factor import FactorNode
 
 
 class SingleAssetStrategy:

@@ -1,49 +1,70 @@
-from .signal_expr import BaseExpr
+from .expr import Expr
+from .node import Node, NodeType
 import pandas as pd
+from vectorbt_test.utils.cs import cs_zscore, cs_rank
 
 
-class Factor:
-    def __init__(self, name: str, expr: BaseExpr):
-        self.name = name
+class FactorNode(Node):
+    def __init__(self, name: str, expr: Expr):
+        super().__init__(NodeType.Factor)
+        self._name = name
         self.expr = expr
-        self._signals = self._collect_signals()
 
-    def _collect_signals(self):
-        # 去重（关键）
-        signals = self.expr.signals()
-        return {s.name: s for s in signals}
-
-    def signals(self):
-        return list(self._signals.values())
-
-    # ==============================
-    # 核心执行入口（你现在缺的）
-    # ==============================
-    def run(self, signal_values: dict) -> pd.Series:
-        return self.expr.evaluate(signal_values)
-
-    # ==============================
-    # 因子分数（带标准化）
-    # ==============================
-    def score(self, signal_values: dict) -> pd.Series:
-        s = self.run(signal_values)
-        # 标准化（时间序列 or 横截面你后面可以扩展）
-        return (s - s.mean()) / (s.std() + 1e-9)
-
-    # ==============================
-    # 排名（选股核心）
-    # ==============================
-    def rank(self, signal_values: dict) -> pd.Series:
-        s = self.score(signal_values)
-        return s.rank(ascending=False)
-
-    # ==============================
-    # TopN（直接生成信号）
-    # ==============================
-    def top_n(self, signal_values, n: int) -> pd.Series:
-        rank = self.rank(signal_values)
-        return rank <= n
+    @property
+    def name(self):
+        return self._name
     
-    def check(self, signal_values: dict) -> pd.Series:
-        # Update signal values before evaluation
-        return self.expr.evaluate(signal_values)
+    def compute(self, data: pd.DataFrame, cache: dict, context: dict | None = None):
+        return self.expr.evaluate(data, cache, context or {})
+
+    def score(self, data: pd.DataFrame, cache: dict, context: dict | None = None):
+        s = self.compute(data, cache, context)
+        return cs_zscore(s)
+
+    def rank(self):
+        return RankNode(self)
+   
+
+class RankNode(Node):
+    def __init__(self, node):
+        super().__init__(node.type)
+        self.node = node
+
+    def compute(self, data, cache, context):
+        x = self.node.compute(data, cache, context)
+        return x.rank(axis=1, pct=True)
+
+    
+# NodeRegistry.register(
+#     "momentum_score",
+#     lambda: DBNode("momentum_score"),
+#     NodeMeta(
+#         name="momentum_score",
+#         group="factor",
+#         desc="动量因子"
+#     )
+# )
+# NodeRegistry.register(
+#     "close",
+#     lambda: DBNode("close"),
+#     NodeMeta(
+#         name="close",
+#         group="raw",
+#         desc="收盘价"
+#     )
+# )
+
+# if __name__ == "__main__":
+#     from .expr_parser import NodeBuilder
+
+#     builder = NodeBuilder()
+
+#     expr = builder.build("0.7*ma5 + 0.3*macd")
+
+#     factor = FactorNode("trend", expr)
+
+#     context = {
+#         "db_df": df   # 从数据库读取的指标
+#     }
+
+#     score = factor.score(df, context)
