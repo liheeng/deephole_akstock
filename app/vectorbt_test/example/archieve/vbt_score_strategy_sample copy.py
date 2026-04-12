@@ -6,7 +6,7 @@ from vectorbt_test.strategy.archieve.strategy_portfolio_v2 import StrategyPortfo
 from vectorbt_test.signals.ma_signal import MASignal
 from vectorbt_test.signals.boll_signal import BollSignal
 from vectorbt_test.strategy.archieve.factor_strategy import FactorStrategy
-from vectorbt_test.core.factor import Factor
+from vectorbt_test.core.factors import Factor
 from vectorbt_test.core.signal_expr import score_signal_expr
 
 from db.duckdb import DuckDBController
@@ -55,7 +55,7 @@ if __name__ == "__main__":
     ma5 = MASignal(5)
     trend_strategy = FactorStrategy(
         "trend",
-        factors=[Factor(name="trend_factor", expr=score_signal_expr(ma5, 0.7) + score_signal_expr(macd, 0.3))]
+        factors=[Factor(name="trend_factor", node=score_signal_expr(ma5, 0.7) + score_signal_expr(macd, 0.3))]
         # sell_signals=Trigger(sell_signal_expr(boll))
         # sell_signals=SignalGroup(score_signal_expr(macd) + score_signal_expr(rsi) + score_signal_expr(breakout))
         # sell_signals=Trigger(sell_signal_expr(macd))

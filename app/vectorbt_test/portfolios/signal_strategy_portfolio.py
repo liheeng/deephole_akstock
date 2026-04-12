@@ -2,8 +2,10 @@ import enum
 from typing import List, Sequence
 import pandas as pd
 import vectorbt as vbt
-from ..core.portfolio import PortfolioParameters, StrategyPortfolio
-from ..strategy.signal_strategy import SignalStrategy
+from ..core.portfolio import PortfolioParameters, StrategyPortfolio, PortfolioContext
+from ..strategies.signal_strategy import SignalStrategy
+from ..core.signals import Signal, SignalScope
+from ..core.node_builder import NodeBuilder
 from vectorbt_test.engine.data_adapter import DataAdapter
 
 
@@ -17,9 +19,10 @@ class SignalStrategyPortfolio(StrategyPortfolio):
     def __init__(self,
                  strategies: Sequence[SignalStrategy],
                  strategy_op: StrategyOp = StrategyOp.AND,
+                 schedule_signal: str | Signal | None = None,
                  vote_weights: List[float] | None = None,
                  portfolio_params: PortfolioParameters | None = None):
-        super().__init__(strategies, portfolio_params)
+        super().__init__(strategies, schedule_signal, portfolio_params)
         self.strategy_op = strategy_op
         self.vote_weights = vote_weights
         self.freq = self.params.freq if self.params else "1D"
@@ -27,6 +30,8 @@ class SignalStrategyPortfolio(StrategyPortfolio):
         
     def run(self, df: pd.DataFrame, freq: str = "1D", init_cash: float = 100000):
         adapter = DataAdapter(df)
+        context = PortfolioContext(adapter)
+        
         data = adapter.data
         close = adapter.to_vbt(df["close"])
         
@@ -38,13 +43,17 @@ class SignalStrategyPortfolio(StrategyPortfolio):
         entries = None
         exits = None
 
+        global_schedule = None
+        if self.schedule_signal is not None:
+            global_schedule = self.schedule_signal.compute(data, cache, context)
+
         if self.strategy_op == StrategyOp.VOTE:
             vote_entries = None
             vote_exits = None
 
             vote_weights = self.vote_weights if self.vote_weights is not None else [1.0 / len(self.strategies)] * len(self.strategies)
             for strat, w in zip(self.strategies, vote_weights):
-                _type, _entries, _exits = strat.generate(data, cache)
+                _type, _entries, _exits = strat.generate(data, cache, context)
 
                 if _type != "signal":
                     raise ValueError("Only signal strategies supported")
@@ -65,9 +74,12 @@ class SignalStrategyPortfolio(StrategyPortfolio):
             entries = vote_entries >= entry_threshold
             exits = vote_exits >= exit_threshold
 
+            if global_schedule is not None:
+                entries = entries & global_schedule
+                exits = exits & global_schedule
         else:
             for strat in self.strategies:
-                _type, _entries, _exits = strat.generate(data, cache)
+                _type, _entries, _exits = strat.generate(data, cache, context)
 
                 if _type != "signal":
                     raise ValueError(f"{strat} is not signal strategy")
@@ -82,6 +94,10 @@ class SignalStrategyPortfolio(StrategyPortfolio):
                 
         if entries is None or exits is None:
             raise ValueError("No signals generated")
+
+        if global_schedule is not None:
+            entries = entries & global_schedule
+            exits = exits & global_schedule
 
         # 🔥 确保 bool
         entries = entries.astype(bool)

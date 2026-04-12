@@ -1,4 +1,4 @@
-from vectorbt_test.core.factor import Factor
+from vectorbt_test.core.factors import Factor
 from vectorbt_test.core.strategy import StrategyMode
 from typing import List
 from .hybrid_strategy import HybridStrategy
@@ -6,5 +6,5 @@ from .hybrid_strategy import HybridStrategy
 
 class SignalStrategy(HybridStrategy):
 
-    def __init__(self, factors: List[Factor], top_n=10, threshold=0):
-        super().__init__(factors, mode=StrategyMode.TIME_SERIES, top_n=top_n, threshold=threshold)
+    def __init__(self, name, factors: List[Factor | str], signal: str | Signal | None = None, top_n=10, threshold=0):
+        super().__init__(name, factors, signal, mode=StrategyMode.TIME_SERIES, top_n=top_n, threshold=threshold)

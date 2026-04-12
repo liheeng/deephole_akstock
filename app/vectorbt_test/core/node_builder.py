@@ -1,6 +1,5 @@
 
 from .expr_parser import ExprParser
-from .expr import NodeExpr
 from .registry import NodeRegistry
 import re
 
@@ -22,8 +21,7 @@ class NodeBuilder:
 
             if name in NodeRegistry._factories:
                 params = self._parse_args(args)
-                node = NodeRegistry.create(name, **params)
-                return NodeExpr(node)
+                return NodeRegistry.create(name, **params)
 
         # ===== 普通表达式 =====
         return self.parser.parse(expr_str)
@@ -44,5 +42,5 @@ class NodeBuilder:
 
         return params
     
-    # def suggest(prefix):
-    #     return [k for k in NodeRegistry.registry if k.startswith(prefix)]
+    def suggest(self, prefix: str) -> list:
+        return [k for k in NodeRegistry._meta.keys() if k.startswith(prefix)]

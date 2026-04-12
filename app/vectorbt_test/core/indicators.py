@@ -1,4 +1,4 @@
-from .node import Node, NodeType
+from .nodes import Node, NodeType
 from .registry import NodeRegistry, NodeMeta, NodeParam
 
 

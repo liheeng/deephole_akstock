@@ -6,7 +6,7 @@ from vectorbt_test.strategy.archieve.strategy_portfolio_v2 import StrategyPortfo
 from vectorbt_test.signals.ma_signal import MASignal
 from vectorbt_test.signals.boll_signal import BollSignal
 from vectorbt_test.strategy.archieve.rule_strategy import RuleStrategy
-from vectorbt_test.core.factor import Factor
+from vectorbt_test.core.factors import Factor
 from vectorbt_test.core.signal_expr import buy_signal_expr, sell_signal_expr
 
 if __name__ == "__main__":
@@ -20,8 +20,8 @@ if __name__ == "__main__":
     trend_strategy = RuleStrategy(
         "trend",
         factors=[
-            Factor(name="buy", expr=buy_signal_expr(ma20) & buy_signal_expr(macd)),
-            Factor(name="sell", expr=sell_signal_expr(macd))
+            Factor(name="buy", node=buy_signal_expr(ma20) & buy_signal_expr(macd)),
+            Factor(name="sell", node=sell_signal_expr(macd))
         ]
     )
 
@@ -29,8 +29,8 @@ if __name__ == "__main__":
     mean_rev_strategy = RuleStrategy(
         "mean_rev",
         factors=[
-            Factor(name="buy", expr=buy_signal_expr(rsi) & buy_signal_expr(boll)),
-            Factor(name="sell", expr=sell_signal_expr(rsi))
+            Factor(name="buy", node=buy_signal_expr(rsi) & buy_signal_expr(boll)),
+            Factor(name="sell", node=sell_signal_expr(rsi))
         ]
     )
 
@@ -38,8 +38,8 @@ if __name__ == "__main__":
     breakout_strategy = RuleStrategy(
         "breakout",
         factors=[
-            Factor(name="buy", expr=buy_signal_expr(breakout)),
-            Factor(name="sell", expr=sell_signal_expr(breakout))
+            Factor(name="buy", node=buy_signal_expr(breakout)),
+            Factor(name="sell", node=sell_signal_expr(breakout))
         ]
     )
 

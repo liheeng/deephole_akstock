@@ -1,7 +1,6 @@
-from .factor import Factor
-from typing import List
 from abc import ABC, abstractmethod
 from enum import Enum
+from .portfolio import PortfolioContext
 
 
 class StrategyMode(Enum):
@@ -19,5 +18,5 @@ class Strategy(ABC):
         self.data_adapter = data_adapter
 
     @abstractmethod
-    def generate(self, data, cache, context: dict | None = None):
+    def generate(self, data, cache, context: PortfolioContext) -> dict:
         pass

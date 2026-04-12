@@ -1,9 +1,10 @@
 from typing import List, Sequence
 import pandas as pd
 import vectorbt as vbt
-from ..core.portfolio import StrategyPortfolio
-from ..strategy.weight_strategy import WeightStrategy
+from ..core.portfolio import StrategyPortfolio, PortfolioContext
+from ..strategies.weight_strategy import WeightStrategy
 from ..core.portfolio import PortfolioParameters
+from ..core.signals import Signal
 from vectorbt_test.engine.data_adapter import DataAdapter
 
 
@@ -11,14 +12,17 @@ class WeightStrategyPortfolio(StrategyPortfolio):
     def __init__(self,
                  strategies: Sequence[WeightStrategy],
                  strategy_weights: List[float] | None = None,
+                 schedule_signal: str | Signal | None = None,
                  portfolio_params: PortfolioParameters | None = None):
-        super().__init__(strategies, portfolio_params)
+        super().__init__(strategies, schedule_signal, portfolio_params)
         self.strategy_weights = strategy_weights or [1.0 / len(self.strategies)] * len(self.strategies)
         self.freq = portfolio_params.freq if portfolio_params else "1D"
         self.init_cash = portfolio_params.init_cash if portfolio_params else 100000
         
     def run(self, df: pd.DataFrame, freq: str = "1D", init_cash: float = 100000):
         adapter = DataAdapter(df)
+        context = PortfolioContext(adapter)
+
         data = adapter.data
         close = adapter.to_vbt(df["close"])
 
@@ -28,10 +32,14 @@ class WeightStrategyPortfolio(StrategyPortfolio):
 
         cache = {}
 
+        global_schedule = None
+        if self.schedule_signal is not None:
+            global_schedule = self.schedule_signal.compute(data, cache, context)
+
         # ===== 合成 alpha =====
         alpha = None
         for strat, w in zip(self.strategies, self.strategy_weights):
-            _type, weights = strat.generate(data, cache)
+            _type, weights = strat.generate(data, cache, context)
 
             if _type != "weight":
                 raise ValueError("Only weight strategies supported")
@@ -41,25 +49,29 @@ class WeightStrategyPortfolio(StrategyPortfolio):
         # 🔥 关键：normalize
         alpha = adapter.cs_normalize(alpha).fillna(0)
 
-        # ===== 转 vbt =====
-        alpha = adapter.to_vbt(alpha).fillna(0)
+        alpha = adapter.to_vbt(alpha).reindex(close.index)
 
-        # ===== 对齐 =====
-        alpha = alpha.reindex(close.index).fillna(0)
+        if global_schedule is not None:
+            global_schedule = (
+                adapter.to_vbt(global_schedule)
+                .reindex(close.index)
+                .fillna(False)
+            )
 
-        # ===== rebalance（可选）=====
-        if self.portfolio_params and self.portfolio_params.hold_days > 1:
-            alpha.iloc[::self.portfolio_params.hold_days] = alpha.iloc[::self.portfolio_params.hold_days]
-            alpha = alpha.ffill()
+            # 🔥 核心：只在调仓日更新
+            alpha = alpha.where(global_schedule)
+
+        # 🔥 forward fill → 持仓不变
+        alpha = alpha.ffill().fillna(0)
 
         # ===== delta =====
         delta = alpha - alpha.shift(1).fillna(0)
+        min_change = 0.01
+        delta = delta.where(delta.abs() > min_change, 0)
 
         # 🔥 threshold（关键）
-        threshold = 0.001
-
-        entries = delta > threshold
-        exits   = delta < -threshold
+        entries = delta > 0
+        exits   = delta < 0
 
         size = delta.where(entries | exits, 0).abs()
 

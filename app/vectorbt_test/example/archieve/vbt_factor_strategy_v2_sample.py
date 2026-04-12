@@ -1,14 +1,14 @@
 
 from vectorbt_test.strategy.archieve.strategy_portfolio_v2 import StrategyPortfolioV2
 from vectorbt_test.strategy.archieve.multi_factors_strategy import MultiFactorStrategy
-from vectorbt_test.core.factor import Factor
+from vectorbt_test.core.factors import Factor
 from vectorbt_test.core.node_builder import NodeBuilder
 
 from db.duckdb import DuckDBController
 from db.stock_daily_util import get_symbol_data, get_symbols_data
 import pandas as pd
 
-import app.vectorbt_test.core.indicator as indicator
+import app.vectorbt_test.core.indicators as indicators
 
 
 def print_trades(pf):
@@ -35,7 +35,7 @@ if __name__ == "__main__":
     factor_expr = nb.build("ma5 * 1")
 
     trend_strategy = MultiFactorStrategy(
-        factors=[Factor(name="trend_factor", expr=factor_expr)] 
+        factors=[Factor(name="trend_factor", node=factor_expr)] 
     )
 
     portfolio = StrategyPortfolioV2(
