@@ -1,11 +1,11 @@
-from vectorbt_test.core.factor import FactorNode
+from vectorbt_test.core.factor import Factor
 from vectorbt_test.core.strategy import Strategy, StrategyMode
 from typing import List
 
 
 class HybridStrategy(Strategy):
 
-    def __init__(self, factors: List[FactorNode], mode=StrategyMode.AUTO, top_n=10, threshold=0):
+    def __init__(self, factors: List[Factor], mode=StrategyMode.AUTO, top_n=10, threshold=0):
         self.factors = factors
         self.mode = mode
         self.top_n = top_n

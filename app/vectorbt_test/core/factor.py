@@ -4,7 +4,7 @@ import pandas as pd
 from vectorbt_test.utils.cs import cs_zscore, cs_rank
 
 
-class FactorNode(Node):
+class Factor(Node):
     def __init__(self, name: str, expr: Expr):
         super().__init__(NodeType.Factor)
         self._name = name
@@ -22,10 +22,10 @@ class FactorNode(Node):
         return cs_zscore(s)
 
     def rank(self):
-        return RankNode(self)
+        return Rank(self)
    
 
-class RankNode(Node):
+class Rank(Node):
     def __init__(self, node):
         super().__init__(node.type)
         self.node = node

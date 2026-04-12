@@ -1,5 +1,6 @@
-import pandas as pd
+from abc import ABC, abstractmethod
 import enum
+import pandas as pd
 
 
 class NodeType(enum.Enum):
@@ -10,7 +11,7 @@ class NodeType(enum.Enum):
     Factor = "factor"
 
 
-class Node:
+class Node(ABC):
     def __init__(self, type: NodeType = NodeType.Unknown):
         self._type = type
 
@@ -26,14 +27,15 @@ class Node:
     def name(self):
         return self.__class__.__name__
 
+    @abstractmethod
     def compute(self, data: pd.DataFrame, cache: dict, context: dict | None = None):
         raise NotImplementedError
 
     def slope(self):
-        return SlopeNode(self)
+        return Slope(self)
 
 
-class SlopeNode(Node):
+class Slope(Node):
     def __init__(self, node):
         super().__init__(node.type)
         self.node = node
@@ -42,7 +44,7 @@ class SlopeNode(Node):
         x = self.node.compute(data, cache, context)
         return x.diff()
 
-    
+
 # =========================
 # DB Node（优先用数据库）
 # =========================

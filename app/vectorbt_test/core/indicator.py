@@ -2,7 +2,7 @@ from .node import Node, NodeType
 from .registry import NodeRegistry, NodeMeta, NodeParam
 
 
-class IndicatorNode(Node):
+class Indicator(Node):
     def __init__(self):
         super().__init__(NodeType.Indicator)
 
@@ -10,7 +10,7 @@ class IndicatorNode(Node):
 # =========================
 # Indicator Node（支持fallback）
 # =========================
-class MAIndicatorNode(IndicatorNode):
+class MAIndicator(Indicator):
     def __init__(self, period):
         self.period = period
 
@@ -28,7 +28,7 @@ class MAIndicatorNode(IndicatorNode):
         return data["close"].rolling(self.period).mean()
 
 
-class RSIIndicatorNode(IndicatorNode):
+class RSIIndicator(Indicator):
     def __init__(self, period=14):
         self.period = period
 
@@ -48,7 +48,7 @@ class RSIIndicatorNode(IndicatorNode):
         return 100 - (100 / (1 + rs))
     
 
-class MacdIndicatorNode(IndicatorNode):
+class MacdIndicator(Indicator):
     def __init__(self, fast_period=12, slow_period=26, signal_period=9):
         self.fast_period = fast_period
         self.slow_period = slow_period
@@ -72,7 +72,7 @@ class MacdIndicatorNode(IndicatorNode):
 
 NodeRegistry.register(
     "ma5",
-    lambda period=5: MAIndicatorNode(period),
+    lambda period=5: MAIndicator(period),
     NodeMeta(
         name="ma",
         group="indicator",
@@ -84,7 +84,7 @@ NodeRegistry.register(
 )
 NodeRegistry.register(
     "ma20",
-    lambda period=20: MAIndicatorNode(period),
+    lambda period=20: MAIndicator(period),
     NodeMeta(
         name="ma",
         group="indicator",
@@ -96,7 +96,7 @@ NodeRegistry.register(
 )
 NodeRegistry.register(
     "rsi14",
-    lambda period=14: RSIIndicatorNode(period),
+    lambda period=14: RSIIndicator(period),
     NodeMeta(
         name="rsi",
         group="indicator",
@@ -108,7 +108,7 @@ NodeRegistry.register(
 
 NodeRegistry.register(
     "macd",
-    lambda fast_period=12, slow_period=26, signal_period=9: MacdIndicatorNode(fast_period, slow_period, signal_period),
+    lambda fast_period=12, slow_period=26, signal_period=9: MacdIndicator(fast_period, slow_period, signal_period),
     NodeMeta(
         name="macd",
         group="indicator",

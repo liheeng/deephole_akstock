@@ -1,8 +1,8 @@
-from vectorbt_test.core.factor import FactorNode
+from vectorbt_test.core.factor import Factor
 
 
 class SingleAssetStrategy:
-    def __init__(self, factor: FactorNode, threshold=0):
+    def __init__(self, factor: Factor, threshold=0):
         self.factor = factor
         self.threshold = threshold
 

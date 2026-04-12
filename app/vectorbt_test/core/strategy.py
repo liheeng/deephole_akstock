@@ -1,4 +1,4 @@
-from .factor import FactorNode
+from .factor import Factor
 from typing import List
 from abc import ABC, abstractmethod
 from enum import Enum

@@ -1,5 +1,5 @@
 import pandas as pd
-from vectorbt_test.core.factor import FactorNode
+from vectorbt_test.core.factor import Factor
 from typing import List
 from vectorbt_test.core.strategy import Strategy
 from vectorbt_test.utils.cs import cs_rank, cs_normalize, orthogonalize_factors
@@ -7,7 +7,7 @@ from vectorbt_test.utils.cs import cs_rank, cs_normalize, orthogonalize_factors
 
 class MultiFactorStrategy(Strategy):
 
-    def __init__(self, factors: List[FactorNode], factor_weights: List[float] | None = None, threshold=0, top_n=None):
+    def __init__(self, factors: List[Factor], factor_weights: List[float] | None = None, threshold=0, top_n=None):
         self.factors = factors
         self.factor_weights = factor_weights or [1.0 / len(self.factors)] * len(self.factors)
         self.threshold = threshold

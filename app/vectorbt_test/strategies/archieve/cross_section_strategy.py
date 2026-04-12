@@ -1,8 +1,8 @@
-from vectorbt_test.core.factor import FactorNode
+from vectorbt_test.core.factor import Factor
 
 
 class CrossSectionStrategy:
-    def __init__(self, factor: FactorNode, top_n=10):
+    def __init__(self, factor: Factor, top_n=10):
         self.factor = factor
         self.top_n = top_n
 
