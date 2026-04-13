@@ -71,10 +71,23 @@ class MacdIndicator(Indicator):
     
 
 NodeRegistry.register(
+    "ma",
+    lambda period: MAIndicator(period),
+    NodeMeta(
+        name="ma",
+        group="indicator",
+        desc="移动平均线",
+        params=[
+            NodeParam("period", "int", 5, "周期")
+        ]
+    )
+)
+
+NodeRegistry.register(
     "ma5",
     lambda period=5: MAIndicator(period),
     NodeMeta(
-        name="ma",
+        name="ma5",
         group="indicator",
         desc="移动平均线",
         params=[
@@ -86,7 +99,7 @@ NodeRegistry.register(
     "ma20",
     lambda period=20: MAIndicator(period),
     NodeMeta(
-        name="ma",
+        name="ma20",
         group="indicator",
         desc="移动平均线",
         params=[
@@ -96,7 +109,7 @@ NodeRegistry.register(
 )
 
 NodeRegistry.register(
-    "rsi14",
+    "rsi",
     lambda period=14: RSIIndicator(period),
     NodeMeta(
         name="rsi",

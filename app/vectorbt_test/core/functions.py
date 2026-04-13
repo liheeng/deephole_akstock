@@ -95,14 +95,14 @@ class ZScore(Function):
         return (x - x.mean()) / (x.std() + 1e-9)
 
 
-FUNCTION_REGISTRY = {
-    "cross": lambda a, b: Cross(a, b), # It is signal
-    "rank": lambda x: Rank(x),
-    "top": lambda n, x: Top(n, x),
-    "delay": lambda x, n: Delay(x, n),
-    "mean": lambda x, n: Mean(x, n),
-    "zscore": lambda x: ZScore(x),
-}
+# FUNCTION_REGISTRY = {
+#     "cross": lambda a, b: Cross(a, b), # It is signal
+#     "rank": lambda x: Rank(x),
+#     "top": lambda n, x: Top(n, x),
+#     "delay": lambda x, n: Delay(x, n),
+#     "mean": lambda x, n: Mean(x, n),
+#     "zscore": lambda x: ZScore(x),
+# }
 
 NodeRegistry.register(
     "cross",
