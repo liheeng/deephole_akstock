@@ -24,9 +24,11 @@ class MAIndicator(Indicator):
 
     def compute(self, data, context: PortfolioContext):
         # fallback
-        return context.data_adapter.apply_ts(
+        return self.apply(
             data["close"],
-            lambda x: x.rolling(self.period).mean())
+            lambda x: x.rolling(self.period).mean(),
+            context
+        )
 
 
 class RSIIndicator(Indicator):
@@ -38,9 +40,10 @@ class RSIIndicator(Indicator):
         return f"rsi{self.period}"
 
     def compute(self, data, context: PortfolioContext):
-        return context.data_adapter.apply_ts(
+        return self.apply(
             data["close"],
-            lambda x: self._compute(x, context))
+            lambda x: self._compute(x, context),
+            context)
     
     def _compute(self, x, context: PortfolioContext):
         delta = x.diff()
@@ -61,9 +64,10 @@ class MacdIndicator(Indicator):
         return f"macd{self.fast_period}_{self.slow_period}_{self.signal_period}"
 
     def compute(self, data, context: PortfolioContext):
-        return context.data_adapter.apply_ts(
+        return self.apply(
             data["close"],
-            lambda x: self._compute(x, context)
+            lambda x: self._compute(x, context),
+            context
         )
     
     def _compute(self, x, context: PortfolioContext):

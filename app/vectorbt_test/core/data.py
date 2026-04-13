@@ -1,4 +1,4 @@
-from .nodes import DataNode
+from vectorbt_test.core.nodes import DataNode
 from .context import PortfolioContext
 import pandas as pd
 

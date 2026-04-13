@@ -7,7 +7,7 @@ from vectorbt_test.core.portfolio import PortfolioParameters, StrategyPortfolio
 from vectorbt_test.core.strategy import StrategyResult
 from vectorbt_test.strategies.signal_strategy import SignalStrategy
 from vectorbt_test.engine.data_provider import DataProvider
-from vectorbt_test.engine.portofilo_builder import create_context
+from vectorbt_test.engine.context_builder import create_context
 
 
 class StrategyOp(enum.Enum):

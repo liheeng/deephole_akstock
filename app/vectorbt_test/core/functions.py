@@ -123,10 +123,11 @@ class ZScoreTS(Node):
     def compute(self, data, context):
         x = self.node.evaluate(data, context)
 
-        return context.data_adapter.apply_ts(
+        return self.apply(
             x,
             lambda s: (s - s.rolling(self.window).mean()) /
-                      (s.rolling(self.window).std() + 1e-9)
+                      (s.rolling(self.window).std() + 1e-9),
+            context
         )
 
 

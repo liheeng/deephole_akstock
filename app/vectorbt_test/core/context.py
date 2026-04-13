@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Dict, Any
 from vectorbt_test.engine.data_adapter import DataAdapter
 from vectorbt_test.engine.data_provider import DataProvider

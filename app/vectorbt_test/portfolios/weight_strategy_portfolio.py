@@ -7,7 +7,7 @@ from vectorbt_test.core.portfolio import PortfolioParameters
 from vectorbt_test.core.signals import Signal
 from vectorbt_test.core.strategy import StrategyResult
 from vectorbt_test.engine.data_provider import DataProvider
-from vectorbt_test.engine.portofilo_builder import create_context
+from vectorbt_test.engine.context_builder import create_context
 
 
 class WeightStrategyPortfolio(StrategyPortfolio):

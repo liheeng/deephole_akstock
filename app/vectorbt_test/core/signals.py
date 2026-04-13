@@ -164,9 +164,10 @@ class Cross(Signal):
         b = self.right.evaluate(data, context)
 
         # return (a > b) & (a.shift(1) <= b.shift(1))
-        return context.data_adapter.apply_ts(
+        return self.apply(
             a,
-            lambda x: (x > b.loc[x.index]) & (x.shift(1) <= b.loc[x.index].shift(1))
+            lambda x: (x > b.loc[x.index]) & (x.shift(1) <= b.loc[x.index].shift(1)),
+            context
         )
 
 
