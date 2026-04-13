@@ -6,6 +6,7 @@ from ..strategies.weight_strategy import WeightStrategy
 from ..core.portfolio import PortfolioParameters
 from ..core.signals import Signal
 from vectorbt_test.engine.data_adapter import DataAdapter
+from vectorbt_test.engine.data_provider import DataProvider
 
 
 class WeightStrategyPortfolio(StrategyPortfolio):
@@ -19,9 +20,11 @@ class WeightStrategyPortfolio(StrategyPortfolio):
         self.freq = portfolio_params.freq if portfolio_params else "1D"
         self.init_cash = portfolio_params.init_cash if portfolio_params else 100000
         
-    def run(self, df: pd.DataFrame, freq: str = "1D", init_cash: float = 100000):
+    def run(self, data_provider: DataProvider, df: pd.DataFrame, freq: str = "1D", init_cash: float = 100000):
         adapter = DataAdapter(df)
-        context = PortfolioContext(adapter)
+        context = PortfolioContext()
+        context.data_provider = data_provider  
+        context.data_adapter = adapter
 
         data = adapter.data
         close = adapter.to_vbt(df["close"])
@@ -30,16 +33,14 @@ class WeightStrategyPortfolio(StrategyPortfolio):
         for strat in self.strategies:
             strat.bind_data_adapter(adapter)
 
-        cache = {}
-
         global_schedule = None
         if self.schedule_signal is not None:
-            global_schedule = self.schedule_signal.compute(data, cache, context)
+            global_schedule = self.schedule_signal.evaluate(data, context)
 
         # ===== 合成 alpha =====
         alpha = None
         for strat, w in zip(self.strategies, self.strategy_weights):
-            _type, weights = strat.generate(data, cache, context)
+            _type, weights = strat.generate(data, context)
 
             if _type != "weight":
                 raise ValueError("Only weight strategies supported")

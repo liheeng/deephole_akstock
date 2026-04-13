@@ -62,15 +62,16 @@ class Signal(Node, ABC):
 
 
 class SignalGate(Signal):
-    def __init__(self, signal, gate):
+    def __init__(self, signal, signal_gate):
         super().__init__()
         self._scope = SignalScope.TS_CS
         self.signal = signal
-        self.gate = gate
+        self.signal_gate = signal_gate
 
-    def compute(self, data, cache, context):
-        s = self.signal.compute(data, cache, context)
-        g = self.gate.compute(data, cache, context)
+    def compute(self, data, context):
+        assert context.data_provider is not None
+        s = self.signal.evaluate(data, context)
+        g = self.signal_gate.evaluate(data, context)
 
         return s & g
 
@@ -80,14 +81,16 @@ class TSSignal(Signal):
         super().__init__()
         self._scope = SignalScope.TS
 
+
 class Cooldown(TSSignal):
     def __init__(self, signal, n):
         super().__init__()
         self.signal = signal
         self.n = n
 
-    def compute(self, data, cache, context):
-        s = self.signal.compute(data, cache, context).fillna(False)
+    def compute(self, data, context):
+        assert context.data_provider is not None
+        s = self.signal.evaluate(data, context).fillna(False)
 
         result = s.copy()
         cooldown = 0
@@ -109,8 +112,9 @@ class Hold(TSSignal):
         self.signal = signal
         self.n = n
 
-    def compute(self, data, cache, context):
-        s = self.signal.compute(data, cache, context).fillna(False)
+    def compute(self, data, context):
+        assert context.data_provider is not None
+        s = self.signal.evaluate(data, context).fillna(False)
 
         result = pd.Series(False, index=s.index)
 
@@ -139,9 +143,10 @@ class BinarySignalOp(Signal):
                 and self.left.is_scope(scope)
                 and self.right.is_scope(scope))
     
-    def compute(self, data, cache, context):
-        l = self.left.compute(data, cache, context)
-        r = self.right.compute(data, cache, context)
+    def compute(self, data, context):
+        assert context.data_provider is not None
+        l = self.left.evaluate(data, context)
+        r = self.right.evaluate(data, context)
 
         if self.op == "and":
             return l & r
@@ -156,9 +161,10 @@ class Cross(Signal):
         self.left = left
         self.right = right
 
-    def compute(self, data, cache, context):
-        a = self.left.compute(data, cache, context)
-        b = self.right.compute(data, cache, context)
+    def compute(self, data, context):
+        assert context.data_provider is not None
+        a = self.left.evaluate(data, context)
+        b = self.right.evaluate(data, context)
 
         return (a > b) & (a.shift(1) <= b.shift(1))
 
@@ -170,9 +176,10 @@ class CrossUnder(Signal):
         self.left = left
         self.right = right
 
-    def compute(self, data, cache, context):
-        a = self.left.compute(data, cache, context)
-        b = self.right.compute(data, cache, context)
+    def compute(self, data, context):
+        assert context.data_provider is not None
+        a = self.left.evaluate(data, context)
+        b = self.right.evaluate(data, context)
 
         return (a < b) & (a.shift(1) >= b.shift(1))
 
@@ -183,7 +190,7 @@ class CSSignal(Signal):
         self._scope = SignalScope.CS
 
 class RebalanceDaily(CSSignal):
-    def compute(self, data, cache, context):
+    def compute(self, data, context):
         return pd.Series(True, index=data.index)
 
 
@@ -193,7 +200,7 @@ class RebalanceWeekly(CSSignal):
         super().__init__()
         self.weekday = weekday
 
-    def compute(self, data, cache, context):
+    def compute(self, data, context):
         dt = data.index
         return pd.Series(dt.weekday == self.weekday, index=dt)
     
@@ -203,7 +210,7 @@ class RebalanceMonthly(CSSignal):
         super().__init__()
         self.day = day
 
-    def compute(self, data, cache, context):
+    def compute(self, data, context):
         dt = data.index
         return pd.Series(dt.day == self.day, index=dt)
 
@@ -213,7 +220,7 @@ class RebalanceEveryNDays(CSSignal):
         super().__init__()
         self.n = n
 
-    def compute(self, data, cache, context):
+    def compute(self, data, context):
         idx = data.index
         mask = pd.Series(False, index=idx)
         mask.iloc[::self.n] = True
@@ -225,13 +232,13 @@ class RebalanceOnDates(CSSignal):
         super().__init__()
         self.dates = pd.to_datetime(dates)
 
-    def compute(self, data, cache, context):
+    def compute(self, data, context):
         idx = data.index
         return pd.Series(idx.isin(self.dates), index=idx)
 
 
 class RebalanceMonthEnd(CSSignal):
-    def compute(self, data, cache, context):
+    def compute(self, data, context):
         idx = data.index
         df = pd.Series(index=idx, data=False)
 
@@ -243,7 +250,7 @@ class RebalanceMonthEnd(CSSignal):
 
 
 class RebalanceWeekEnd(CSSignal):
-    def compute(self, data, cache, context):
+    def compute(self, data, context):
         idx = data.index
         df = pd.Series(False, index=idx)
 
@@ -338,7 +345,7 @@ NodeRegistry.register(
         params=[
             NodeParam("day", "int", 1, "day")
         ]   
-    )))
+    ))
 
 NodeRegistry.register(
     "RebalanceEveryNDays",

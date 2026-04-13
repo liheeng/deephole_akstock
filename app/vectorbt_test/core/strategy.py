@@ -18,5 +18,5 @@ class Strategy(ABC):
         self.data_adapter = data_adapter
 
     @abstractmethod
-    def generate(self, data, cache, context: PortfolioContext) -> dict:
+    def generate(self, data, context: PortfolioContext) -> dict:
         pass

@@ -31,18 +31,6 @@ class Node(ABC):
     @property
     def name(self):
         return self.__class__.__name__
-    
-    # @property
-    # def is_numeric(self):
-    #     return self._type in {NodeType.Indicator, NodeType.Factor}
-
-    # @property
-    # def is_bool(self):
-    #     return self._type in {NodeType.Signal} or (isinstance(self, BinaryOp) and self.op in {"gt", "lt", "ge", "le", "eq", "ne"})
-    
-    # @property
-    # def is_signal(self):
-    #     return self._type == NodeType.Signal
 
     @property
     def dtype(self):
@@ -68,18 +56,20 @@ class Node(ABC):
         return []
 
     # ===== evaluate（统一缓存入口）=====
-    def evaluate(self, data, cache, context):
-        key = self.cache_key()
+    def evaluate(self, data, context: PortfolioContext = PortfolioContext()):
+        assert context.data_provider is not None
+        return context.data_provider.get(self, data, context)
+        # key = self.cache_key()
 
-        if key in cache:
-            return cache[key]
+        # if key in cache:
+        #     return cache[key]
 
-        result = self.compute(data, cache, context)
-        cache[key] = result
-        return result
+        # result = self.compute(data, context)
+        # cache[key] = result
+        # return result
 
     @abstractmethod
-    def compute(self, data: pd.DataFrame, cache: dict, context: PortfolioContext):
+    def compute(self, data: pd.DataFrame, context: PortfolioContext):
         pass
 
     # =========================
@@ -145,8 +135,8 @@ class ConstNode(Node):
     def _args(self):
         return [self.value]
 
-    def compute(self, data, cache, context):
-        any_series = next(iter(cache.values()))
+    def compute(self, data, context: PortfolioContext):
+        any_series = next(iter(context.data_provider.get_cache().values()))
         return any_series * 0 + self.value
 
 
@@ -180,9 +170,10 @@ class BinaryOp(Node):
     def _args(self):
         return [self.left.cache_key(), self.right.cache_key(), self.op]
 
-    def compute(self, data, cache, context):
-        l = self.left.evaluate(data, cache, context)
-        r = self.right.evaluate(data, cache, context)
+    def compute(self, data, context):
+        assert context.data_provider is not None
+        l = self.left.evaluate(data, context)
+        r = self.right.evaluate(data, context)
 
         if self.op == "add":
             return l + r
@@ -223,8 +214,9 @@ class UnaryOp(Node):
     def _args(self):
         return [self.node.cache_key(), self.op]
 
-    def compute(self, data, cache, context):
-        x = self.node.evaluate(data, cache, context)
+    def compute(self, data, context):
+        assert context.data_provider is not None
+        x = self.node.evaluate(data, context)
 
         if self.op == "not":
             return (~x.astype(bool)).astype(int)
@@ -240,8 +232,9 @@ class Slope(Node):
     def _args(self):
         return [self.node.cache_key()]
 
-    def compute(self, data, cache, context):
-        x = self.node.evaluate(data, cache, context)
+    def compute(self, data, context):
+        assert context.data_provider is not None
+        x = self.node.evaluate(data, context)
         return x.diff()
 
 
@@ -257,7 +250,7 @@ class DBNode(Node):
     def name(self):
         return self.field_name
 
-    def compute(self, data: pd.DataFrame, cache: dict, context: PortfolioContext):
+    def compute(self, data: pd.DataFrame, context: PortfolioContext):
         df = context.get("db_df")
 
         if df is None:

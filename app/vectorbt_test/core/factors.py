@@ -2,7 +2,7 @@ from .nodes import Node, NodeType, NodeDType
 from .node_builder import NodeBuilder
 from .functions import Rank
 from .portfolio import PortfolioContext
-from .registry import NodeRegistry, NodeMeta, NodeParam
+from .registry import NodeRegistry, NodeMeta
 import pandas as pd
 
 
@@ -17,11 +17,12 @@ class Factor(Node):
     def name(self):
         return self._name
     
-    def compute(self, data: pd.DataFrame, cache: dict, context: PortfolioContext):
-        return self.node.evaluate(data, cache, context or {})
+    def compute(self, data: pd.DataFrame, context: PortfolioContext):
+        assert context.data_provider is not None
+        return self.node.evaluate(data, context)
 
-    def score(self, data: pd.DataFrame, cache: dict, context: PortfolioContext):
-        s = self.compute(data, cache, context)
+    def score(self, data: pd.DataFrame, context: PortfolioContext):
+        s = self.evaluate(data, context)
         return context.data_adapter.cs_zscore(s)
 
     def rank(self):
@@ -47,8 +48,8 @@ NodeRegistry.register(
 #         super().__init__(node.type)
 #         self.node = node
 
-#     def compute(self, data, cache, context):
-#         x = self.node.compute(data, cache, context)
+#     def compute(self, data, context):
+#         x = self.node.evaluate(data, context)
 #         return x.rank(axis=1, pct=True)
 
     

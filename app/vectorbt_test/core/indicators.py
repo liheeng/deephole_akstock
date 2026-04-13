@@ -18,7 +18,7 @@ class MAIndicator(Indicator):
     def name(self):
         return f"ma{self.period}"
 
-    def compute(self, data, cache, context):
+    def compute(self, data, context):
         # 优先 DB
         df = context.get("db_df")
         if df is not None and self.name in df.columns:
@@ -36,7 +36,7 @@ class RSIIndicator(Indicator):
     def name(self):
         return f"rsi{self.period}"
 
-    def compute(self, data, cache, context):
+    def compute(self, data, context):
         df = context.get("db_df")
         if df is not None and self.name in df.columns:
             return df[self.name]
@@ -58,7 +58,7 @@ class MacdIndicator(Indicator):
     def name(self):
         return f"macd{self.fast_period}_{self.slow_period}_{self.signal_period}"
 
-    def compute(self, data, cache, context):
+    def compute(self, data, context):
         df = context.get("db_df")
         if df is not None and self.name in df.columns:
             return df[self.name]

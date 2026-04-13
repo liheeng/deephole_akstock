@@ -47,11 +47,11 @@ class HybridStrategy(Strategy):
         self.top_n = top_n
         self.threshold = threshold
     
-    def generate(self, data, cache, context: PortfolioContext) -> dict:
+    def generate(self, data, context: PortfolioContext) -> dict:
         # ===== 1. 合成 alpha =====
         alpha = None
         for f in self.factors:
-            s = f.score(data, cache, context)
+            s = f.score(data, context)
             alpha = s if alpha is None else alpha + s
 
         # ===== 2. 判断模式 =====
@@ -68,7 +68,7 @@ class HybridStrategy(Strategy):
             else:
                 assert self.signal.is_scope(SignalScope.CS.value | SignalScope.TS_CS.value)
 
-            signal = self.signal.compute(data, cache, context)
+            signal = self.signal.evaluate(data, context)
     
         # ===== 4. 分支 =====
         if mode == StrategyMode.TIME_SERIES:

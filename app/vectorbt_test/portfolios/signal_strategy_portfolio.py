@@ -2,11 +2,11 @@ import enum
 from typing import List, Sequence
 import pandas as pd
 import vectorbt as vbt
+from ..core.signals import Signal
 from ..core.portfolio import PortfolioParameters, StrategyPortfolio, PortfolioContext
 from ..strategies.signal_strategy import SignalStrategy
-from ..core.signals import Signal, SignalScope
-from ..core.node_builder import NodeBuilder
 from vectorbt_test.engine.data_adapter import DataAdapter
+from vectorbt_test.engine.data_provider import DataProvider
 
 
 class StrategyOp(enum.Enum):
@@ -28,9 +28,11 @@ class SignalStrategyPortfolio(StrategyPortfolio):
         self.freq = self.params.freq if self.params else "1D"
         self.init_cash = self.params.init_cash if self.params else 100000
         
-    def run(self, df: pd.DataFrame, freq: str = "1D", init_cash: float = 100000):
+    def run(self, data_provider: DataProvider, df: pd.DataFrame, freq: str = "1D", init_cash: float = 100000):
         adapter = DataAdapter(df)
-        context = PortfolioContext(adapter)
+        context = PortfolioContext()
+        context.data_provider = data_provider   
+        context.data_adapter = adapter
         
         data = adapter.data
         close = adapter.to_vbt(df["close"])
@@ -39,13 +41,12 @@ class SignalStrategyPortfolio(StrategyPortfolio):
         for strat in self.strategies:
             strat.bind_data_adapter(adapter)
 
-        cache = {}
         entries = None
         exits = None
 
         global_schedule = None
         if self.schedule_signal is not None:
-            global_schedule = self.schedule_signal.compute(data, cache, context)
+            global_schedule = self.schedule_signal.evaluate(data, context)
 
         if self.strategy_op == StrategyOp.VOTE:
             vote_entries = None
@@ -53,7 +54,7 @@ class SignalStrategyPortfolio(StrategyPortfolio):
 
             vote_weights = self.vote_weights if self.vote_weights is not None else [1.0 / len(self.strategies)] * len(self.strategies)
             for strat, w in zip(self.strategies, vote_weights):
-                _type, _entries, _exits = strat.generate(data, cache, context)
+                _type, _entries, _exits = strat.generate(data, context)
 
                 if _type != "signal":
                     raise ValueError("Only signal strategies supported")
@@ -79,7 +80,7 @@ class SignalStrategyPortfolio(StrategyPortfolio):
                 exits = exits & global_schedule
         else:
             for strat in self.strategies:
-                _type, _entries, _exits = strat.generate(data, cache, context)
+                _type, _entries, _exits = strat.generate(data, context)
 
                 if _type != "signal":
                     raise ValueError(f"{strat} is not signal strategy")

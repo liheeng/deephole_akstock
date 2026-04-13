@@ -18,9 +18,10 @@ class Cross(Function):
                          dtype=NodeDType.Signal,
                          node_type=NodeType.Signal)
 
-    def compute(self, data, cache, context):
-        left = self.args[0].evaluate(data, cache, context)
-        right = self.args[1].evaluate(data, cache, context)
+    def compute(self, data, context):
+        assert context.data_provider is not None
+        left = self.args[0].evaluate(data, context)
+        right = self.args[1].evaluate(data, context)
 
         cross = (left > right) & (left.shift(1) <= right.shift(1))
         return cross.astype(bool)
@@ -30,8 +31,9 @@ class Rank(Function):
     def __init__(self, x):
         super().__init__(x, dtype=NodeDType.Numeric)
 
-    def compute(self, data, cache, context):
-        x = self.args[0].evaluate(data, cache, context)
+    def compute(self, data, context):
+        assert context.data_provider is not None
+        x = self.args[0].evaluate(data, context)
 
         if isinstance(x.index, pd.MultiIndex):
             return x.groupby(level=0).rank(ascending=False)
@@ -39,9 +41,9 @@ class Rank(Function):
         return x.rank(ascending=False)
 
 
-def get_value(x, data, cache, context):
+def get_value(x, data, context):
     if isinstance(x, Node):
-        return x.evaluate(data, cache, context)
+        return x.evaluate(data, context)
     return x
 
 
@@ -49,10 +51,10 @@ class Top(Function):
     def __init__(self, n, x):
         super().__init__(n, x, dtype=NodeDType.Bool)
 
-    def compute(self, data, cache, context):
+    def compute(self, data, context):
         
         n = self.args[0].value if isinstance(self.args[0], ConstNode) else self.args[0]
-        x = get_value(self.args[1], data, cache, context)
+        x = get_value(self.args[1], data, context)
 
         if isinstance(x.index, pd.MultiIndex):
             rank = x.groupby(level=0).rank(ascending=False)
@@ -65,8 +67,9 @@ class Delay(Function):
     def __init__(self, x, n):
         super().__init__(x, n, dtype=NodeDType.Numeric)
 
-    def compute(self, data, cache, context):
-        x = self.args[0].evaluate(data, cache, context)
+    def compute(self, data, context):
+        assert context.data_provider is not None
+        x = self.args[0].evaluate(data, context)
         n = self.args[1].value
         return x.shift(n)
 
@@ -75,8 +78,9 @@ class Mean(Function):
     def __init__(self, x, n):
         super().__init__(x, n, dtype=NodeDType.Numeric)
 
-    def compute(self, data, cache, context):
-        x = self.args[0].evaluate(data, cache, context)
+    def compute(self, data, context):
+        assert context.data_provider is not None
+        x = self.args[0].evaluate(data, context)
         n = self.args[1].value
         return x.rolling(n).mean()
 
@@ -85,8 +89,9 @@ class ZScore(Function):
     def __init__(self, x):
         super().__init__(x, dtype=NodeDType.Numeric)
 
-    def compute(self, data, cache, context):
-        x = self.args[0].evaluate(data, cache, context)
+    def compute(self, data, context):
+        assert context.data_provider is not None
+        x = self.args[0].evaluate(data, context)
         return (x - x.mean()) / (x.std() + 1e-9)
 
 
