@@ -10,6 +10,7 @@ class NodeType(enum.Enum):
     Factor = "factor"
     Signal = "signal"
     Function = "function"
+    Data = "data"
 
 
 class NodeDType(enum.Enum):
@@ -119,7 +120,15 @@ class Node(ABC):
         return Slope(self)
 
 
-class ConstNode(Node):
+class DataNode(Node):
+    pass
+
+
+class FeatureNode(Node):
+    pass
+
+
+class ConstNode(FeatureNode):
     def __init__(self, value):
         super().__init__(NodeType.Indicator)
         self.value = value
@@ -138,7 +147,7 @@ def to_node(x):
     return ConstNode(x)
 
 
-class BinaryOp(Node):
+class BinaryOp(FeatureNode):
     def __init__(self, left, right, op):
 
         if op in {"add", "sub", "mul", "div"}:
@@ -162,7 +171,7 @@ class BinaryOp(Node):
     def _args(self):
         return [self.left.cache_key(), self.right.cache_key(), self.op]
 
-    def compute(self, data, context):
+    def compute(self, data, context: PortfolioContext):
         l = self.left.evaluate(data, context)
         r = self.right.evaluate(data, context)
 
@@ -196,7 +205,7 @@ class BinaryOp(Node):
         raise ValueError(f"Unknown op {self.op}")
    
 
-class UnaryOp(Node):
+class UnaryOp(FeatureNode):
     def __init__(self, node, op):
         super().__init__(NodeType.Factor, NodeDType.Bool)
         self.node = node
@@ -205,7 +214,7 @@ class UnaryOp(Node):
     def _args(self):
         return [self.node.cache_key(), self.op]
 
-    def compute(self, data, context):
+    def compute(self, data, context: PortfolioContext):
         x = self.node.evaluate(data, context)
 
         if self.op == "not":
@@ -214,7 +223,7 @@ class UnaryOp(Node):
         raise ValueError(self.op)
    
 
-class Slope(Node):
+class Slope(FeatureNode):
     def __init__(self, node):
         super().__init__(node.type)
         self.node = node
@@ -222,30 +231,7 @@ class Slope(Node):
     def _args(self):
         return [self.node.cache_key()]
 
-    def compute(self, data, context):
+    def compute(self, data, context: PortfolioContext):
         x = self.node.evaluate(data, context)
         return x.diff()
 
-
-# # =========================
-# # DB Node（优先用数据库）
-# # =========================
-# class DBNode(Node):
-#     def __init__(self, field_name: str):
-#         super().__init__()
-#         self.field_name = field_name
-
-#     @property
-#     def name(self):
-#         return self.field_name
-
-#     def compute(self, data: pd.DataFrame, context: PortfolioContext):
-#         df = context.get("db_df")
-
-#         if df is None:
-#             raise ValueError("DBNode requires db_df in context")
-
-#         if self.field_name not in df.columns:
-#             raise ValueError(f"{self.field_name} not found in db_df")
-
-#         return df[self.field_name]

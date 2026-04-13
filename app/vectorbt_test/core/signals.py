@@ -1,6 +1,6 @@
 import enum
 from abc import ABC
-from vectorbt_test.core.nodes import Node, NodeType, NodeDType
+from vectorbt_test.core.nodes import FeatureNode, NodeType, NodeDType
 from vectorbt_test.core.node_builder import NodeBuilder
 from vectorbt_test.core.registry import NodeRegistry, NodeMeta, NodeParam
 import pandas as pd
@@ -13,7 +13,7 @@ class SignalScope(enum.Enum):
     TS_CS = 4
 
 
-class Signal(Node, ABC):
+class Signal(FeatureNode, ABC):
     @staticmethod
     def build(expr_str: str):
         node = NodeBuilder().build(expr_str)
@@ -69,7 +69,7 @@ class SignalGate(Signal):
         self.signal = signal
         self.signal_gate = signal_gate
 
-    def compute(self, data, context):
+    def compute(self, data, context: PortfolioContext):
         s = self.signal.evaluate(data, context)
         g = self.signal_gate.evaluate(data, context)
 
@@ -88,7 +88,7 @@ class Cooldown(TSSignal):
         self.signal = signal
         self.n = n
 
-    def compute(self, data, context):
+    def compute(self, data, context: PortfolioContext):
         s = self.signal.evaluate(data, context).fillna(False)
 
         result = s.copy()
@@ -111,7 +111,7 @@ class Hold(TSSignal):
         self.signal = signal
         self.n = n
 
-    def compute(self, data, context):
+    def compute(self, data, context: PortfolioContext):
         s = self.signal.evaluate(data, context).fillna(False)
 
         result = pd.Series(False, index=s.index)
@@ -141,7 +141,7 @@ class BinarySignalOp(Signal):
                 and self.left.is_scope(scope)
                 and self.right.is_scope(scope))
     
-    def compute(self, data, context):
+    def compute(self, data, context: PortfolioContext):
         l = self.left.evaluate(data, context)
         r = self.right.evaluate(data, context)
 
@@ -158,7 +158,7 @@ class Cross(Signal):
         self.left = left
         self.right = right
 
-    def compute(self, data, context):
+    def compute(self, data, context: PortfolioContext):
         a = self.left.evaluate(data, context)
         b = self.right.evaluate(data, context)
 
@@ -172,7 +172,7 @@ class CrossUnder(Signal):
         self.left = left
         self.right = right
 
-    def compute(self, data, context):
+    def compute(self, data, context: PortfolioContext):
         a = self.left.evaluate(data, context)
         b = self.right.evaluate(data, context)
 
@@ -186,7 +186,7 @@ class CSSignal(Signal):
 
 
 class RebalanceDaily(CSSignal):
-    def compute(self, data, context):
+    def compute(self, data, context: PortfolioContext):
         return pd.Series(True, index=data.index)
 
 
@@ -196,7 +196,7 @@ class RebalanceWeekly(CSSignal):
         super().__init__()
         self.weekday = weekday
 
-    def compute(self, data, context):
+    def compute(self, data, context: PortfolioContext):
         dt = data.index
         return pd.Series(dt.weekday == self.weekday, index=dt)
     
@@ -206,7 +206,7 @@ class RebalanceMonthly(CSSignal):
         super().__init__()
         self.day = day
 
-    def compute(self, data, context):
+    def compute(self, data, context: PortfolioContext):
         dt = data.index
         return pd.Series(dt.day == self.day, index=dt)
 
@@ -216,7 +216,7 @@ class RebalanceEveryNDays(CSSignal):
         super().__init__()
         self.n = n
 
-    def compute(self, data, context):
+    def compute(self, data, context: PortfolioContext):
         idx = data.index
         mask = pd.Series(False, index=idx)
         mask.iloc[::self.n] = True
@@ -228,13 +228,13 @@ class RebalanceOnDates(CSSignal):
         super().__init__()
         self.dates = pd.to_datetime(dates)
 
-    def compute(self, data, context):
+    def compute(self, data, context: PortfolioContext):
         idx = data.index
         return pd.Series(idx.isin(self.dates), index=idx)
 
 
 class RebalanceMonthEnd(CSSignal):
-    def compute(self, data, context):
+    def compute(self, data, context: PortfolioContext):
         idx = data.index
         df = pd.Series(index=idx, data=False)
 
@@ -246,7 +246,7 @@ class RebalanceMonthEnd(CSSignal):
 
 
 class RebalanceWeekEnd(CSSignal):
-    def compute(self, data, context):
+    def compute(self, data, context: PortfolioContext):
         idx = data.index
         df = pd.Series(False, index=idx)
 

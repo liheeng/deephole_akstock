@@ -1,4 +1,4 @@
-from vectorbt_test.core.nodes import Node, NodeType, NodeDType
+from vectorbt_test.core.nodes import FeatureNode, NodeType, NodeDType
 from vectorbt_test.core.node_builder import NodeBuilder
 from vectorbt_test.core.functions import Rank
 from vectorbt_test.core.context import PortfolioContext
@@ -6,17 +6,17 @@ from vectorbt_test.core.registry import NodeRegistry, NodeMeta, NodeParam
 import pandas as pd
 
 
-# class SignalToFactor(Node):
+# class SignalToFactor(FeatureNode):
 #     def __init__(self, signal_node):
 #         super().__init__(NodeType.Factor, NodeDType.Numeric)
 #         self.signal = signal_node
 
-#     def compute(self, data, context):
+#     def compute(self, data, context: PortfolioContext):
 #         s = self.signal.evaluate(data, context)
 #         return s.astype(int)   # 或 float
     
 
-class Factor(Node):
+class Factor(FeatureNode):
     def __init__(self, name: str, expr_str: str):
         super().__init__(NodeType.Factor, NodeDType.Numeric)
         self._name = name
@@ -51,7 +51,7 @@ class SignalToFactor(Factor):
         self.signal = signal_node
         self.node = self.signal
 
-    def compute(self, data, context):
+    def compute(self, data, context: PortfolioContext):
         s = self.node.evaluate(data, context)
         return s.astype(int)   # 或 float
 
@@ -74,12 +74,12 @@ NodeRegistry.register(
         ]
     ))
 
-# class Rank(Node):
+# class Rank(FeatureNode):
 #     def __init__(self, node):
 #         super().__init__(node.type)
 #         self.node = node
 
-#     def compute(self, data, context):
+#     def compute(self, data, context: PortfolioContext):
 #         x = self.node.evaluate(data, context)
 #         return x.rank(axis=1, pct=True)
 

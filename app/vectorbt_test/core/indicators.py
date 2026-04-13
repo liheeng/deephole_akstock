@@ -1,8 +1,8 @@
-from vectorbt_test.core.nodes import Node, NodeType
+from vectorbt_test.core.nodes import FeatureNode, NodeType
 from vectorbt_test.core.registry import NodeRegistry, NodeMeta, NodeParam
+from vectorbt_test.core.context import PortfolioContext
 
-
-class Indicator(Node):
+class Indicator(FeatureNode):
     def __init__(self):
         super().__init__(NodeType.Indicator)
 
@@ -18,7 +18,7 @@ class MAIndicator(Indicator):
     def name(self):
         return f"ma{self.period}"
 
-    def compute(self, data, context):
+    def compute(self, data, context: PortfolioContext):
         # fallback
         return data["close"].rolling(self.period).mean()
 
@@ -31,7 +31,7 @@ class RSIIndicator(Indicator):
     def name(self):
         return f"rsi{self.period}"
 
-    def compute(self, data, context):
+    def compute(self, data, context: PortfolioContext):
         delta = data["close"].diff()
         gain = delta.clip(lower=0).rolling(self.period).mean()
         loss = (-delta.clip(upper=0)).rolling(self.period).mean()
@@ -49,7 +49,7 @@ class MacdIndicator(Indicator):
     def name(self):
         return f"macd{self.fast_period}_{self.slow_period}_{self.signal_period}"
 
-    def compute(self, data, context):
+    def compute(self, data, context: PortfolioContext):
         exp1 = data["close"].ewm(span=self.fast_period, adjust=False).mean()
         exp2 = data["close"].ewm(span=self.slow_period, adjust=False).mean()
         macd = exp1 - exp2

@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 import pandas as pd
+from vectorbt_test.core.data import RawDataNode
+from vectorbt_test.core.context import PortfolioContext
 
 
 class DataProvider:
@@ -12,9 +14,12 @@ class DataProvider:
     def get_cache(self):
         return self.cache
     
-    def get(self, node, data, context):
-        key = node.cache_key()
+    def get(self, node, data, context: PortfolioContext):
+        # Raw data node 直接计算, DO NOT cache!!!
+        if isinstance(node, RawDataNode):
+            return node.compute(data, context)
 
+        key = node.cache_key()
         # 1️⃣ cache
         if key in self.cache:
             return self.cache[key]
@@ -34,7 +39,7 @@ class DataProvider:
 
         return val
     
-    def _get_from_db(self, node, context):
+    def _get_from_db(self, node, context: PortfolioContext):
         # 只允许某些 node 走 DB
         if not hasattr(node, "name"):
             return None
@@ -54,15 +59,15 @@ class DataBackend(ABC):
         pass
 
     @abstractmethod
-    def set(self, key: tuple, value: pd.Series, context):
+    def set(self, key: tuple, value: pd.Series, context: PortfolioContext):
         pass
 
 
 class DuckDBBackend(DataBackend):
 
-    def get(self, key, context):
+    def get(self, key, context: PortfolioContext):
         # key → table / column mapping
         pass
 
-    def set(self, key, value, context):
+    def set(self, key, value, context: PortfolioContext):
         pass
