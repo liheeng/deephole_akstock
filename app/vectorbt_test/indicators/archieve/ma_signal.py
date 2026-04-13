@@ -1,6 +1,6 @@
 # signals/ma_signal.py
 
-from ..core.base_signal import BaseSignal
+from vectorbt_test.core.base_signal import BaseSignal
 import pandas as pd
 import vectorbt as vbt
 

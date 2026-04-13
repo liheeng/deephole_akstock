@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from .portfolio import PortfolioContext
+from vectorbt_test.core.portfolio import PortfolioContext
 
 
 class StrategyMode(Enum):

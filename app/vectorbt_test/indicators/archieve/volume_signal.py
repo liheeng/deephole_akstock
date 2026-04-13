@@ -2,7 +2,7 @@
 
 import pandas as pd
 import numpy as np
-from ..core.base_signal import BaseSignal
+from vectorbt_test.core.base_signal import BaseSignal
 
 # 规则示例：
 # 成交量 > N日均量 × 1.5 → 买

@@ -1,8 +1,8 @@
 import enum
 from abc import ABC
-from .nodes import Node, NodeType, NodeDType
-from .node_builder import NodeBuilder
-from .registry import NodeRegistry, NodeMeta, NodeParam
+from vectorbt_test.core.nodes import Node, NodeType, NodeDType
+from vectorbt_test.core.node_builder import NodeBuilder
+from vectorbt_test.core.registry import NodeRegistry, NodeMeta, NodeParam
 import pandas as pd
 
 
@@ -11,6 +11,7 @@ class SignalScope(enum.Enum):
     TS = 1
     CS = 2
     TS_CS = 4
+
 
 class Signal(Node, ABC):
     @staticmethod
@@ -188,6 +189,7 @@ class CSSignal(Signal):
     def __init__(self):
         super().__init__()
         self._scope = SignalScope.CS
+
 
 class RebalanceDaily(CSSignal):
     def compute(self, data, context):

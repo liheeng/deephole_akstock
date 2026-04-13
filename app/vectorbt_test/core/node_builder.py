@@ -1,6 +1,6 @@
 
-from .expr_parser import ExprParser
-from .registry import NodeRegistry
+from vectorbt_test.core.expr_parser import ExprParser
+from vectorbt_test.core.registry import NodeRegistry
 import re
 
 

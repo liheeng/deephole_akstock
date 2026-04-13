@@ -3,7 +3,7 @@
 import pandas as pd
 import vectorbt as vbt
 import numpy as np
-from ..core.base_signal import BaseSignal
+from vectorbt_test.core.base_signal import BaseSignal
 
 # 经典规则：
 # RSI < 30 → 买

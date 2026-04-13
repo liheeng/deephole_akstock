@@ -1,5 +1,5 @@
-from .nodes import Node, NodeType
-from .registry import NodeRegistry, NodeMeta, NodeParam
+from vectorbt_test.core.nodes import Node, NodeType
+from vectorbt_test.core.registry import NodeRegistry, NodeMeta, NodeParam
 
 
 class Indicator(Node):

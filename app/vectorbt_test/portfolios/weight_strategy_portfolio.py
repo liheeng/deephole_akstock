@@ -1,10 +1,10 @@
 from typing import List, Sequence
 import pandas as pd
 import vectorbt as vbt
-from ..core.portfolio import StrategyPortfolio, PortfolioContext
-from ..strategies.weight_strategy import WeightStrategy
-from ..core.portfolio import PortfolioParameters
-from ..core.signals import Signal
+from vectorbt_test.core.portfolio import StrategyPortfolio, PortfolioContext
+from vectorbt_test.strategies.weight_strategy import WeightStrategy
+from vectorbt_test.core.portfolio import PortfolioParameters
+from vectorbt_test.core.signals import Signal
 from vectorbt_test.engine.data_adapter import DataAdapter
 from vectorbt_test.engine.data_provider import DataProvider
 

@@ -1,5 +1,5 @@
-from .nodes import Node, NodeType, NodeDType, ConstNode, to_node
-from .registry import NodeRegistry, NodeMeta, NodeParam
+from vectorbt_test.core.nodes import Node, NodeType, NodeDType, ConstNode, to_node
+from vectorbt_test.core.registry import NodeRegistry, NodeMeta, NodeParam
 import pandas as pd
 
 

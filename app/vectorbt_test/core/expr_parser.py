@@ -1,7 +1,7 @@
 import ast
-from .registry import NodeRegistry
-from .functions import FUNCTION_REGISTRY
-from .nodes import Node, to_node   # 👈 用我们刚才定义的
+from vectorbt_test.core.registry import NodeRegistry
+from vectorbt_test.core.functions import FUNCTION_REGISTRY
+from vectorbt_test.core.nodes import Node, to_node   # 👈 用我们刚才定义的
 
 
 class ExprParser:

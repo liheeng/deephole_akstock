@@ -5,8 +5,9 @@ import pandas as pd
 from vectorbt_test.core.strategy import Strategy
 from vectorbt_test.engine.data_adapter import DataAdapter
 from vectorbt_test.engine.data_provider import DataProvider
-from ..core.signals import Signal, SignalScope
-from ..core.node_builder import NodeBuilder
+from vectorbt_test.core.signals import Signal, SignalScope
+from vectorbt_test.core.node_builder import NodeBuilder
+
 
 @dataclass
 class PortfolioParameters:

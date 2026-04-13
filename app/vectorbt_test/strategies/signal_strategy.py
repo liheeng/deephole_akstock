@@ -1,7 +1,7 @@
 from vectorbt_test.core.factors import Factor
 from vectorbt_test.core.strategy import StrategyMode
 from typing import List
-from .hybrid_strategy import HybridStrategy
+from vectorbt_test.strategies.hybrid_strategy import HybridStrategy
 
 
 class SignalStrategy(HybridStrategy):

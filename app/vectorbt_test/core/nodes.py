@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import enum
 import pandas as pd
-from .portfolio import PortfolioContext
+from vectorbt_test.core.portfolio import PortfolioContext
 
 
 class NodeType(enum.Enum):

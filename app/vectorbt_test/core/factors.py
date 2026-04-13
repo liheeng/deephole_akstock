@@ -1,8 +1,8 @@
-from .nodes import Node, NodeType, NodeDType
-from .node_builder import NodeBuilder
-from .functions import Rank
-from .portfolio import PortfolioContext
-from .registry import NodeRegistry, NodeMeta
+from vectorbt_test.core.nodes import Node, NodeType, NodeDType
+from vectorbt_test.core.node_builder import NodeBuilder
+from vectorbt_test.core.functions import Rank
+from vectorbt_test.core.portfolio import PortfolioContext
+from vectorbt_test.core.registry import NodeRegistry, NodeMeta
 import pandas as pd
 
 
@@ -73,7 +73,7 @@ NodeRegistry.register(
 # )
 
 # if __name__ == "__main__":
-#     from .expr_parser import NodeBuilder
+#     from vectorbt_test.core.expr_parser import NodeBuilder
 
 #     builder = NodeBuilder()
 

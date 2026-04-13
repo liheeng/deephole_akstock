@@ -10,8 +10,8 @@ from vectorbt_test.core.signals import Signal
 
 
 class PortfolioType(enum.Enum):
-    SIGNAL_STRATEGY = 1
-    WEIGHT_STRATEGY = 2
+    SIGNAL_STRATEGY = "signal_strategy"
+    WEIGHT_STRATEGY = "wight_strategy"
 
 
 class PortfolioBuilder:
