@@ -3,6 +3,7 @@ from abc import ABC
 from vectorbt_test.core.nodes import FeatureNode, NodeType, NodeDType
 from vectorbt_test.core.node_builder import NodeBuilder
 from vectorbt_test.core.registry import NodeRegistry, NodeMeta, NodeParam
+from vectorbt_test.core.context import PortfolioContext
 import pandas as pd
 
 
@@ -162,7 +163,11 @@ class Cross(Signal):
         a = self.left.evaluate(data, context)
         b = self.right.evaluate(data, context)
 
-        return (a > b) & (a.shift(1) <= b.shift(1))
+        # return (a > b) & (a.shift(1) <= b.shift(1))
+        return context.data_adapter.apply_ts(
+            a,
+            lambda x: (x > b.loc[x.index]) & (x.shift(1) <= b.loc[x.index].shift(1))
+        )
 
 
 class CrossUnder(Signal):

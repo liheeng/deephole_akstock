@@ -2,6 +2,7 @@ from vectorbt_test.core.nodes import FeatureNode, NodeType
 from vectorbt_test.core.registry import NodeRegistry, NodeMeta, NodeParam
 from vectorbt_test.core.context import PortfolioContext
 
+
 class Indicator(FeatureNode):
     def __init__(self):
         super().__init__(NodeType.Indicator)
@@ -20,7 +21,9 @@ class MAIndicator(Indicator):
 
     def compute(self, data, context: PortfolioContext):
         # fallback
-        return data["close"].rolling(self.period).mean()
+        return context.data_adapter.apply_ts(
+            data["close"],
+            lambda x: x.rolling(self.period).mean())
 
 
 class RSIIndicator(Indicator):
@@ -32,12 +35,17 @@ class RSIIndicator(Indicator):
         return f"rsi{self.period}"
 
     def compute(self, data, context: PortfolioContext):
-        delta = data["close"].diff()
+        return context.data_adapter.apply_ts(
+            data["close"],
+            lambda x: self._compute(x, context))
+    
+    def _compute(self, x, context: PortfolioContext):
+        delta = x.diff()
         gain = delta.clip(lower=0).rolling(self.period).mean()
         loss = (-delta.clip(upper=0)).rolling(self.period).mean()
         rs = gain / loss
         return 100 - (100 / (1 + rs))
-    
+
 
 class MacdIndicator(Indicator):
     def __init__(self, fast_period=12, slow_period=26, signal_period=9):
@@ -50,8 +58,14 @@ class MacdIndicator(Indicator):
         return f"macd{self.fast_period}_{self.slow_period}_{self.signal_period}"
 
     def compute(self, data, context: PortfolioContext):
-        exp1 = data["close"].ewm(span=self.fast_period, adjust=False).mean()
-        exp2 = data["close"].ewm(span=self.slow_period, adjust=False).mean()
+        return context.data_adapter.apply_ts(
+            data["close"],
+            lambda x: self._compute(x, context)
+        )
+    
+    def _compute(self, x, context: PortfolioContext):
+        exp1 = x.ewm(span=self.fast_period, adjust=False).mean()
+        exp2 = x.ewm(span=self.slow_period, adjust=False).mean()
         macd = exp1 - exp2
         signal = macd.ewm(span=self.signal_period, adjust=False).mean()
         return macd - signal

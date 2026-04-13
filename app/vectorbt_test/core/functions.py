@@ -1,4 +1,4 @@
-from vectorbt_test.core.nodes import FeatureNode, NodeType, NodeDType, ConstNode, to_node
+from vectorbt_test.core.nodes import Node, FeatureNode, NodeType, NodeDType, ConstNode, to_node
 from vectorbt_test.core.registry import NodeRegistry, NodeMeta, NodeParam
 from vectorbt_test.core.context import PortfolioContext
 import pandas as pd
@@ -34,10 +34,14 @@ class Rank(Function):
     def compute(self, data, context: PortfolioContext):
         x = self.args[0].evaluate(data, context)
 
-        if isinstance(x.index, pd.MultiIndex):
-            return x.groupby(level=0).rank(ascending=False)
+        # if isinstance(x.index, pd.MultiIndex):
+        #     return x.groupby(level=0).rank(ascending=False)
 
-        return x.rank(ascending=False)
+        # return x.rank(ascending=False)
+        return context.data_adapter.apply_cs(
+            x,
+            lambda df: df.rank(ascending=False)
+        )
 
 
 def get_value(x, data, context: PortfolioContext):
@@ -55,11 +59,15 @@ class Top(Function):
         n = self.args[0].value if isinstance(self.args[0], ConstNode) else self.args[0]
         x = get_value(self.args[1], data, context)
 
-        if isinstance(x.index, pd.MultiIndex):
-            rank = x.groupby(level=0).rank(ascending=False)
-            return (rank <= n).astype(bool)
+        # if isinstance(x.index, pd.MultiIndex):
+        #     rank = x.groupby(level=0).rank(ascending=False)
+        #     return (rank <= n).astype(bool)
 
-        return (x.rank(ascending=False) <= n).astype(bool)
+        # return (x.rank(ascending=False) <= n).astype(bool)
+        return context.data_adapter.apply_cs(
+            x,
+            lambda df: (df.rank(ascending=False) <= n)
+        ).astype(bool)
 
 
 class Delay(Function):
