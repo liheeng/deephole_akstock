@@ -3,20 +3,13 @@ from vectorbt_test.core.node_builder import NodeBuilder
 from vectorbt_test.core.functions import Rank
 from vectorbt_test.core.context import PortfolioContext
 from vectorbt_test.core.registry import NodeRegistry, NodeMeta, NodeParam
+from vectorbt_test.core.base import Scope
 import pandas as pd
 
 
-# class SignalToFactor(FeatureNode):
-#     def __init__(self, signal_node):
-#         super().__init__(NodeType.Factor, NodeDType.Numeric)
-#         self.signal = signal_node
-
-#     def compute(self, data, context: PortfolioContext):
-#         s = self.signal.evaluate(data, context)
-#         return s.astype(int)   # 或 float
-    
-
 class Factor(FeatureNode):
+    scope = Scope.TS
+
     def __init__(self, name: str, expr_str: str):
         super().__init__(NodeType.Factor, NodeDType.Numeric)
         self._name = name
@@ -75,6 +68,7 @@ NodeRegistry.register(
     ))
 
 # class Rank(FeatureNode):
+#     scope = Scope.CS
 #     def __init__(self, node):
 #         super().__init__(node.type)
 #         self.node = node

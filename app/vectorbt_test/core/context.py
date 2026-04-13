@@ -1,6 +1,7 @@
 from typing import Dict, Any
 from vectorbt_test.engine.data_adapter import DataAdapter
 from vectorbt_test.engine.data_provider import DataProvider
+from vectorbt_test.engine.execution_engine import ExecutionEngine
 
 
 class PortfolioContext(Dict[str, Any]):
@@ -31,3 +32,11 @@ class PortfolioContext(Dict[str, Any]):
     @data_adapter.setter
     def data_adapter(self, adapter: DataAdapter):
         self["data_adapter"] = adapter
+
+    @property
+    def execution_engine(self) -> ExecutionEngine | None:
+        return self.get("execution_engine", ExecutionEngine())
+
+    @execution_engine.setter
+    def execution_engine(self, engine: ExecutionEngine):
+        self["execution_engine"] = engine

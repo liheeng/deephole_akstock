@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import enum
 import pandas as pd
 from vectorbt_test.core.context import PortfolioContext
+from vectorbt_test.engine.execution_engine import Scope
 
 
 class NodeType(enum.Enum):
@@ -20,9 +21,14 @@ class NodeDType(enum.Enum):
 
 
 class Node(ABC):
+    scope: Scope | None = None
+
     def __init__(self, type: NodeType = NodeType.Unknown, dtype: NodeDType = NodeDType.Numeric):
         self._type = type
         self._dtype = dtype
+
+    def apply(self, series, func, context: PortfolioContext):
+        return context.execution_engine.apply(series, func, self.scope)
 
     # ===== 类型 =====
     @property
@@ -167,6 +173,13 @@ class BinaryOp(FeatureNode):
         self.left = left
         self.right = right
         self.op = op
+
+        self.scope = self._infer_scope()
+
+    def _infer_scope(self):
+        if self.left.scope == "cs" or self.right.scope == "cs":
+            return "cs"
+        return "ts"
 
     def _args(self):
         return [self.left.cache_key(), self.right.cache_key(), self.op]

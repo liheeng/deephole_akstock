@@ -1,7 +1,7 @@
 from vectorbt_test.core.nodes import Node, FeatureNode, NodeType, NodeDType, ConstNode, to_node
 from vectorbt_test.core.registry import NodeRegistry, NodeMeta, NodeParam
 from vectorbt_test.core.context import PortfolioContext
-import pandas as pd
+from vectorbt_test.core.base import Scope
 
 
 class Function(FeatureNode):
@@ -11,9 +11,10 @@ class Function(FeatureNode):
 
     def _args(self):
         return [a.cache_key() for a in self.args]
-    
+ 
 
 class Cross(Function):
+
     def __init__(self, left, right):
         super().__init__(left, right,
                          dtype=NodeDType.Signal,
@@ -28,6 +29,8 @@ class Cross(Function):
     
 
 class Rank(Function):
+    scope = Scope.CS
+
     def __init__(self, x):
         super().__init__(x, dtype=NodeDType.Numeric)
 
@@ -38,9 +41,10 @@ class Rank(Function):
         #     return x.groupby(level=0).rank(ascending=False)
 
         # return x.rank(ascending=False)
-        return context.data_adapter.apply_cs(
+        return self.apply(
             x,
-            lambda df: df.rank(ascending=False)
+            lambda df: df.rank(ascending=False),
+            context
         )
 
 
@@ -51,6 +55,8 @@ def get_value(x, data, context: PortfolioContext):
 
 
 class Top(Function):
+    scope = Scope.CS
+
     def __init__(self, n, x):
         super().__init__(n, x, dtype=NodeDType.Bool)
 
@@ -64,9 +70,10 @@ class Top(Function):
         #     return (rank <= n).astype(bool)
 
         # return (x.rank(ascending=False) <= n).astype(bool)
-        return context.data_adapter.apply_cs(
+        return self.apply(
             x,
-            lambda df: (df.rank(ascending=False) <= n)
+            lambda df: (df.rank(ascending=False) <= n),
+            context
         ).astype(bool)
 
 
@@ -91,22 +98,37 @@ class Mean(Function):
 
 
 class ZScore(Function):
+    scope = Scope.CS
+
     def __init__(self, x):
         super().__init__(x, dtype=NodeDType.Numeric)
 
     def compute(self, data, context: PortfolioContext):
         x = self.args[0].evaluate(data, context)
-        return (x - x.mean()) / (x.std() + 1e-9)
+        
+        return self.apply(
+            x,
+            lambda s: (s - s.mean()) / (s.std() + 1e-9),
+            context
+        )
 
 
-# FUNCTION_REGISTRY = {
-#     "cross": lambda a, b: Cross(a, b), # It is signal
-#     "rank": lambda x: Rank(x),
-#     "top": lambda n, x: Top(n, x),
-#     "delay": lambda x, n: Delay(x, n),
-#     "mean": lambda x, n: Mean(x, n),
-#     "zscore": lambda x: ZScore(x),
-# }
+class ZScoreTS(Node):
+    scope = Scope.TS
+
+    def __init__(self, node, window):
+        self.node = node
+        self.window = window
+
+    def compute(self, data, context):
+        x = self.node.evaluate(data, context)
+
+        return context.data_adapter.apply_ts(
+            x,
+            lambda s: (s - s.rolling(self.window).mean()) /
+                      (s.rolling(self.window).std() + 1e-9)
+        )
+
 
 NodeRegistry.register(
     "cross",
@@ -181,6 +203,20 @@ NodeRegistry.register(
         desc="ZScore计算",
         params=[
             NodeParam("x", "Node", desc="节点")
+        ]
+    )
+)
+
+NodeRegistry.register(
+    "zscore_ts",
+    lambda x, window: ZScoreTS(x, window),
+    NodeMeta(
+        name="zscore",
+        group="function",
+        desc="基于TS的ZScore计算",
+        params=[
+            NodeParam("x", "Node", desc="节点"),
+            NodeParam("window", "int", desc="窗口")
         ]
     )
 )

@@ -1,9 +1,12 @@
 from vectorbt_test.core.nodes import FeatureNode, NodeType
 from vectorbt_test.core.registry import NodeRegistry, NodeMeta, NodeParam
 from vectorbt_test.core.context import PortfolioContext
+from vectorbt_test.core.base import Scope
 
 
 class Indicator(FeatureNode):
+    scope = Scope.TS
+
     def __init__(self):
         super().__init__(NodeType.Indicator)
 

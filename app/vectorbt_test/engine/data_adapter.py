@@ -116,28 +116,6 @@ class DataAdapter:
 
         return self.data.index
 
-    def apply_ts(self, series: pd.Series, func):
-        """时间序列（按 symbol）"""
-        if isinstance(series.index, pd.MultiIndex):
-            return (
-                series
-                .groupby(level=1)
-                .apply(func)
-                .reset_index(level=0, drop=True)
-            )
-        return func(series)
-
-    def apply_cs(self, series: pd.Series, func):
-        """横截面（按 date）"""
-        if isinstance(series.index, pd.MultiIndex):
-            return (
-                series
-                .groupby(level=0)
-                .apply(func)
-                .reset_index(level=0, drop=True)
-            )
-        return func(series)
-
     # ========================
     # Debug（强烈推荐）
     # ========================
