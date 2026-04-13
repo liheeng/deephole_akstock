@@ -1,4 +1,4 @@
-from vectorbt_test.core.factors import Factor
+from vectorbt_test.core.factors import Factor, SignalToFactor
 from vectorbt_test.core.signals import Signal, SignalScope
 from vectorbt_test.core.strategy import Strategy, StrategyMode, StrategyResult
 from vectorbt_test.core.context import PortfolioContext
@@ -35,7 +35,7 @@ class HybridStrategy(Strategy):
         self.name = name
         self.factors: List[Factor] = []
         for f in factors:
-            factor: Factor | None = NodeBuilder().build(f) if isinstance(f, str) else f  # type: ignore
+            factor: Factor | None = NodeBuilder().build_factor(f, SignalToFactor) if isinstance(f, str) else f  # type: ignore
             assert factor is not None and factor.type == NodeType.Factor
             self.factors.append(factor)
 

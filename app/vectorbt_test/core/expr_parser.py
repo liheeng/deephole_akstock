@@ -1,7 +1,6 @@
 import ast
 from vectorbt_test.core.registry import NodeRegistry
 from vectorbt_test.core.nodes import Node, ConstNode, to_node
-from vectorbt_test.core.functions import FUNCTION_REGISTRY
 
 
 class ExprParser:
@@ -9,6 +8,25 @@ class ExprParser:
     def parse(self, expr_str: str) -> Node:
         tree = ast.parse(expr_str, mode="eval")
         return self._parse_node(tree.body)
+
+    # =========================
+    # utils
+    # =========================
+    def _unwrap(self, x):
+        """把 ConstNode → 原始值，同时防止 Node 混入 literal 参数"""
+        if isinstance(x, ConstNode):
+            return x.value
+
+        if isinstance(x, (list, tuple)):
+            return type(x)(self._unwrap(v) for v in x)
+
+        if isinstance(x, Node):
+            raise ValueError(f"Expected literal, got Node: {x}")
+
+        return x
+
+    def _is_node_param(self, param):
+        return param.type in {"Node", "Signal", "Factor", "Indicator"}
 
     # =========================
     # 主递归解析
@@ -63,7 +81,7 @@ class ExprParser:
 
             return left
 
-        # ===== 布尔（and / or → 转成 & |）=====
+        # ===== 布尔（and / or）=====
         if isinstance(node, ast.BoolOp):
             values = [self._parse_node(v) for v in node.values]
             result = values[0]
@@ -81,32 +99,64 @@ class ExprParser:
             if isinstance(node.op, ast.Invert):
                 return ~self._parse_node(node.operand)
 
-        # ===== 函数调用（最关键）=====
+        # ===== 函数调用（核心）=====
         if isinstance(node, ast.Call):
 
             func_name = node.func.id
 
-            def _unwrap(x):
-                if isinstance(x, ConstNode):
-                    return x.value
-                return x
+            if func_name not in NodeRegistry._meta:
+                raise ValueError(f"{func_name} not registered")
 
-            args = [_unwrap(self._parse_node(arg)) for arg in node.args]
+            meta = NodeRegistry._meta[func_name]
+            param_defs = meta.params or []
 
-            kwargs = {
-                kw.arg: _unwrap(self._parse_node(kw.value))
+            # ===== 解析参数 =====
+            parsed_args = [self._parse_node(arg) for arg in node.args]
+            parsed_kwargs = {
+                kw.arg: self._parse_node(kw.value)
                 for kw in node.keywords
             }
 
-            # ===== NodeRegistry 优先 =====
-            if func_name in NodeRegistry._factories:
-                return NodeRegistry.create(func_name, *args, **kwargs)
+            final_kwargs = {}
 
-            # ===== FunctionNode =====
-            if func_name in FUNCTION_REGISTRY:
-                return FUNCTION_REGISTRY[func_name](*args)
+            for i, param in enumerate(param_defs):
 
-            raise ValueError(f"Unknown function: {func_name}")
+                # ===== 取值（位置优先）=====
+                if i < len(parsed_args):
+                    val = parsed_args[i]
+                elif param.name in parsed_kwargs:
+                    val = parsed_kwargs[param.name]
+                else:
+                    val = param.default
+
+                if val is None:
+                    raise ValueError(f"{func_name}: missing param '{param.name}'")
+
+                # ===== 类型处理 =====
+                if self._is_node_param(param):
+
+                    if not isinstance(val, Node):
+                        raise ValueError(
+                            f"{func_name}: param '{param.name}' expects Node, got {val}"
+                        )
+
+                    final_kwargs[param.name] = val
+
+                else:
+                    raw = self._unwrap(val)
+
+                    if param.type == "int":
+                        final_kwargs[param.name] = int(raw)
+
+                    elif param.type == "float":
+                        final_kwargs[param.name] = float(raw)
+
+                    elif param.type == "str":
+                        final_kwargs[param.name] = str(raw)
+
+                    else:
+                        final_kwargs[param.name] = raw
+
+            return NodeRegistry.create(func_name, **final_kwargs)
 
         raise ValueError(f"Unsupported expression: {ast.dump(node)}")
-        

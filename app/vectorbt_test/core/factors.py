@@ -2,7 +2,7 @@ from vectorbt_test.core.nodes import Node, NodeType, NodeDType
 from vectorbt_test.core.node_builder import NodeBuilder
 from vectorbt_test.core.functions import Rank
 from vectorbt_test.core.context import PortfolioContext
-from vectorbt_test.core.registry import NodeRegistry, NodeMeta
+from vectorbt_test.core.registry import NodeRegistry, NodeMeta, NodeParam
 import pandas as pd
 
 
@@ -44,6 +44,19 @@ class Factor(Node):
         return Rank(self)
 
 
+class SignalToFactor(Factor):
+    def __init__(self, signal_node):
+        self._name = self.__class__.__name__
+        self._type = NodeType.Factor
+        self._dtype = NodeDType.Numeric
+        self.signal = signal_node
+        self.node = self.signal
+
+    def compute(self, data, context):
+        s = self.node.evaluate(data, context)
+        return s.astype(int)   # 或 float
+
+
 class GeneralFactor(Factor):
     def __init__(self, name: str, expr_str: str):
         super().__init__(name, expr_str)
@@ -55,7 +68,11 @@ NodeRegistry.register(
     NodeMeta(
         name="GeneralFactor",
         group="factor",
-        desc="GeneralFactor to create general factors"
+        desc="GeneralFactor to create general factors",
+        params=[
+            NodeParam("name", "str", None, "Factor name"),
+            NodeParam("expr_str", "str", None, "Expression string")
+        ]
     ))
 
 # class Rank(Node):

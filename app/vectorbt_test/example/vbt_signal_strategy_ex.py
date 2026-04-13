@@ -48,8 +48,9 @@ if __name__ == "__main__":
         PortfolioBuilder
         .new("SP1", mode="signal_strategy")
         .add_strategy("trend")
-            .add_factor("GFactor(name='trend-factor', expr_str='Cross(ma5, ma20)')")
-            # .add_factor("Cross(ma5, ma20)")
+            # .add_factor("GFactor(name='trend-factor', expr_str='Cross(ma5, ma20)')")
+            # .add_factor("GFactor('trend-factor', 'Cross(ma5, ma20)')")
+            .add_factor("Cross(ma5, ma20)")
             .end_factor()
         .end_strategy()
         .set_strategy_op(StrategyOp.OR.value)
