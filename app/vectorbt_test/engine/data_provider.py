@@ -19,7 +19,10 @@ class DataProvider:
         if isinstance(node, RawDataNode):
             return node.compute(data, context)
 
-        key = node.cache_key()
+        key = (
+            node.cache_key(),
+            context.data_scope.key()
+        )
         # 1️⃣ cache
         if key in self.cache:
             return self.cache[key]

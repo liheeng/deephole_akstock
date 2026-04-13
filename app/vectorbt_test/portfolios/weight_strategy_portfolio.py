@@ -2,13 +2,12 @@ from typing import List, Sequence
 import pandas as pd
 import vectorbt as vbt
 from vectorbt_test.core.portfolio import StrategyPortfolio
-from vectorbt_test.core.context import PortfolioContext
 from vectorbt_test.strategies.weight_strategy import WeightStrategy
 from vectorbt_test.core.portfolio import PortfolioParameters
 from vectorbt_test.core.signals import Signal
 from vectorbt_test.core.strategy import StrategyResult
-from vectorbt_test.engine.data_adapter import DataAdapter
 from vectorbt_test.engine.data_provider import DataProvider
+from vectorbt_test.engine.portofilo_builder import create_context
 
 
 class WeightStrategyPortfolio(StrategyPortfolio):
@@ -23,10 +22,9 @@ class WeightStrategyPortfolio(StrategyPortfolio):
         self.init_cash = portfolio_params.init_cash if portfolio_params else 100000
         
     def run(self, data_provider: DataProvider, df: pd.DataFrame, freq: str = "1D", init_cash: float = 100000):
-        adapter = DataAdapter(df)
-        context = PortfolioContext()
-        context.data_provider = data_provider  
-        context.data_adapter = adapter
+        context = create_context(df, data_provider, freq or self.freq)
+        
+        adapter = context.data_adapter
 
         data = adapter.data
         close = adapter.to_vbt(df["close"])

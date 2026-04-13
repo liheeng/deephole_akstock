@@ -2,6 +2,7 @@ from typing import Dict, Any
 from vectorbt_test.engine.data_adapter import DataAdapter
 from vectorbt_test.engine.data_provider import DataProvider
 from vectorbt_test.engine.execution_engine import ExecutionEngine
+from .data_scope import DataScope
 
 
 class PortfolioContext(Dict[str, Any]):
@@ -40,3 +41,11 @@ class PortfolioContext(Dict[str, Any]):
     @execution_engine.setter
     def execution_engine(self, engine: ExecutionEngine):
         self["execution_engine"] = engine
+
+    @property
+    def data_scope(self) -> DataScope | None:
+        return self.get("data_scope")
+
+    @data_scope.setter
+    def data_scope(self, data_scope: DataScope):
+        self["data_scope"] = data_scope
