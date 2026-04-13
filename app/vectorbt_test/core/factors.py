@@ -1,4 +1,4 @@
-from vectorbt_test.core.nodes import FeatureNode, NodeType, NodeDType
+from vectorbt_test.core.nodes import Node, FeatureNode, NodeType, NodeDType
 from vectorbt_test.core.node_builder import NodeBuilder
 from vectorbt_test.core.functions import Rank
 from vectorbt_test.core.context import PortfolioContext
@@ -10,10 +10,14 @@ import pandas as pd
 class Factor(FeatureNode):
     scope = Scope.TS
 
-    def __init__(self, name: str, expr_str: str):
+    def __init__(self, name: str, expr_str: str | Node):
         super().__init__(NodeType.Factor, NodeDType.Numeric)
         self._name = name
-        self.node = NodeBuilder().build(expr_str)
+        if isinstance(expr_str, str):
+            self.node = NodeBuilder().build(expr_str)
+        else:
+            self.node = expr_str
+        
         # # 🔥 修复点：允许 Signal
         # if self.node.type == NodeType.Signal:
         #     self.node = SignalToFactor(self.node)
@@ -24,6 +28,9 @@ class Factor(FeatureNode):
     @property
     def name(self):
         return self._name
+    
+    def _args(self):
+        return [self.name, self.node.cache_key()]
     
     def compute(self, data: pd.DataFrame, context: PortfolioContext):
         return self.node.evaluate(data, context)
@@ -38,15 +45,11 @@ class Factor(FeatureNode):
 
 class SignalToFactor(Factor):
     def __init__(self, signal_node):
-        self._name = self.__class__.__name__
-        self._type = NodeType.Factor
-        self._dtype = NodeDType.Numeric
-        self.signal = signal_node
-        self.node = self.signal
+        super().__init__("signal_node", signal_node)
 
-    def compute(self, data, context: PortfolioContext):
-        s = self.node.evaluate(data, context)
-        return s.astype(int)   # 或 float
+    # def compute(self, data, context: PortfolioContext):
+    #     s = self.node.evaluate(data, context)
+    #     return s.astype(int)   # 或 float
 
 
 class GeneralFactor(Factor):

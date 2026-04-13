@@ -16,12 +16,16 @@ class Indicator(FeatureNode):
 # =========================
 class MAIndicator(Indicator):
     def __init__(self, period):
+        super().__init__()
         self.period = period
 
     @property
     def name(self):
         return f"ma{self.period}"
 
+    def _args(self):
+        return [self.period]
+    
     def compute(self, data, context: PortfolioContext):
         # fallback
         return self.apply(
@@ -33,12 +37,16 @@ class MAIndicator(Indicator):
 
 class RSIIndicator(Indicator):
     def __init__(self, period=14):
+        super().__init__()
         self.period = period
 
     @property
     def name(self):
         return f"rsi{self.period}"
 
+    def _args(self):
+        return [self.period]
+    
     def compute(self, data, context: PortfolioContext):
         return self.apply(
             data["close"],
@@ -55,6 +63,7 @@ class RSIIndicator(Indicator):
 
 class MacdIndicator(Indicator):
     def __init__(self, fast_period=12, slow_period=26, signal_period=9):
+        super().__init__()
         self.fast_period = fast_period
         self.slow_period = slow_period
         self.signal_period = signal_period
@@ -62,6 +71,9 @@ class MacdIndicator(Indicator):
     @property
     def name(self):
         return f"macd{self.fast_period}_{self.slow_period}_{self.signal_period}"
+
+    def _args(self):
+        return [self.fast_period, self.slow_period, self.signal_period]
 
     def compute(self, data, context: PortfolioContext):
         return self.apply(

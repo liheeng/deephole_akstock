@@ -26,7 +26,7 @@ class ExprParser:
         return x
 
     def _is_node_param(self, param):
-        return param.type in {"Node", "Signal", "Factor", "Indicator"}
+        return param.type in {"Node", "Signal", "Factor", "Indicator", "Data"}
 
     # =========================
     # 主递归解析

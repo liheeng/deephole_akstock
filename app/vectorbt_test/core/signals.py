@@ -1,6 +1,6 @@
 import enum
 from abc import ABC
-from vectorbt_test.core.nodes import FeatureNode, NodeType, NodeDType
+from vectorbt_test.core.nodes import FeatureNode, NodeType, NodeDType, to_node
 from vectorbt_test.core.node_builder import NodeBuilder
 from vectorbt_test.core.registry import NodeRegistry, NodeMeta, NodeParam
 from vectorbt_test.core.context import PortfolioContext
@@ -21,16 +21,16 @@ class Signal(FeatureNode, ABC):
         assert node.is_signal
         return node
 
-    def __init__(self):
+    def __init__(self, *args):
         super().__init__(NodeType.Signal, NodeDType.Signal)
-        self._scope = SignalScope.Null
+        self.scope = SignalScope.Null
+        self.args = [to_node(a) for a in args]
 
-    @property
-    def scope(self):
-        self._scope
-
+    def _args(self):
+        return [a.cache_key() for a in self.args]
+  
     def is_scope(self, scope: int) -> bool:
-        return (self._scope.value & scope) == self._scope.value
+        return (self.scope.value & scope) == self.scope.value
     
     def __and__(self, other):
         return BinarySignalOp(self, other, op="and")
@@ -66,7 +66,7 @@ class Signal(FeatureNode, ABC):
 class SignalGate(Signal):
     def __init__(self, signal, signal_gate):
         super().__init__()
-        self._scope = SignalScope.TS_CS
+        self.scope = SignalScope.TS_CS
         self.signal = signal
         self.signal_gate = signal_gate
 
@@ -80,7 +80,7 @@ class SignalGate(Signal):
 class TSSignal(Signal):
     def __init__(self):
         super().__init__()
-        self._scope = SignalScope.TS
+        self.scope = SignalScope.TS
 
 
 class Cooldown(TSSignal):
@@ -132,7 +132,7 @@ class Hold(TSSignal):
 class BinarySignalOp(Signal):
     def __init__(self, left, right, op):
         super().__init__()
-        self._scope = SignalScope.TS_CS
+        self.scope = SignalScope.TS_CS
         self.left = left
         self.right = right
         self.op = op
@@ -155,7 +155,7 @@ class BinarySignalOp(Signal):
 class Cross(Signal):
     def __init__(self, left, right):
         super().__init__()
-        self._scope = SignalScope.TS_CS
+        self.scope = SignalScope.TS_CS
         self.left = left
         self.right = right
 
@@ -174,7 +174,7 @@ class Cross(Signal):
 class CrossUnder(Signal):
     def __init__(self, left, right):
         super().__init__()
-        self._scope = SignalScope.TS_CS
+        self.scope = SignalScope.TS_CS
         self.left = left
         self.right = right
 
@@ -188,7 +188,7 @@ class CrossUnder(Signal):
 class CSSignal(Signal):
     def __init__(self):
         super().__init__()
-        self._scope = SignalScope.CS
+        self.scope = SignalScope.CS
 
 
 class RebalanceDaily(CSSignal):

@@ -15,6 +15,7 @@ class NodeType(enum.Enum):
 
 
 class NodeDType(enum.Enum):
+    Any = "any"
     Numeric = "numeric"
     Bool = "bool"
     Signal = "signal"
@@ -60,7 +61,7 @@ class Node(ABC):
         return (self.__class__.__name__, tuple(self._args()))
 
     def _args(self):
-        return []
+        return [self._type.value, self._dtype.value, self.scope]
 
     # ===== evaluate（统一缓存入口）=====
     def evaluate(self, data, context: PortfolioContext = PortfolioContext()):
@@ -127,10 +128,15 @@ class Node(ABC):
 
 
 class DataNode(Node):
+    def __init__(self, type=NodeType.Unknown, dtype=NodeDType.Any):
+        super().__init__(type=type, dtype=dtype)
+  
     pass
 
 
 class FeatureNode(Node):
+    def __init__(self, type=NodeType.Unknown, dtype=NodeDType.Any):
+        super().__init__(type=type, dtype=dtype)
     pass
 
 
