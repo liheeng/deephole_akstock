@@ -1,17 +1,32 @@
 from vectorbt_test.core.nodes import Node, NodeType, NodeDType
 from vectorbt_test.core.node_builder import NodeBuilder
 from vectorbt_test.core.functions import Rank
-from vectorbt_test.core.portfolio import PortfolioContext
+from vectorbt_test.core.context import PortfolioContext
 from vectorbt_test.core.registry import NodeRegistry, NodeMeta
 import pandas as pd
 
+
+# class SignalToFactor(Node):
+#     def __init__(self, signal_node):
+#         super().__init__(NodeType.Factor, NodeDType.Numeric)
+#         self.signal = signal_node
+
+#     def compute(self, data, context):
+#         s = self.signal.evaluate(data, context)
+#         return s.astype(int)   # 或 float
+    
 
 class Factor(Node):
     def __init__(self, name: str, expr_str: str):
         super().__init__(NodeType.Factor, NodeDType.Numeric)
         self._name = name
         self.node = NodeBuilder().build(expr_str)
-        assert self.node.type == NodeType.Factor
+        # # 🔥 修复点：允许 Signal
+        # if self.node.type == NodeType.Signal:
+        #     self.node = SignalToFactor(self.node)
+        # assert self.node.type == NodeType.Factor
+
+        assert self.type == NodeType.Factor
         
     @property
     def name(self):

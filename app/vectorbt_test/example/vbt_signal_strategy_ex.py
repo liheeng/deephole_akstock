@@ -8,6 +8,7 @@ from vectorbt_test.portfolios.signal_strategy_portfolio import StrategyOp
 from vectorbt_test.core.portfolio import PortfolioParameters
 from vectorbt_test.engine.data_provider import DataProvider
 
+from vectorbt_test.engine.init import load_nodes
 
 def print_trades(pf):
     trades = pf.trades.records_readable
@@ -23,6 +24,8 @@ def print_trades(pf):
 
 
 if __name__ == "__main__":
+    load_nodes()
+
     db_controller = DuckDBController(db_path="../data/stock.duckdb")
     df = get_symbol_data(db_controller, "603259.SH", "2025-01-01", "2026-03-31")
     # df['date'] = pd.to_datetime(df['date'])
@@ -45,7 +48,8 @@ if __name__ == "__main__":
         PortfolioBuilder
         .new("SP1", mode="signal_strategy")
         .add_strategy("trend")
-            .add_factor("GFactor('trend-factor', 'Cross(ma5, ma20)')")
+            .add_factor("GFactor(name='trend-factor', expr_str='Cross(ma5, ma20)')")
+            # .add_factor("Cross(ma5, ma20)")
             .end_factor()
         .end_strategy()
         .set_strategy_op(StrategyOp.OR.value)

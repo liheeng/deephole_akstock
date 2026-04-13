@@ -1,3 +1,4 @@
+from vectorbt_test.core.signals import Signal
 from vectorbt_test.core.factors import Factor
 from vectorbt_test.core.strategy import StrategyMode
 from typing import List

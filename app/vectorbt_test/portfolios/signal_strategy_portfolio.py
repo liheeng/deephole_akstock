@@ -3,7 +3,9 @@ from typing import List, Sequence
 import pandas as pd
 import vectorbt as vbt
 from vectorbt_test.core.signals import Signal
-from vectorbt_test.core.portfolio import PortfolioParameters, StrategyPortfolio, PortfolioContext
+from vectorbt_test.core.portfolio import PortfolioParameters, StrategyPortfolio
+from vectorbt_test.core.context import PortfolioContext
+from vectorbt_test.core.strategy import StrategyResult
 from vectorbt_test.strategies.signal_strategy import SignalStrategy
 from vectorbt_test.engine.data_adapter import DataAdapter
 from vectorbt_test.engine.data_provider import DataProvider
@@ -54,13 +56,13 @@ class SignalStrategyPortfolio(StrategyPortfolio):
 
             vote_weights = self.vote_weights if self.vote_weights is not None else [1.0 / len(self.strategies)] * len(self.strategies)
             for strat, w in zip(self.strategies, vote_weights):
-                _type, _entries, _exits = strat.generate(data, context)
+                results: StrategyResult = strat.generate(data, context)
 
-                if _type != "signal":
+                if results.type != 'signal':
                     raise ValueError("Only signal strategies supported")
 
-                e = _entries.astype(float) * w
-                x = _exits.astype(float) * w
+                e = results.entries.astype(float) * w
+                x = results.exits.astype(float) * w
 
                 vote_entries = e if vote_entries is None else vote_entries + e
                 vote_exits = x if vote_exits is None else vote_exits + x
@@ -80,11 +82,13 @@ class SignalStrategyPortfolio(StrategyPortfolio):
                 exits = exits & global_schedule
         else:
             for strat in self.strategies:
-                _type, _entries, _exits = strat.generate(data, context)
+                results: StrategyResult = strat.generate(data, context)
 
-                if _type != "signal":
+                if results.type != "signal":
                     raise ValueError(f"{strat} is not signal strategy")
 
+                _entries = results.entries
+                _exits = results.exits
                 if self.strategy_op == StrategyOp.OR:
                     entries = _entries if entries is None else (entries | _entries)
                     exits = _exits if exits is None else (exits | _exits)

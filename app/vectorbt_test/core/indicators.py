@@ -94,6 +94,7 @@ NodeRegistry.register(
         ]
     )
 )
+
 NodeRegistry.register(
     "rsi14",
     lambda period=14: RSIIndicator(period),

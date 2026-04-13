@@ -1,7 +1,7 @@
 import ast
 from vectorbt_test.core.registry import NodeRegistry
+from vectorbt_test.core.nodes import Node, ConstNode, to_node
 from vectorbt_test.core.functions import FUNCTION_REGISTRY
-from vectorbt_test.core.nodes import Node, to_node   # 👈 用我们刚才定义的
 
 
 class ExprParser:
@@ -11,7 +11,7 @@ class ExprParser:
         return self._parse_node(tree.body)
 
     # =========================
-    # 主解析函数
+    # 主递归解析
     # =========================
     def _parse_node(self, node) -> Node:
 
@@ -19,37 +19,30 @@ class ExprParser:
         if isinstance(node, ast.Constant):
             return to_node(node.value)
 
-        # ===== 变量（Node）=====
+        # ===== 变量（NodeRegistry）=====
         if isinstance(node, ast.Name):
             return NodeRegistry.create(node.id)
 
-        # ===== 算术运算 =====
+        # ===== 算术 / 位运算 =====
         if isinstance(node, ast.BinOp):
-
             left = self._parse_node(node.left)
             right = self._parse_node(node.right)
 
             if isinstance(node.op, ast.Add):
                 return left + right
-
             elif isinstance(node.op, ast.Sub):
                 return left - right
-
             elif isinstance(node.op, ast.Mult):
                 return left * right
-
             elif isinstance(node.op, ast.Div):
                 return left / right
-
             elif isinstance(node.op, ast.BitAnd):
                 return left & right
-
             elif isinstance(node.op, ast.BitOr):
                 return left | right
 
-        # ===== 比较运算 =====
+        # ===== 比较 =====
         if isinstance(node, ast.Compare):
-
             left = self._parse_node(node.left)
 
             for op, comparator in zip(node.ops, node.comparators):
@@ -57,34 +50,27 @@ class ExprParser:
 
                 if isinstance(op, ast.Gt):
                     left = left > right
-
                 elif isinstance(op, ast.Lt):
                     left = left < right
-
                 elif isinstance(op, ast.GtE):
                     left = left >= right
-
                 elif isinstance(op, ast.LtE):
                     left = left <= right
-
                 elif isinstance(op, ast.Eq):
                     left = left == right
-
                 elif isinstance(op, ast.NotEq):
                     left = left != right
 
             return left
 
-        # ===== 布尔运算（and / or）=====
+        # ===== 布尔（and / or → 转成 & |）=====
         if isinstance(node, ast.BoolOp):
-
             values = [self._parse_node(v) for v in node.values]
             result = values[0]
 
             for v in values[1:]:
                 if isinstance(node.op, ast.And):
-                    result = result & v   # 👈 注意：用 &
-
+                    result = result & v
                 elif isinstance(node.op, ast.Or):
                     result = result | v
 
@@ -92,20 +78,35 @@ class ExprParser:
 
         # ===== NOT (~) =====
         if isinstance(node, ast.UnaryOp):
-
             if isinstance(node.op, ast.Invert):
                 return ~self._parse_node(node.operand)
 
-        # ===== 函数调用 =====
+        # ===== 函数调用（最关键）=====
         if isinstance(node, ast.Call):
 
             func_name = node.func.id
 
-            if func_name not in FUNCTION_REGISTRY:
-                raise ValueError(f"Unknown function: {func_name}")
+            def _unwrap(x):
+                if isinstance(x, ConstNode):
+                    return x.value
+                return x
 
-            args = [self._parse_node(arg) for arg in node.args]
+            args = [_unwrap(self._parse_node(arg)) for arg in node.args]
 
-            return FUNCTION_REGISTRY[func_name](*args)
+            kwargs = {
+                kw.arg: _unwrap(self._parse_node(kw.value))
+                for kw in node.keywords
+            }
+
+            # ===== NodeRegistry 优先 =====
+            if func_name in NodeRegistry._factories:
+                return NodeRegistry.create(func_name, *args, **kwargs)
+
+            # ===== FunctionNode =====
+            if func_name in FUNCTION_REGISTRY:
+                return FUNCTION_REGISTRY[func_name](*args)
+
+            raise ValueError(f"Unknown function: {func_name}")
 
         raise ValueError(f"Unsupported expression: {ast.dump(node)}")
+        

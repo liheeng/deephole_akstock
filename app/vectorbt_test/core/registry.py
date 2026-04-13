@@ -38,10 +38,18 @@ class NodeRegistry:
     # 创建 Node
     # =========================
     @classmethod
-    def create(cls, name: str, **kwargs):
-        if name not in cls._factories:
-            raise ValueError(f"Unknown node: {name}")
-        return cls._factories[name](**kwargs)
+    def create(cls, __node_name, *args, **kwargs):
+        if __node_name not in cls._factories:
+            raise ValueError(f"{__node_name} not registered")
+
+        factory = cls._factories[__node_name]
+
+        try:
+            return factory(*args, **kwargs)
+        except TypeError as e:
+            raise TypeError(
+                f"Error creating node '{__node_name}': args={args}, kwargs={kwargs}"
+            ) from e
 
     # =========================
     # 获取 Meta

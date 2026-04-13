@@ -1,7 +1,7 @@
 from vectorbt_test.core.factors import Factor
 from vectorbt_test.core.signals import Signal, SignalScope
-from vectorbt_test.core.strategy import Strategy, StrategyMode
-from vectorbt_test.core.portfolio import PortfolioContext
+from vectorbt_test.core.strategy import Strategy, StrategyMode, StrategyResult
+from vectorbt_test.core.context import PortfolioContext
 from vectorbt_test.core.node_builder import NodeBuilder
 from vectorbt_test.core.nodes import NodeType
 from typing import List
@@ -47,7 +47,7 @@ class HybridStrategy(Strategy):
         self.top_n = top_n
         self.threshold = threshold
     
-    def generate(self, data, context: PortfolioContext) -> dict:
+    def generate(self, data, context: PortfolioContext) -> StrategyResult:
         # ===== 1. 合成 alpha =====
         alpha = None
         for f in self.factors:
@@ -77,7 +77,7 @@ class HybridStrategy(Strategy):
         else:
             return self._cs_strategy(alpha, signal)
         
-    def _ts_strategy(self, alpha, signal: Signal | None = None):
+    def _ts_strategy(self, alpha, signal: Signal | None = None) -> StrategyResult:
         entries = alpha > self.threshold
         exits   = alpha < -self.threshold
 
@@ -86,13 +86,14 @@ class HybridStrategy(Strategy):
             entries = entries & signal
             exits   = exits & signal
 
-        return {
-            "type": "signal",
-            "entries": entries,
-            "exits": exits
-        }
+        return StrategyResult(
+            type="signal",
+            entries=entries,
+            exits=exits,
+            weights=None
+        )
     
-    def _cs_strategy(self, alpha, signal: Signal | None = None):
+    def _cs_strategy(self, alpha, signal: Signal | None = None) -> StrategyResult:
         ranks = self.data_adapter.cs_rank(alpha, ascending=False)
 
         mask = ranks <= self.top_n
@@ -104,7 +105,9 @@ class HybridStrategy(Strategy):
         if signal is not None:
             weights = weights.where(signal, np.nan)   # 非调仓日不变
 
-        return {
-            "type": "weight",
-            "weights": weights
-        }
+        return StrategyResult(
+            type="weight",
+            entries=None,
+            exits=None,
+            weights=weights
+        )

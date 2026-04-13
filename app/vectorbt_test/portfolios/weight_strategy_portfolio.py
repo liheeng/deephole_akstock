@@ -1,10 +1,12 @@
 from typing import List, Sequence
 import pandas as pd
 import vectorbt as vbt
-from vectorbt_test.core.portfolio import StrategyPortfolio, PortfolioContext
+from vectorbt_test.core.portfolio import StrategyPortfolio
+from vectorbt_test.core.context import PortfolioContext
 from vectorbt_test.strategies.weight_strategy import WeightStrategy
 from vectorbt_test.core.portfolio import PortfolioParameters
 from vectorbt_test.core.signals import Signal
+from vectorbt_test.core.strategy import StrategyResult
 from vectorbt_test.engine.data_adapter import DataAdapter
 from vectorbt_test.engine.data_provider import DataProvider
 
@@ -40,12 +42,12 @@ class WeightStrategyPortfolio(StrategyPortfolio):
         # ===== 合成 alpha =====
         alpha = None
         for strat, w in zip(self.strategies, self.strategy_weights):
-            _type, weights = strat.generate(data, context)
+            results: StrategyResult = strat.generate(data, context)
 
-            if _type != "weight":
+            if results.type != "weight":
                 raise ValueError("Only weight strategies supported")
 
-            alpha = weights * w if alpha is None else alpha + weights * w
+            alpha = results.weights * w if alpha is None else alpha + results.weights * w
 
         # 🔥 关键：normalize
         alpha = adapter.cs_normalize(alpha).fillna(0)
