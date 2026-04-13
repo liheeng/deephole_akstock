@@ -19,7 +19,6 @@ class Cross(Function):
                          node_type=NodeType.Signal)
 
     def compute(self, data, context):
-        assert context.data_provider is not None
         left = self.args[0].evaluate(data, context)
         right = self.args[1].evaluate(data, context)
 
@@ -32,7 +31,6 @@ class Rank(Function):
         super().__init__(x, dtype=NodeDType.Numeric)
 
     def compute(self, data, context):
-        assert context.data_provider is not None
         x = self.args[0].evaluate(data, context)
 
         if isinstance(x.index, pd.MultiIndex):
@@ -68,7 +66,6 @@ class Delay(Function):
         super().__init__(x, n, dtype=NodeDType.Numeric)
 
     def compute(self, data, context):
-        assert context.data_provider is not None
         x = self.args[0].evaluate(data, context)
         n = self.args[1].value
         return x.shift(n)
@@ -79,7 +76,6 @@ class Mean(Function):
         super().__init__(x, n, dtype=NodeDType.Numeric)
 
     def compute(self, data, context):
-        assert context.data_provider is not None
         x = self.args[0].evaluate(data, context)
         n = self.args[1].value
         return x.rolling(n).mean()
@@ -90,7 +86,6 @@ class ZScore(Function):
         super().__init__(x, dtype=NodeDType.Numeric)
 
     def compute(self, data, context):
-        assert context.data_provider is not None
         x = self.args[0].evaluate(data, context)
         return (x - x.mean()) / (x.std() + 1e-9)
 

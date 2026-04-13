@@ -33,7 +33,6 @@ class Factor(Node):
         return self._name
     
     def compute(self, data: pd.DataFrame, context: PortfolioContext):
-        assert context.data_provider is not None
         return self.node.evaluate(data, context)
 
     def score(self, data: pd.DataFrame, context: PortfolioContext):

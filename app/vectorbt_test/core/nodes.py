@@ -59,14 +59,6 @@ class Node(ABC):
     def evaluate(self, data, context: PortfolioContext = PortfolioContext()):
         assert context.data_provider is not None
         return context.data_provider.get(self, data, context)
-        # key = self.cache_key()
-
-        # if key in cache:
-        #     return cache[key]
-
-        # result = self.compute(data, context)
-        # cache[key] = result
-        # return result
 
     @abstractmethod
     def compute(self, data: pd.DataFrame, context: PortfolioContext):
@@ -171,7 +163,6 @@ class BinaryOp(Node):
         return [self.left.cache_key(), self.right.cache_key(), self.op]
 
     def compute(self, data, context):
-        assert context.data_provider is not None
         l = self.left.evaluate(data, context)
         r = self.right.evaluate(data, context)
 
@@ -215,7 +206,6 @@ class UnaryOp(Node):
         return [self.node.cache_key(), self.op]
 
     def compute(self, data, context):
-        assert context.data_provider is not None
         x = self.node.evaluate(data, context)
 
         if self.op == "not":
@@ -233,30 +223,29 @@ class Slope(Node):
         return [self.node.cache_key()]
 
     def compute(self, data, context):
-        assert context.data_provider is not None
         x = self.node.evaluate(data, context)
         return x.diff()
 
 
-# =========================
-# DB Node（优先用数据库）
-# =========================
-class DBNode(Node):
-    def __init__(self, field_name: str):
-        super().__init__()
-        self.field_name = field_name
+# # =========================
+# # DB Node（优先用数据库）
+# # =========================
+# class DBNode(Node):
+#     def __init__(self, field_name: str):
+#         super().__init__()
+#         self.field_name = field_name
 
-    @property
-    def name(self):
-        return self.field_name
+#     @property
+#     def name(self):
+#         return self.field_name
 
-    def compute(self, data: pd.DataFrame, context: PortfolioContext):
-        df = context.get("db_df")
+#     def compute(self, data: pd.DataFrame, context: PortfolioContext):
+#         df = context.get("db_df")
 
-        if df is None:
-            raise ValueError("DBNode requires db_df in context")
+#         if df is None:
+#             raise ValueError("DBNode requires db_df in context")
 
-        if self.field_name not in df.columns:
-            raise ValueError(f"{self.field_name} not found in db_df")
+#         if self.field_name not in df.columns:
+#             raise ValueError(f"{self.field_name} not found in db_df")
 
-        return df[self.field_name]
+#         return df[self.field_name]

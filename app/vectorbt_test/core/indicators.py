@@ -19,11 +19,6 @@ class MAIndicator(Indicator):
         return f"ma{self.period}"
 
     def compute(self, data, context):
-        # 优先 DB
-        df = context.get("db_df")
-        if df is not None and self.name in df.columns:
-            return df[self.name]
-
         # fallback
         return data["close"].rolling(self.period).mean()
 
@@ -37,10 +32,6 @@ class RSIIndicator(Indicator):
         return f"rsi{self.period}"
 
     def compute(self, data, context):
-        df = context.get("db_df")
-        if df is not None and self.name in df.columns:
-            return df[self.name]
-
         delta = data["close"].diff()
         gain = delta.clip(lower=0).rolling(self.period).mean()
         loss = (-delta.clip(upper=0)).rolling(self.period).mean()
@@ -59,16 +50,12 @@ class MacdIndicator(Indicator):
         return f"macd{self.fast_period}_{self.slow_period}_{self.signal_period}"
 
     def compute(self, data, context):
-        df = context.get("db_df")
-        if df is not None and self.name in df.columns:
-            return df[self.name]
-
         exp1 = data["close"].ewm(span=self.fast_period, adjust=False).mean()
         exp2 = data["close"].ewm(span=self.slow_period, adjust=False).mean()
         macd = exp1 - exp2
         signal = macd.ewm(span=self.signal_period, adjust=False).mean()
         return macd - signal
-    
+ 
 
 NodeRegistry.register(
     "ma",

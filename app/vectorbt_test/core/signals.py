@@ -70,7 +70,6 @@ class SignalGate(Signal):
         self.signal_gate = signal_gate
 
     def compute(self, data, context):
-        assert context.data_provider is not None
         s = self.signal.evaluate(data, context)
         g = self.signal_gate.evaluate(data, context)
 
@@ -90,7 +89,6 @@ class Cooldown(TSSignal):
         self.n = n
 
     def compute(self, data, context):
-        assert context.data_provider is not None
         s = self.signal.evaluate(data, context).fillna(False)
 
         result = s.copy()
@@ -114,7 +112,6 @@ class Hold(TSSignal):
         self.n = n
 
     def compute(self, data, context):
-        assert context.data_provider is not None
         s = self.signal.evaluate(data, context).fillna(False)
 
         result = pd.Series(False, index=s.index)
@@ -145,7 +142,6 @@ class BinarySignalOp(Signal):
                 and self.right.is_scope(scope))
     
     def compute(self, data, context):
-        assert context.data_provider is not None
         l = self.left.evaluate(data, context)
         r = self.right.evaluate(data, context)
 
@@ -163,7 +159,6 @@ class Cross(Signal):
         self.right = right
 
     def compute(self, data, context):
-        assert context.data_provider is not None
         a = self.left.evaluate(data, context)
         b = self.right.evaluate(data, context)
 
@@ -178,7 +173,6 @@ class CrossUnder(Signal):
         self.right = right
 
     def compute(self, data, context):
-        assert context.data_provider is not None
         a = self.left.evaluate(data, context)
         b = self.right.evaluate(data, context)
 
