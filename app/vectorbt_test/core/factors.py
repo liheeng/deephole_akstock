@@ -74,18 +74,19 @@ class GeneralFactor(Factor):
         super().__init__(name, expr_str)
 
 
-NodeRegistry.register(
-    "GFactor",
-    lambda name, expr_str: GeneralFactor(name, expr_str),
-    NodeMeta(
-        name="GeneralFactor",
-        group="factor",
-        desc="GeneralFactor to create general factors",
-        params=[
-            NodeParam("name", "str", None, "Factor name"),
-            NodeParam("expr_str", "str", None, "Expression string")
-        ]
-    ))
+def register_factors():
+    NodeRegistry.register(
+        "GFactor",
+        lambda name, expr_str: GeneralFactor(name, expr_str),
+        NodeMeta(
+            name="GFactor",
+            group="factor",
+            desc="GeneralFactor to create general factors",
+            params=[
+                NodeParam("name", "str", None, "Factor name"),
+                NodeParam("expr_str", "str", None, "Expression string")
+            ]
+        ))
 
 # class Rank(FeatureNode):
 #     scope = Scope.CS

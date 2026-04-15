@@ -7,7 +7,7 @@ from sources.data_source import DataSourceApiName
 
 
 @dataclass
-class TaskResult(Dict[str, Any], Any):
+class TaskResult(Dict[str, Any]):
     status: bool = False
     data: Any | None = None
     message: str = ""

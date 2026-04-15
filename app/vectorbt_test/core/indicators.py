@@ -89,68 +89,69 @@ class MacdIndicator(Indicator):
         macd = exp1 - exp2
         signal = macd.ewm(span=self.signal_period, adjust=False).mean()
         return macd - signal
- 
 
-NodeRegistry.register(
-    "MA",
-    lambda period: MAIndicator(period),
-    NodeMeta(
-        name="ma",
-        group="indicator",
-        desc="移动平均线",
-        params=[
-            NodeParam("period", "int", 5, "周期")
-        ]
+
+def register_indicators():
+    NodeRegistry.register(
+        "MA",
+        lambda period: MAIndicator(period),
+        NodeMeta(
+            name="MA",
+            group="indicator",
+            desc="移动平均线",
+            params=[
+                NodeParam("period", "int", 5, "周期")
+            ]
+        )
     )
-)
 
-NodeRegistry.register(
-    "MA5",
-    lambda period=5: MAIndicator(period),
-    NodeMeta(
-        name="ma5",
-        group="indicator",
-        desc="移动平均线",
-        params=[
-            NodeParam("period", "int", 5, "周期")
-        ]
+    NodeRegistry.register(
+        "MA5",
+        lambda period=5: MAIndicator(period),
+        NodeMeta(
+            name="MA5",
+            group="indicator",
+            desc="移动平均线",
+            params=[
+                NodeParam("period", "int", 5, "周期")
+            ]
+        )
     )
-)
-NodeRegistry.register(
-    "MA20",
-    lambda period=20: MAIndicator(period),
-    NodeMeta(
-        name="ma20",
-        group="indicator",
-        desc="移动平均线",
-        params=[
-            NodeParam("period", "int", 20, "周期")
-        ]
+    NodeRegistry.register(
+        "MA20",
+        lambda period=20: MAIndicator(period),
+        NodeMeta(
+            name="MA20",
+            group="indicator",
+            desc="移动平均线",
+            params=[
+                NodeParam("period", "int", 20, "周期")
+            ]
+        )
     )
-)
 
-NodeRegistry.register(
-    "RSI",
-    lambda period=14: RSIIndicator(period),
-    NodeMeta(
-        name="rsi",
-        group="indicator",
-        desc="相对强弱指数",
-        params=[
-            NodeParam("period", "int", 14, "周期")
-        ]
-    ))
+    NodeRegistry.register(
+        "RSI",
+        lambda period=14: RSIIndicator(period),
+        NodeMeta(
+            name="RSI",
+            group="indicator",
+            desc="相对强弱指数",
+            params=[
+                NodeParam("period", "int", 14, "周期")
+            ]
+        ))
 
-NodeRegistry.register(
-    "MACD",
-    lambda fast_period=12, slow_period=26, signal_period=9: MacdIndicator(fast_period, slow_period, signal_period),
-    NodeMeta(
-        name="macd",
-        group="indicator",
-        desc="超买超卖指标",
-        params=[
-            NodeParam("fast_period", "int", 12, "快线周期"),
-            NodeParam("slow_period", "int", 26, "慢线周期"),
-            NodeParam("signal_period", "int", 9, "信号线周期")
-        ]
-    ))
+    NodeRegistry.register(
+        "MACD",
+        lambda fast_period=12, slow_period=26, signal_period=9: MacdIndicator(fast_period, slow_period, signal_period),
+        NodeMeta(
+            name="MACD",
+            group="indicator",
+            desc="超买超卖指标",
+            params=[
+                NodeParam("fast_period", "int", 12, "快线周期"),
+                NodeParam("slow_period", "int", 26, "慢线周期"),
+                NodeParam("signal_period", "int", 9, "信号线周期")
+            ]
+        ))

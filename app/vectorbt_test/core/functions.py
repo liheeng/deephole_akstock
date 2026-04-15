@@ -182,94 +182,95 @@ class ZScoreTS(Function):
         )
 
 
-NodeRegistry.register(
-    "cross",
-    lambda left, right: Cross(left, right),
-    NodeMeta(
-        name="cross",
-        group="function",
-        desc="Cross计算",
-        params=[
-            NodeParam("left", "Node", desc="左节点"),
-            NodeParam("right", "Node", desc="右节点")
-        ]
-    ))
+def register_functions():
+    NodeRegistry.register(
+        "cross",
+        lambda left, right: Cross(left, right),
+        NodeMeta(
+            name="cross",
+            group="function",
+            desc="Cross计算",
+            params=[
+                NodeParam("left", "Node", desc="左节点"),
+                NodeParam("right", "Node", desc="右节点")
+            ]
+        ))
 
-NodeRegistry.register(
-    "rank",
-    lambda node: Rank(node),
-    NodeMeta(
-        name="rank",
-        group="function",
-        desc="Rank计算",
-        params=[
-            NodeParam("node", "Node", desc="节点")
-        ]
-    ))
+    NodeRegistry.register(
+        "rank",
+        lambda node: Rank(node),
+        NodeMeta(
+            name="rank",
+            group="function",
+            desc="Rank计算",
+            params=[
+                NodeParam("node", "Node", desc="节点")
+            ]
+        ))
 
-NodeRegistry.register(
-    "top",
-    lambda node, window: Top(node, window),
-    NodeMeta(
-        name="top",
-        group="function",
-        desc="Top计算",
-        params=[
-            NodeParam("node", "Node", desc="节点"),
-            NodeParam("window", "int", desc="阈值")
+    NodeRegistry.register(
+        "top",
+        lambda node, window: Top(node, window),
+        NodeMeta(
+            name="top",
+            group="function",
+            desc="Top计算",
+            params=[
+                NodeParam("node", "Node", desc="节点"),
+                NodeParam("window", "int", desc="阈值")
 
-        ]
-    ))
+            ]
+        ))
 
-NodeRegistry.register(
-    "delay",
-    lambda node, window: Delay(node, window),
-    NodeMeta(
-        name="delay",
-        group="function",
-        desc="Delay计算",
-        params=[
-            NodeParam("node", "Node", desc="节点"),
-            NodeParam("window", "int", desc="阈值")
-        ]
-    ))
+    NodeRegistry.register(
+        "delay",
+        lambda node, window: Delay(node, window),
+        NodeMeta(
+            name="delay",
+            group="function",
+            desc="Delay计算",
+            params=[
+                NodeParam("node", "Node", desc="节点"),
+                NodeParam("window", "int", desc="阈值")
+            ]
+        ))
 
-NodeRegistry.register(
-    "mean",
-    lambda node, window: Mean(node, window),
-    NodeMeta(
-        name="mean",
-        group="function",
-        desc="Mean计算",
-        params=[
-            NodeParam("node", "Node", desc="节点"),
-            NodeParam("window", "int", desc="阈值")
-        ]
-    ))
+    NodeRegistry.register(
+        "mean",
+        lambda node, window: Mean(node, window),
+        NodeMeta(
+            name="mean",
+            group="function",
+            desc="Mean计算",
+            params=[
+                NodeParam("node", "Node", desc="节点"),
+                NodeParam("window", "int", desc="阈值")
+            ]
+        ))
 
-NodeRegistry.register(
-    "zscore",
-    lambda node: ZScore(node),
-    NodeMeta(
-        name="zscore",
-        group="function",
-        desc="ZScore计算",
-        params=[
-            NodeParam("node", "Node", desc="节点")
-        ]
+    NodeRegistry.register(
+        "zscore",
+        lambda node: ZScore(node),
+        NodeMeta(
+            name="zscore",
+            group="function",
+            desc="ZScore计算",
+            params=[
+                NodeParam("node", "Node", desc="节点")
+            ]
+        )
     )
-)
 
-NodeRegistry.register(
-    "zscore_ts",
-    lambda node, window: ZScoreTS(node, window),
-    NodeMeta(
-        name="zscore",
-        group="function",
-        desc="基于TS的ZScore计算",
-        params=[
-            NodeParam("node", "Node", desc="节点"),
-            NodeParam("window", "int", desc="窗口")
-        ]
+    NodeRegistry.register(
+        "zscore_ts",
+        lambda node, window: ZScoreTS(node, window),
+        NodeMeta(
+            name="zscore",
+            group="function",
+            desc="基于TS的ZScore计算",
+            params=[
+                NodeParam("node", "Node", desc="节点"),
+                NodeParam("window", "int", desc="窗口")
+            ]
+        )
     )
-)

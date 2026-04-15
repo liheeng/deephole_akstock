@@ -20,3 +20,4 @@ class NodeBuilder:
     
     def suggest(self, prefix: str) -> list:
         return [k for k in NodeRegistry._meta.keys() if k.startswith(prefix)]
+

@@ -64,15 +64,16 @@ class DBNode(RawDataNode):
         return df[self.field_name]
     
 
-NodeRegistry.register(
-    "Price",
-    lambda column="close": Price(column),
-    NodeMeta(
-        name="Price",
-        group="data",
-        desc="price",
-        params=[
-            NodeParam("column", "str", 'close', "price column")
-        ]
+def register_data():
+    NodeRegistry.register(
+        "Price",
+        lambda column="close": Price(column),
+        NodeMeta(
+            name="Price",
+            group="data",
+            desc="price",
+            params=[
+                NodeParam("column", "str", 'close', "price column")
+            ]
+        )
     )
-)

@@ -24,7 +24,12 @@ from core.worker import start_workers
 from db.duckdb import DuckDBController
 from sources.ifind.ifind_api import IFinDApi
 from sources.data_source import DataSourceApiName
+
 from vectorbt_test.core.registry import NodeRegistry
+from vectorbt_test.core.portfolio import PortfolioParameters
+from vectorbt_test.engine.data_provider import DataProvider
+from vectorbt_test.engine.portfolio_builder import PortfolioBuilder
+from vectorbt_test.engine.init import load_register_nodes
 
 # !!! Register executors, any new executor needs to be import here,
 # it is very important,otherwise the API won't know how to handle
@@ -49,6 +54,8 @@ def init():
     except Exception as e:
         logger.error(f"iFinD API is failed to initialize, error: str({e})")
     
+    load_register_nodes()
+    logger.info("load backtest's register nodes")
     # 启动工作线程池
     start_workers(n=4)   # 👈 在这里启动
     logger.info("Worker threads started")
@@ -200,10 +207,72 @@ async def export_stream(req: ExportRequest):
         headers={"Content-Disposition": f"attachment; filename=stock_daily.{fmt}"}
     )
 
+
 @app.get("/nodes")
 def get_nodes():
-    return NodeRegistry.to_dict()
-    
+    nodes = NodeRegistry.to_dict()
+    logger.info(f"nodes: {nodes}")
+    logger.info(f"get all nodes: {nodes.keys()}")
+    return nodes
+
+
+class StrategyConfig(BaseModel):
+    name: str
+    factors: List[str]
+    signal: Optional[str] = None
+
+
+class PortfolioRequest(BaseModel):
+    name: str
+    mode: str
+    strategies: List[StrategyConfig]
+    strategy_op: Optional[str] = "AND"
+    schedule_signal: Optional[str] = None
+    params: dict
+
+
+def load_data_somehow():
+    from db.stock_daily_util import get_symbol_data
+    db_controller = DuckDBController(db_path="../data/stock.duckdb")
+    df = get_symbol_data(db_controller, "603259.SH", "2025-01-01", "2026-03-31")
+    return df
+
+
+@app.post("/backtest")
+def run_backtest(req: PortfolioRequest):
+    builder = PortfolioBuilder.new(req.name, req.mode)
+
+    for s in req.strategies:
+        builder.add_strategy(s.name)
+
+        for f in s.factors:
+            builder.add_factor(f)
+
+        builder.end_strategy()
+
+    builder.set_strategy_op(req.strategy_op)
+
+    if req.schedule_signal:
+        builder.set_schedule_signal(req.schedule_signal)
+
+    builder.set_portfolio_params(
+        PortfolioParameters(**req.params)
+    )
+
+    portfolio = builder.build()
+
+    # === 数据 ===
+    df = load_data_somehow()
+
+    pf = portfolio.run(DataProvider(None), df)
+
+    return {
+        "stats": pf.stats().to_dict(),
+        "trades": pf.trades.records_readable.to_dict(orient="records"),
+        "equity": pf.value().tolist()
+    }
+
+
 @app.websocket("/ws/terminal/{container}")
 async def terminal_ws(websocket: WebSocket, container: str):
 

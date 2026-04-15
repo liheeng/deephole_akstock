@@ -7,7 +7,7 @@ from vectorbt_test.engine.portfolio_builder import PortfolioBuilder
 from vectorbt_test.portfolios.signal_strategy_portfolio import StrategyOp
 from vectorbt_test.core.portfolio import PortfolioParameters
 from vectorbt_test.engine.data_provider import DataProvider
-
+from vectorbt_test.core.registry import NodeRegistry
 from vectorbt_test.engine.init import load_register_nodes
 
 
@@ -27,6 +27,9 @@ def print_trades(pf):
 if __name__ == "__main__":
     load_register_nodes()
 
+    dd = NodeRegistry.to_dict()
+    print(dd)
+    
     db_controller = DuckDBController(db_path="../data/stock.duckdb")
     df = get_symbol_data(db_controller, "603259.SH", "2025-01-01", "2026-03-31")
 

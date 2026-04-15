@@ -313,134 +313,134 @@ class RebalanceWeekEnd(CSSignal):
         return df
 
 
-NodeRegistry.register(
-    "Cooldown",
-    lambda signal, n: Cross(signal, n),
-    NodeMeta(
-        name="Cooldown",
-        group="signal",
-        desc="Cooldown Signal",
-        params=[
-            NodeParam("signal", "Signal", desc="Signal"),
-            NodeParam("n", "int", desc="number")
-        ]
-    ))
+def register_signals():
+    NodeRegistry.register(
+        "Cooldown",
+        lambda signal, n: Cross(signal, n),
+        NodeMeta(
+            name="Cooldown",
+            group="signal",
+            desc="Cooldown Signal",
+            params=[
+                NodeParam("signal", "Signal", desc="Signal"),
+                NodeParam("n", "int", desc="number")
+            ]
+        ))
 
+    NodeRegistry.register(
+        "Hold",
+        lambda signal, n: Hold(signal, n),
+        NodeMeta(
+            name="Hold",
+            group="signal",
+            desc="Hold Signal",
+            params=[
+                NodeParam("signal", "Signal", desc="Signal"),
+                NodeParam("n", "int", desc="hold days")
+            ]
+        ))
 
-NodeRegistry.register(
-    "Hold",
-    lambda signal, n: Hold(signal, n),
-    NodeMeta(
-        name="Hold",
-        group="signal",
-        desc="Hold Signal",
-        params=[
-            NodeParam("signal", "Signal", desc="Signal"),
-            NodeParam("n", "int", desc="hold days")
-        ]
-    ))
+    NodeRegistry.register(
+        "Cross",
+        lambda left, right: Cross(left, right),
+        NodeMeta(
+            name="Cross",
+            group="signal",
+            desc="Corss Signal",
+            params=[
+                NodeParam("left", "Node", desc="左节点"),
+                NodeParam("right", "Node", desc="右节点")
+            ]
+        ))
 
-NodeRegistry.register(
-    "Cross",
-    lambda left, right: Cross(left, right),
-    NodeMeta(
-        name="Cross",
-        group="signal",
-        desc="Corss Signal",
-        params=[
-            NodeParam("left", "Node", desc="左节点"),
-            NodeParam("right", "Node", desc="右节点")
-        ]
-    ))
+    NodeRegistry.register(
+        "CrossUnder",
+        lambda left, right: CrossUnder(left, right),
+        NodeMeta(
+            name="CrossUnder",
+            group="signal",
+            desc="CrossUnder Signal",
+            params=[
+                NodeParam("left", "Node", desc="左节点"),
+                NodeParam("right", "Node", desc="右节点")
+            ]
+        ))
 
-NodeRegistry.register(
-    "CrossUnder",
-    lambda left, right: CrossUnder(left, right),
-    NodeMeta(
-        name="CrossUnder",
-        group="signal",
-        desc="CrossUnder Signal",
-        params=[
-            NodeParam("left", "Node", desc="左节点"),
-            NodeParam("right", "Node", desc="右节点")
-        ]
-    ))
+    NodeRegistry.register(
+        "RebalanceDaily",
+        lambda: RebalanceDaily(),
+        NodeMeta(
+            name="RebalanceDaily",
+            group="signal",
+            desc="RebalanceDaily Signal"
+        ))
 
-NodeRegistry.register(
-    "RebalanceDaily",
-    lambda: RebalanceDaily(),
-    NodeMeta(
-        name="RebalanceDaily",
-        group="signal",
-        desc="RebalanceDaily Signal"
-    ))
+    NodeRegistry.register(
+        "RebalanceWeekly",
+        lambda weekday=0: RebalanceWeekly(weekday),
+        NodeMeta(
+            name="RebalanceWeekly",
+            group="signal",
+            desc="RebalanceWeekly Signal",
+            params=[
+                NodeParam("weekday", "int", 0, "weekday")
+            ]
+        ))
 
-NodeRegistry.register(
-    "RebalanceWeekly",
-    lambda weekday=0: RebalanceWeekly(weekday),
-    NodeMeta(
-        name="RebalanceWeekly",
-        group="signal",
-        desc="RebalanceWeekly Signal",
-        params=[
-            NodeParam("weekday", "int", 0, "weekday")
-        ]
-    ))
+    NodeRegistry.register(
+        "RebalanceMonthly",
+        lambda day=1: RebalanceMonthly(day),
+        NodeMeta(
+            name="RebalanceMonthly",
+            group="signal",
+            desc="RebalanceMonthly Signal",
+            params=[
+                NodeParam("day", "int", 1, "day")
+            ]   
+        ))
 
-NodeRegistry.register(
-    "RebalanceMonthly",
-    lambda day=1: RebalanceMonthly(day),
-    NodeMeta(
-        name="RebalanceMonthly",
-        group="signal",
-        desc="RebalanceMonthly Signal",
-        params=[
-            NodeParam("day", "int", 1, "day")
-        ]   
-    ))
+    NodeRegistry.register(
+        "RebalanceEveryNDays",
+        lambda n: RebalanceEveryNDays(n),
+        NodeMeta(
+            name="RebalanceEveryNDays",
+            group="signal",
+            desc="RebalanceEveryNDays Signal",
+            params=[
+                NodeParam("n", "int", 1, "n")
+            ]   
+        ))
 
-NodeRegistry.register(
-    "RebalanceEveryNDays",
-    lambda n: RebalanceEveryNDays(n),
-    NodeMeta(
-        name="RebalanceEveryNDays",
-        group="signal",
-        desc="RebalanceEveryNDays Signal",
-        params=[
-            NodeParam("n", "int", 1, "n")
-        ]   
-    ))
+    NodeRegistry.register(
+        "RebalanceOnDates",
+        lambda dates: RebalanceOnDates(dates),
+        NodeMeta(
+            name="RebalanceOnDates",
+            group="signal",
+            desc="RebalanceOnDates Signal",
+            params=[
+                NodeParam("dates", "list", [], "dates")
+            ]   
+        ))
 
-NodeRegistry.register(
-    "RebalanceOnDates",
-    lambda dates: RebalanceOnDates(dates),
-    NodeMeta(
-        name="RebalanceOnDates",
-        group="signal",
-        desc="RebalanceOnDates Signal",
-        params=[
-            NodeParam("dates", "list", [], "dates")
-        ]   
-    ))
+    NodeRegistry.register(
+        "RebalanceMonthEnd",
+        lambda: RebalanceMonthEnd(),
+        NodeMeta(
+            name="RebalanceMonthEnd",
+            group="signal",
+            desc="RebalanceMonthEnd Signal"
+        ))
 
-NodeRegistry.register(
-    "RebalanceMonthEnd",
-    lambda: RebalanceMonthEnd(),
-    NodeMeta(
-        name="RebalanceMonthEnd",
-        group="signal",
-        desc="RebalanceMonthEnd Signal"
-    ))
+    NodeRegistry.register(
+        "RebalanceWeekEnd",
+        lambda: RebalanceWeekEnd(),
+        NodeMeta(
+            name="RebalanceWeekEnd",
+            group="signal",
+            desc="RebalanceWeekEnd Signal"
+        ))
 
-NodeRegistry.register(
-    "RebalanceWeekEnd",
-    lambda: RebalanceWeekEnd(),
-    NodeMeta(
-        name="RebalanceWeekEnd",
-        group="signal",
-        desc="RebalanceWeekEnd Signal"
-    ))
-
-# NodeRegistry.register("cross", lambda: CrossSignalNode(), group="signal")
-# NodeRegistry.register("breakout", lambda: BreakoutSignalNode(), group="signal")
+    # NodeRegistry.register("cross", lambda: CrossSignalNode(), group="signal")
+    # NodeRegistry.register("breakout", lambda: BreakoutSignalNode(), group="signal")
 

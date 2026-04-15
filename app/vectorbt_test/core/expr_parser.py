@@ -63,33 +63,35 @@ class ExprParser:
 
         # ===== 比较 =====
         if isinstance(node, ast.Compare):
-            left = self._parse_node(node.left)
-            assert left.dtype == NodeDType.Numeric
-            
+            left_node = self._parse_node(node.left)
+            result: Node = None
+
             for op, comparator in zip(node.ops, node.comparators):
-                right = self._parse_node(comparator)
-                assert right.dtype == NodeDType.Numeric
+                right_node = self._parse_node(comparator)
 
                 if isinstance(op, ast.Gt):
-                    left = left > right
+                    cond = left_node > right_node
                 elif isinstance(op, ast.Lt):
-                    left = left < right
+                    cond = left_node < right_node
                 elif isinstance(op, ast.GtE):
-                    left = left >= right
+                    cond = left_node >= right_node
                 elif isinstance(op, ast.LtE):
-                    left = left <= right
+                    cond = left_node <= right_node
                 elif isinstance(op, ast.Eq):
-                    left = left == right
+                    cond = left_node == right_node
                 elif isinstance(op, ast.NotEq):
-                    left = left != right
+                    cond = left_node != right_node
 
-            return left
+                result = cond if result is None else (result & cond)
+                left_node = right_node
+
+            return result
 
         # ===== 布尔（and / or）=====
         if isinstance(node, ast.BoolOp):
             values = [self._parse_node(v) for v in node.values]
             result = values[0]
-            assert result in {NodeDType.Bool, NodeDType.Signal}
+            assert result.dtype in {NodeDType.Bool, NodeDType.Signal}
 
             for v in values[1:]:
                 assert v in {NodeDType.Bool, NodeDType.Signal}
@@ -104,7 +106,7 @@ class ExprParser:
         if isinstance(node, ast.UnaryOp):
             if isinstance(node.op, ast.Invert):
                 n = self._parse_node(node.operand)
-                assert n.dtype == NodeDType.Bool
+                assert n.dtype in {NodeDType.Bool, NodeDType.Signal}
                 return ~n
 
         # ===== 函数调用（核心）=====

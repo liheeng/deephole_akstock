@@ -7,6 +7,7 @@ from vectorbt_test.portfolios.weight_strategy_portfolio import WeightStrategyPor
 from vectorbt_test.portfolios.signal_strategy_portfolio import StrategyOp, SignalStrategy
 from vectorbt_test.portfolios.weight_strategy_portfolio import WeightStrategy
 from vectorbt_test.core.signals import Signal
+from vectorbt_test.core.strategy import StrategyMode
 
 
 class PortfolioType(enum.Enum):
@@ -61,7 +62,17 @@ class PortfolioBuilder:
     def end_factor(self):
         self._current_factor = None
         return self
-
+    
+    def set_strategy_signal(self, signal: str | Signal):
+        if self._current_strategy:
+            self._current_strategy['signal'] = signal
+        return self
+    
+    def set_strategy_mode(self, mode: str | StrategyMode):
+        if self._current_strategy:
+            self._current_strategy['mode'] = StrategyMode(mode) if isinstance(mode, str) else mode
+        return self
+      
     def end_strategy(self):
         self._current_strategy = None
         return self
@@ -90,7 +101,7 @@ class PortfolioBuilder:
         strategies_obj = []
 
         for s in self.strategies:
-            if self.mode == PortfolioType.SIGNAL_STRATEGY.value:     
+            if self.mode == StrategyMode.TIME_SERIES:
                 strategies_obj.append(
                     SignalStrategy(
                         name=s["name"],
@@ -107,7 +118,7 @@ class PortfolioBuilder:
                     )
                 )
 
-        if self.mode == PortfolioType.SIGNAL_STRATEGY.value:
+        if self.mode == StrategyMode.TIME_SERIES:
             return SignalStrategyPortfolio(
                 strategies=strategies_obj,
                 strategy_op=self.strategy_op,

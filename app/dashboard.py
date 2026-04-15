@@ -8,6 +8,7 @@ from sources.data_source import DataSourceApiName
 from utils.common import is_running_in_docker
 from core.job import JobType
 import pandas as pd
+from dashboard_backtest import BacktestPage
 
 API_SERVICE_NAME = os.getenv("API_SERVICE_NAME", "akstock_api_service")
 API_PORT = os.getenv("API_PORT", "8000")
@@ -20,7 +21,7 @@ st.set_page_config(layout="wide")
 # 🎯 左侧菜单 - 新增 Export Data 选项
 menu = st.sidebar.radio(
     "菜单",
-    ["Tasks", "Sync CN Daily", "Sync HK Daily", "Sync US Daily", "Export Data", "Logs", "SQL Executor", "WebConsole"],
+    ["Tasks", "Sync CN Daily", "Sync HK Daily", "Sync US Daily", "Export Data", "Logs", "SQL Executor", "Backtest", "WebConsole"],
     key="main_menu"  # 加唯一key避免缓存
 )
 
@@ -357,15 +358,16 @@ elif menu == "SQL Executor":
                     st.error(f"执行失败：{result['message']}")
 
 elif menu == "Backtest":
-    st.header("📊 Backtest"
+    st.header("📊 Backtest")
+    BacktestPage(API).render()
     
-    nodes = requests.get(f"{API}/backtest/funcs/nodes").json()
+    # nodes = requests.get(f"{API}/backtest/funcs/nodes").json()
 
-    for group, items in nodes.items():
-        st.subheader(group)
+    # for group, items in nodes.items():
+    #     st.subheader(group)
 
-        for item in items:
-            st.write(f"{item['name']} - {item['desc']}"))
+    #     for item in items:
+    #         st.write(f"{item['name']} - {item['desc']}"))
     
 # ----------------------------
 # 🧩 WebConsole 页面

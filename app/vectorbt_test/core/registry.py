@@ -39,8 +39,8 @@ class NodeRegistry:
     # =========================
     @classmethod
     def create(cls, __node_name, *args, **kwargs):
-        if __node_name not in cls._factories:
-            raise ValueError(f"{__node_name} not registered")
+        if __node_name not in cls._factories.keys():
+            raise ValueError(f"{__node_name} not registered\n{cls._factories.keys()}")
 
         factory = cls._factories[__node_name]
 
@@ -75,7 +75,7 @@ class NodeRegistry:
     @classmethod
     def to_dict(cls):
         result = {}
-
+    
         for group, names in cls._groups.items():
             result[group] = []
 
@@ -97,5 +97,3 @@ class NodeRegistry:
                 })
 
         return result
-
-
