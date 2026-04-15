@@ -9,19 +9,15 @@ import pandas as pd
 
 class Factor(FeatureNode):
     scope = Scope.TS
+    dtype = NodeDType.Numeric
 
     def __init__(self, name: str, expr_str: str | Node):
-        super().__init__(NodeType.Factor, NodeDType.Numeric)
+        super().__init__(NodeType.Factor)
         self._name = name
         if isinstance(expr_str, str):
             self.node = NodeBuilder().build(expr_str)
         else:
             self.node = expr_str
-        
-        # # 🔥 修复点：允许 Signal
-        # if self.node.type == NodeType.Signal:
-        #     self.node = SignalToFactor(self.node)
-        # assert self.node.type == NodeType.Factor
 
         assert self.type == NodeType.Factor
         
@@ -30,7 +26,7 @@ class Factor(FeatureNode):
         return self._name
     
     def _args(self):
-        return [self.name, self.node.cache_key()]
+        return [self.name, self.node.cache_key()] + super()._args()
     
     def compute(self, data: pd.DataFrame, context: PortfolioContext):
         return self.node.evaluate(data, context)
@@ -43,13 +39,34 @@ class Factor(FeatureNode):
         return Rank(self)
 
 
+class BoolFactor(Factor):
+    dtype = NodeDType.Bool
+
+
 class SignalToFactor(Factor):
     def __init__(self, signal_node):
+        if signal_node.dtype != NodeDType.Signal:
+            raise TypeError("Expect signal")
         super().__init__("signal_node", signal_node)
 
-    # def compute(self, data, context: PortfolioContext):
-    #     s = self.node.evaluate(data, context)
-    #     return s.astype(int)   # 或 float
+    def compute(self, data, context):
+        return self.node.evaluate(data, context).astype(float)
+
+
+class FactorWrapper(Factor):
+    def __init__(self, node: Node):
+        if node.dtype != NodeDType.Numeric:
+            raise TypeError("Expect numberic type of node")
+        super().__init__(node.__class__.__name__, node)
+
+    def compute(self, data, context):
+        return self.node.evaluate(data, context)
+
+
+def wrap_numberic_node_as_factor(node: Node):
+    if node.type == NodeType.Signal and node.dtype == NodeDType.Numeric:
+        return SignalToFactor(node)
+    return FactorWrapper(node)
 
 
 class GeneralFactor(Factor):

@@ -3,7 +3,7 @@ from typing import Sequence
 from abc import ABC, abstractmethod
 import pandas as pd
 from vectorbt_test.core.strategy import Strategy
-from vectorbt_test.core.signals import Signal, SignalScope
+from vectorbt_test.core.signals import Signal, SignalGroup
 from vectorbt_test.core.node_builder import NodeBuilder
 
 
@@ -24,7 +24,7 @@ class StrategyPortfolio(ABC):
         built_signal = NodeBuilder().build(schedule_signal) if isinstance(schedule_signal, str) else schedule_signal
         self.schedule_signal: Signal | None = built_signal if isinstance(built_signal, Signal) or built_signal is None else None
         if self.schedule_signal is not None:
-            assert self.schedule_signal.is_signal and self.schedule_signal.is_scope(SignalScope.CS.value | SignalScope.TS_CS.value)
+            assert self.schedule_signal.is_signal and self.schedule_signal.is_group(SignalGroup.CS.value | SignalGroup.TS_CS.value)
         self.params = portfolio_params
 
     @abstractmethod

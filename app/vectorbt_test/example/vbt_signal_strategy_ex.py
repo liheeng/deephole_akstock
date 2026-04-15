@@ -10,6 +10,7 @@ from vectorbt_test.engine.data_provider import DataProvider
 
 from vectorbt_test.engine.init import load_register_nodes
 
+
 def print_trades(pf):
     trades = pf.trades.records_readable
 
@@ -50,7 +51,8 @@ if __name__ == "__main__":
         .add_strategy("trend")
             # .add_factor("GFactor(name='trend-factor', expr_str='Cross(ma5, ma20)')")
             # .add_factor("GFactor('trend-factor', 'Cross(ma5, ma20)')")
-            .add_factor("Cross(ma(5), ma(20))")
+            # .add_factor("Cross(MA(5), MA(20))")
+            .add_factor("(MA(5) - MA(20))/MA(20)")
             .end_factor()
         .end_strategy()
         .set_strategy_op(StrategyOp.OR.value)

@@ -12,10 +12,10 @@ class NodeBuilder:
     def build(self, expr_str: str):
         return self.parser.parse(expr_str)
 
-    def build_factor(self, expr_str: str, factor_call):
+    def build_factor(self, expr_str: str, wrap_call):
         node = self.build(expr_str)
-        if node.type == NodeType.Signal:
-            node = factor_call(node)
+        if node.type != NodeType.Factor:
+            return wrap_call(node)
         return node
     
     def suggest(self, prefix: str) -> list:

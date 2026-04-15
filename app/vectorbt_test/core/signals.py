@@ -1,13 +1,13 @@
 import enum
 from abc import ABC
-from vectorbt_test.core.nodes import FeatureNode, NodeType, NodeDType, to_node
+from vectorbt_test.core.nodes import FeatureNode, NodeType, NodeDType, to_args
 from vectorbt_test.core.node_builder import NodeBuilder
 from vectorbt_test.core.registry import NodeRegistry, NodeMeta, NodeParam
 from vectorbt_test.core.context import PortfolioContext
 import pandas as pd
 
 
-class SignalScope(enum.Enum):
+class SignalGroup(enum.Enum):
     Null = -1
     TS = 1
     CS = 2
@@ -15,22 +15,25 @@ class SignalScope(enum.Enum):
 
 
 class Signal(FeatureNode, ABC):
+    dtype = NodeDType.Signal
+
     @staticmethod
     def build(expr_str: str):
         node = NodeBuilder().build(expr_str)
         assert node.is_signal
         return node
 
-    def __init__(self, *args):
-        super().__init__(NodeType.Signal, NodeDType.Signal)
-        self.scope = SignalScope.Null
-        self.args = [to_node(a) for a in args]
+    def __init__(self, signal_group: SignalGroup = SignalGroup.Null):
+        super().__init__(NodeType.Signal)
+        self.signal_group = signal_group
+        # self.args = super()._args + [self.signal_group] + [to_args(a) for a in args]
 
     def _args(self):
-        return [a.cache_key() for a in self.args]
+        # return [a.cache_key() for a in self.args] + super()._args()
+        return [self.signal_group] + super()._args()
   
-    def is_scope(self, scope: int) -> bool:
-        return (self.scope.value & scope) == self.scope.value
+    def is_group(self, signal_groups: int) -> bool:
+        return (self.signal_group.value & signal_groups) == self.signal_group.value
     
     def __and__(self, other):
         return BinarySignalOp(self, other, op="and")
@@ -63,24 +66,9 @@ class Signal(FeatureNode, ABC):
         return Hold(self, n)
 
 
-class SignalGate(Signal):
-    def __init__(self, signal, signal_gate):
-        super().__init__()
-        self.scope = SignalScope.TS_CS
-        self.signal = signal
-        self.signal_gate = signal_gate
-
-    def compute(self, data, context: PortfolioContext):
-        s = self.signal.evaluate(data, context)
-        g = self.signal_gate.evaluate(data, context)
-
-        return s & g
-
-
 class TSSignal(Signal):
     def __init__(self):
-        super().__init__()
-        self.scope = SignalScope.TS
+        super().__init__(signal_group=SignalGroup.TS)
 
 
 class Cooldown(TSSignal):
@@ -89,6 +77,9 @@ class Cooldown(TSSignal):
         self.signal = signal
         self.n = n
 
+    def _args(self):
+        return [self.signal.cache_key(), self.n] + super()._args()
+  
     def compute(self, data, context: PortfolioContext):
         s = self.signal.evaluate(data, context).fillna(False)
 
@@ -112,6 +103,9 @@ class Hold(TSSignal):
         self.signal = signal
         self.n = n
 
+    def _args(self):
+        return [self.signal.cache_key(), self.n] + super()._args()
+    
     def compute(self, data, context: PortfolioContext):
         s = self.signal.evaluate(data, context).fillna(False)
 
@@ -127,18 +121,44 @@ class Hold(TSSignal):
                 hold -= 1
 
         return result
-    
 
-class BinarySignalOp(Signal):
-    def __init__(self, left, right, op):
+
+class ComplexSignal(Signal):
+    def __init__(self, left, right):
         super().__init__()
-        self.scope = SignalScope.TS_CS
         self.left = left
         self.right = right
+
+    def _args(self):
+        return [self.left.cache_key(), self.right.cache_key()] + super()._args()
+    
+    def compute(self, data, context: PortfolioContext):
+        raise NotImplementedError("This is abstract class to support multiple signals by implementations")
+    
+
+class SignalGate(ComplexSignal):
+    def __init__(self, signal, signal_gate):
+        super().__init__(signal, signal_gate)
+        self.signal_group = SignalGroup.TS_CS
+
+    def compute(self, data, context: PortfolioContext):
+        s = self.left.evaluate(data, context)
+        g = self.right.evaluate(data, context)
+
+        return s & g
+
+
+class BinarySignalOp(ComplexSignal):
+    def __init__(self, left, right, op):
+        super().__init__(left, right)
+        self.signal_group = SignalGroup.TS_CS
         self.op = op
 
-    def is_scope(self, scope: int) -> bool:
-        return (super().is_scope(scope)
+    def _args(self):
+        return [self.left.cache_key(), self.right.cache_key(), self.op] + super()._args()
+    
+    def is_group(self, scope: int) -> bool:
+        return (super().is_group(scope)
                 and self.left.is_scope(scope)
                 and self.right.is_scope(scope))
     
@@ -152,12 +172,12 @@ class BinarySignalOp(Signal):
             return l | r
 
 
-class Cross(Signal):
+class Cross(ComplexSignal):
     def __init__(self, left, right):
-        super().__init__()
-        self.scope = SignalScope.TS_CS
-        self.left = left
-        self.right = right
+        if left.dtype != NodeDType.Numeric or right.dtype != NodeDType.Numeric:
+            raise TypeError("Cross requires numeric inputs")
+        super().__init__(left, right)
+        self.signal_group = SignalGroup.TS_CS
 
     def compute(self, data, context: PortfolioContext):
         a = self.left.evaluate(data, context)
@@ -171,12 +191,10 @@ class Cross(Signal):
         )
 
 
-class CrossUnder(Signal):
+class CrossUnder(ComplexSignal):
     def __init__(self, left, right):
-        super().__init__()
-        self.scope = SignalScope.TS_CS
-        self.left = left
-        self.right = right
+        super().__init__(left, right)
+        self.signal_group = SignalGroup.TS_CS
 
     def compute(self, data, context: PortfolioContext):
         a = self.left.evaluate(data, context)
@@ -188,7 +206,7 @@ class CrossUnder(Signal):
 class CSSignal(Signal):
     def __init__(self):
         super().__init__()
-        self.scope = SignalScope.CS
+        self.signal_group = SignalGroup.CS
 
 
 class RebalanceDaily(CSSignal):
@@ -202,6 +220,9 @@ class RebalanceWeekly(CSSignal):
         super().__init__()
         self.weekday = weekday
 
+    def _args(self):
+        return [self.weekday] + super()._args()
+    
     def compute(self, data, context: PortfolioContext):
         dt = data.index
         return pd.Series(dt.weekday == self.weekday, index=dt)
@@ -212,6 +233,9 @@ class RebalanceMonthly(CSSignal):
         super().__init__()
         self.day = day
 
+    def _args(self):
+        return [self.day] + super()._args()
+    
     def compute(self, data, context: PortfolioContext):
         dt = data.index
         return pd.Series(dt.day == self.day, index=dt)
@@ -222,6 +246,9 @@ class RebalanceEveryNDays(CSSignal):
         super().__init__()
         self.n = n
 
+    def _args(self):
+        return [self.n] + super()._args()
+    
     def compute(self, data, context: PortfolioContext):
         idx = data.index
         mask = pd.Series(False, index=idx)
@@ -234,6 +261,9 @@ class RebalanceOnDates(CSSignal):
         super().__init__()
         self.dates = pd.to_datetime(dates)
 
+    def _args(self):
+        return [self.dates] + super()._args()
+    
     def compute(self, data, context: PortfolioContext):
         idx = data.index
         return pd.Series(idx.isin(self.dates), index=idx)

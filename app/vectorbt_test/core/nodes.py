@@ -23,11 +23,18 @@ class NodeDType(enum.Enum):
 
 class Node(ABC):
     scope: Scope | None = None
+    dtype: NodeDType | None = None
 
-    def __init__(self, type: NodeType = NodeType.Unknown, dtype: NodeDType = NodeDType.Numeric):
+    def __init__(self, type: NodeType = NodeType.Unknown):
         self._type = type
-        self._dtype = dtype
 
+    def _args(self):
+        return [self._type.value, self.dtype.value, self.scope]
+    
+    # ===== cache key =====
+    def cache_key(self):
+        return (self.__class__.__name__, tuple(self._args()))
+    
     def apply(self, series, func, context: PortfolioContext):
         return context.execution_engine.apply(series, func, self.scope)
 
@@ -41,10 +48,6 @@ class Node(ABC):
         return self.__class__.__name__
 
     @property
-    def dtype(self):
-        return self._dtype
-
-    @property
     def is_numeric(self):
         return self._dtype == NodeDType.Numeric
 
@@ -55,13 +58,6 @@ class Node(ABC):
     @property
     def is_signal(self):
         return self._dtype == NodeDType.Signal
-
-    # ===== cache key =====
-    def cache_key(self):
-        return (self.__class__.__name__, tuple(self._args()))
-
-    def _args(self):
-        return [self._type.value, self._dtype.value, self.scope]
 
     # ===== evaluate（统一缓存入口）=====
     def evaluate(self, data, context: PortfolioContext = PortfolioContext()):
@@ -127,16 +123,9 @@ class Node(ABC):
         return Slope(self)
 
 
-class DataNode(Node):
-    def __init__(self, type=NodeType.Unknown, dtype=NodeDType.Any):
-        super().__init__(type=type, dtype=dtype)
-  
-    pass
-
-
 class FeatureNode(Node):
-    def __init__(self, type=NodeType.Unknown, dtype=NodeDType.Any):
-        super().__init__(type=type, dtype=dtype)
+    def __init__(self, type=NodeType.Unknown):
+        super().__init__(type=type)
     pass
 
 
@@ -146,7 +135,7 @@ class ConstNode(FeatureNode):
         self.value = value
 
     def _args(self):
-        return [self.value]
+        return [self.value] + super()._args()
 
     def compute(self, data, context: PortfolioContext):
         any_series = next(iter(context.data_provider.get_cache().values()))
@@ -159,36 +148,68 @@ def to_node(x):
     return ConstNode(x)
 
 
+class ArgNode(ConstNode):
+    def __init__(self, value):
+        super().__init__(value)
+        self._type = NodeType.Unknown
+        self._dtype = NodeDType.Any
+
+    def compute(self, data, context: PortfolioContext):
+        raise NotImplementedError("DO NOT call this, the ArgNode does not have busisness usage, only for framework to handle argument.")
+
+
+def to_args(x):
+    if isinstance(x, enum.Enum):
+        x = x.value
+      
+    if isinstance(x, str):
+        return ArgNode(x)
+    return to_node(x)
+
+
 class BinaryOp(FeatureNode):
     def __init__(self, left, right, op):
-
-        if op in {"add", "sub", "mul", "div"}:
-            dtype = NodeDType.Numeric
-
-        elif op in {"gt", "lt", "ge", "le", "eq", "ne"}:
-            dtype = NodeDType.Bool
-
-        elif op in {"and", "or"}:
-            dtype = NodeDType.Bool
-
-        else:
-            raise ValueError(op)
-
-        super().__init__(NodeType.Factor, dtype)
+        super().__init__()
 
         self.left = left
         self.right = right
         self.op = op
-
+    
+        self.dtype = self._infer_dtype()
         self.scope = self._infer_scope()
+    
+    def _args(self):
+        return [self.left.cache_key(), self.right.cache_key(), self.op] + super()._args()
+    
+    def _infer_dtype(self):
+        l = self.left.dtype
+        r = self.right.dtype
+
+        # ===== 数值运算 =====
+        if self.op in {"add", "sub", "mul", "div"}:
+            if l != NodeDType.Numeric or r != NodeDType.Numeric:
+                raise TypeError("Arithmetic requires numeric inputs")
+            return NodeDType.Numeric
+
+        # ===== 比较 =====
+        if self.op in {"gt", "lt", "ge", "le", "eq", "ne"}:
+            return NodeDType.Bool
+
+        # ===== 布尔 =====
+        if self.op in {"and", "or"}:
+            if l not in {NodeDType.Bool, NodeDType.Signal}:
+                raise TypeError("AND requires bool/signal")
+            if r not in {NodeDType.Bool, NodeDType.Signal}:
+                raise TypeError("AND requires bool/signal")
+
+            return NodeDType.Bool
+
+        raise ValueError(self.op)
 
     def _infer_scope(self):
-        if self.left.scope == "cs" or self.right.scope == "cs":
-            return "cs"
-        return "ts"
-
-    def _args(self):
-        return [self.left.cache_key(), self.right.cache_key(), self.op]
+        if self.left.scope == Scope.CS or self.right.scope == Scope.CS:
+            return Scope.CS
+        return Scope.TS
 
     def compute(self, data, context: PortfolioContext):
         l = self.left.evaluate(data, context)
@@ -225,13 +246,15 @@ class BinaryOp(FeatureNode):
    
 
 class UnaryOp(FeatureNode):
+    dtype = NodeDType.Bool
+
     def __init__(self, node, op):
-        super().__init__(NodeType.Factor, NodeDType.Bool)
+        super().__init__(NodeType.Factor)
         self.node = node
         self.op = op
 
     def _args(self):
-        return [self.node.cache_key(), self.op]
+        return [self.node.cache_key(), self.op] + super()._args()
 
     def compute(self, data, context: PortfolioContext):
         x = self.node.evaluate(data, context)
@@ -243,12 +266,14 @@ class UnaryOp(FeatureNode):
    
 
 class Slope(FeatureNode):
+    dtype = NodeDType.Numeric
+
     def __init__(self, node):
         super().__init__(node.type)
         self.node = node
 
     def _args(self):
-        return [self.node.cache_key()]
+        return [self.node.cache_key()] + super()._args()
 
     def compute(self, data, context: PortfolioContext):
         x = self.node.evaluate(data, context)

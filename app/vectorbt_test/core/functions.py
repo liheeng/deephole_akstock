@@ -1,41 +1,54 @@
-from vectorbt_test.core.nodes import Node, FeatureNode, NodeType, NodeDType, ConstNode, to_node
+from vectorbt_test.core.nodes import Node, FeatureNode, NodeType, NodeDType, ConstNode, to_args
 from vectorbt_test.core.registry import NodeRegistry, NodeMeta, NodeParam
 from vectorbt_test.core.context import PortfolioContext
 from vectorbt_test.core.base import Scope
 
 
 class Function(FeatureNode):
-    def __init__(self, *args, dtype, node_type=NodeType.Factor):
-        super().__init__(node_type, dtype)
-        self.args = [to_node(a) for a in args]
+    def __init__(self):
+        super().__init__(type=NodeType.Factor)
 
-    def _args(self):
-        return [a.cache_key() for a in self.args]
- 
 
 class Cross(Function):
+    dtype = NodeDType.Bool
 
     def __init__(self, left, right):
-        super().__init__(left, right,
-                         dtype=NodeDType.Signal,
-                         node_type=NodeType.Signal)
+        if left.dtype != NodeDType.Numeric or right.dtype != NodeDType.Numeric:
+            raise TypeError("Cross requires numeric inputs")
+        super().__init__()
+        self.left = left
+        self.right = right
 
+    def _args(self):
+        return [self.left.cache_key(), self.right.cache_key()] + super()._args()
+    
     def compute(self, data, context: PortfolioContext):
-        left = self.args[0].evaluate(data, context)
-        right = self.args[1].evaluate(data, context)
+        a = self.left.evaluate(data, context)
+        b = self.right.evaluate(data, context)
 
-        cross = (left > right) & (left.shift(1) <= right.shift(1))
-        return cross.astype(bool)
+        # return (a > b) & (a.shift(1) <= b.shift(1))
+        return self.apply(
+            a,
+            lambda x: (x > b.loc[x.index]) & (x.shift(1) <= b.loc[x.index].shift(1)),
+            context
+        )
     
 
 class Rank(Function):
     scope = Scope.CS
+    dtype = NodeDType.Numeric
 
-    def __init__(self, x):
-        super().__init__(x, dtype=NodeDType.Numeric)
+    def __init__(self, node):
+        if node.dtype != NodeDType.Numeric:
+            raise TypeError("rank() requires numeric input")
+        super().__init__()
+        self.node = node
 
+    def _args(self):
+        return [self.node.cache_key()] + super()._args()
+    
     def compute(self, data, context: PortfolioContext):
-        x = self.args[0].evaluate(data, context)
+        x = self.node.evaluate(data, context)
 
         # if isinstance(x.index, pd.MultiIndex):
         #     return x.groupby(level=0).rank(ascending=False)
@@ -56,14 +69,20 @@ def get_value(x, data, context: PortfolioContext):
 
 class Top(Function):
     scope = Scope.CS
+    dtype = NodeDType.Bool
 
-    def __init__(self, n, x):
-        super().__init__(n, x, dtype=NodeDType.Bool)
+    def __init__(self, node, window):
+        super().__init__()
+        self.window = window
+        self.node = node
+
+    def _args(self):
+        return [self.node.cache_key(), self.window.cache_key() if isinstance(self.window, ConstNode) else self.window] + super()._args()
 
     def compute(self, data, context: PortfolioContext):
         
-        n = self.args[0].value if isinstance(self.args[0], ConstNode) else self.args[0]
-        x = get_value(self.args[1], data, context)
+        n = self.window.value if isinstance(self.window, ConstNode) else self.window
+        x = get_value(self.node, data, context)
 
         # if isinstance(x.index, pd.MultiIndex):
         #     rank = x.groupby(level=0).rank(ascending=False)
@@ -78,33 +97,58 @@ class Top(Function):
 
 
 class Delay(Function):
-    def __init__(self, x, n):
-        super().__init__(x, n, dtype=NodeDType.Numeric)
+    dtype = NodeDType.Any
+
+    def __init__(self, node, window):
+        if node.dtype != NodeDType.Numeric:
+            raise TypeError("mean requires numeric input")
+        super().__init__()
+        self.node = node
+        self.window = window
+
+    def _args(self):
+        return [self.node.cache_key(), self.window.cache_key() if isinstance(self.window, ConstNode) else self.window] + super()._args()
 
     def compute(self, data, context: PortfolioContext):
-        x = self.args[0].evaluate(data, context)
-        n = self.args[1].value
+        x = self.node.evaluate(data, context)
+        n = self.window.value if isinstance(self.window, ConstNode) else self.window
         return x.shift(n)
 
 
 class Mean(Function):
-    def __init__(self, x, n):
-        super().__init__(x, n, dtype=NodeDType.Numeric)
+    dtype = NodeDType.Numeric
+
+    def __init__(self, node, window):
+        if node.dtype != NodeDType.Numeric:
+            raise TypeError("mean requires numeric input")
+        super().__init__()
+        self.node = node
+        self.window = window
+
+    def _args(self):
+        return [self.node.cache_key(), self.window.cache_key() if isinstance(self.window, ConstNode) else self.window] + super()._args()
 
     def compute(self, data, context: PortfolioContext):
-        x = self.args[0].evaluate(data, context)
-        n = self.args[1].value
+        x = self.node.evaluate(data, context)
+        n = self.window.value if isinstance(self.window, ConstNode) else self.window
         return x.rolling(n).mean()
 
 
 class ZScore(Function):
     scope = Scope.CS
+    dtype = NodeDType.Numeric
 
-    def __init__(self, x):
-        super().__init__(x, dtype=NodeDType.Numeric)
+    def __init__(self, node):
+        if node.dtype != NodeDType.Numeric:
+            raise TypeError("zscore() requires numeric input")
+        super().__init__()
+        self.node = node
+
+    def _args(self):
+        return [self.node.cache_key()] + super()._args()
 
     def compute(self, data, context: PortfolioContext):
-        x = self.args[0].evaluate(data, context)
+        x = self.node.evaluate(data, context)
         
         return self.apply(
             x,
@@ -113,12 +157,19 @@ class ZScore(Function):
         )
 
 
-class ZScoreTS(Node):
+class ZScoreTS(Function):
     scope = Scope.TS
+    dtype = NodeDType.Numeric
 
     def __init__(self, node, window):
+        if node.dtype != NodeDType.Numeric:
+            raise TypeError("zscore() requires numeric input")
+        super().__init__()
         self.node = node
         self.window = window
+
+    def _args(self):
+        return [self.node.cache_key(), self.window] + super()._args()
 
     def compute(self, data, context):
         x = self.node.evaluate(data, context)
@@ -133,7 +184,7 @@ class ZScoreTS(Node):
 
 NodeRegistry.register(
     "cross",
-    lambda a, b: Cross(a, b),
+    lambda left, right: Cross(left, right),
     NodeMeta(
         name="cross",
         group="function",
@@ -146,77 +197,78 @@ NodeRegistry.register(
 
 NodeRegistry.register(
     "rank",
-    lambda x: Rank(x),
+    lambda node: Rank(node),
     NodeMeta(
         name="rank",
         group="function",
         desc="Rank计算",
         params=[
-            NodeParam("x", "Node", desc="节点")
+            NodeParam("node", "Node", desc="节点")
         ]
     ))
 
 NodeRegistry.register(
     "top",
-    lambda n, x: Top(n, x),
+    lambda node, window: Top(node, window),
     NodeMeta(
         name="top",
         group="function",
         desc="Top计算",
         params=[
-            NodeParam("n", "int", desc="阈值"),
-            NodeParam("x", "Node", desc="节点")
+            NodeParam("node", "Node", desc="节点"),
+            NodeParam("window", "int", desc="阈值")
+
         ]
     ))
 
 NodeRegistry.register(
     "delay",
-    lambda x, n: Delay(x, n),
+    lambda node, window: Delay(node, window),
     NodeMeta(
         name="delay",
         group="function",
         desc="Delay计算",
         params=[
-            NodeParam("x", "Node", desc="节点"),
-            NodeParam("n", "int", desc="阈值")
+            NodeParam("node", "Node", desc="节点"),
+            NodeParam("window", "int", desc="阈值")
         ]
     ))
 
 NodeRegistry.register(
     "mean",
-    lambda x, n: Mean(x, n),
+    lambda node, window: Mean(node, window),
     NodeMeta(
         name="mean",
         group="function",
         desc="Mean计算",
         params=[
-            NodeParam("x", "Node", desc="节点"),
-            NodeParam("n", "int", desc="阈值")
+            NodeParam("node", "Node", desc="节点"),
+            NodeParam("window", "int", desc="阈值")
         ]
     ))
 
 NodeRegistry.register(
     "zscore",
-    lambda x: ZScore(x),
+    lambda node: ZScore(node),
     NodeMeta(
         name="zscore",
         group="function",
         desc="ZScore计算",
         params=[
-            NodeParam("x", "Node", desc="节点")
+            NodeParam("node", "Node", desc="节点")
         ]
     )
 )
 
 NodeRegistry.register(
     "zscore_ts",
-    lambda x, window: ZScoreTS(x, window),
+    lambda node, window: ZScoreTS(node, window),
     NodeMeta(
         name="zscore",
         group="function",
         desc="基于TS的ZScore计算",
         params=[
-            NodeParam("x", "Node", desc="节点"),
+            NodeParam("node", "Node", desc="节点"),
             NodeParam("window", "int", desc="窗口")
         ]
     )

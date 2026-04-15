@@ -1,19 +1,27 @@
-from vectorbt_test.core.nodes import DataNode
 from .context import PortfolioContext
 import pandas as pd
 from vectorbt_test.core.registry import NodeRegistry, NodeMeta, NodeParam
-from vectorbt_test.core.nodes import NodeDType, NodeType
+from vectorbt_test.core.nodes import NodeDType, NodeType, Node
+
+
+class DataNode(Node):
+    dtype = NodeDType.Any
+
+    def __init__(self, type=NodeType.Data):
+        super().__init__(type=type)
+  
+    pass
 
 
 class RawDataNode(DataNode):
-    def __init__(self, type=NodeType.Data, dtype=NodeDType.Any):
-        super().__init__(type=type, dtype=dtype)
     pass
 
 
 class Price(RawDataNode):
+    dtype = NodeDType.Numeric
+
     def __init__(self, column="close"):
-        super().__init__(type=NodeType.Data, dtype=NodeDType.Numeric)
+        super().__init__(type=NodeType.Data)
         self.column = column
 
     @property
@@ -21,7 +29,7 @@ class Price(RawDataNode):
         return f"price_{self.column}"
 
     def _args(self):
-        return [self.column]
+        return [self.column] + super()._args()
   
     def compute(self, data, context: PortfolioContext):
         return data[self.column]
@@ -31,8 +39,10 @@ class Price(RawDataNode):
 # DB Node（优先用数据库）
 # =========================
 class DBNode(RawDataNode):
+    dtype = NodeDType.Any
+
     def __init__(self, field_name: str):
-        super().__init__(type=NodeType.Data, dtype=NodeDType.Any)
+        super().__init__()
         self.field_name = field_name
 
     @property
@@ -40,7 +50,7 @@ class DBNode(RawDataNode):
         return self.field_name
 
     def _args(self):
-        return [self.field_name]
+        return [self.field_name] + super()._args()
   
     def compute(self, data: pd.DataFrame, context: PortfolioContext):
         df = context.get("db_df")

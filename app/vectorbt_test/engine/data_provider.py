@@ -16,7 +16,7 @@ class DataProvider:
     
     def get(self, node, data, context):
         # Raw data node 直接计算, DO NOT cache!!!
-        from vectorbt_test.core.nodes import DataNode
+        from vectorbt_test.core.data import DataNode
         if isinstance(node, DataNode):
             return node.compute(data, context)
 

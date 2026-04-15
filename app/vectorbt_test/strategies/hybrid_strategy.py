@@ -1,5 +1,5 @@
-from vectorbt_test.core.factors import Factor, SignalToFactor
-from vectorbt_test.core.signals import Signal, SignalScope
+from vectorbt_test.core.factors import Factor, wrap_numberic_node_as_factor
+from vectorbt_test.core.signals import Signal, SignalGroup
 from vectorbt_test.core.strategy import Strategy, StrategyMode, StrategyResult
 from vectorbt_test.core.context import PortfolioContext
 from vectorbt_test.core.node_builder import NodeBuilder
@@ -35,7 +35,7 @@ class HybridStrategy(Strategy):
         self.name = name
         self.factors: List[Factor] = []
         for f in factors:
-            factor: Factor | None = NodeBuilder().build_factor(f, SignalToFactor) if isinstance(f, str) else f  # type: ignore
+            factor: Factor | None = NodeBuilder().build_factor(f, wrap_numberic_node_as_factor) if isinstance(f, str) else f  # type: ignore
             assert factor is not None and factor.type == NodeType.Factor
             self.factors.append(factor)
 
@@ -64,9 +64,9 @@ class HybridStrategy(Strategy):
         signal: Signal | None = None
         if self.signal is not None:
             if mode == StrategyMode.TIME_SERIES:
-                assert self.signal.is_scope(SignalScope.TS.value | SignalScope.TS_CS.value)
+                assert self.signal.is_group(SignalGroup.TS.value | SignalGroup.TS_CS.value)
             else:
-                assert self.signal.is_scope(SignalScope.CS.value | SignalScope.TS_CS.value)
+                assert self.signal.is_group(SignalGroup.CS.value | SignalGroup.TS_CS.value)
 
             signal = self.signal.evaluate(data, context)
     

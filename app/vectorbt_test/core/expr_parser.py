@@ -1,6 +1,6 @@
 import ast
 from vectorbt_test.core.registry import NodeRegistry
-from vectorbt_test.core.nodes import Node, ConstNode, to_node
+from vectorbt_test.core.nodes import Node, ConstNode, NodeDType, to_node
 
 
 class ExprParser:
@@ -45,6 +45,8 @@ class ExprParser:
         if isinstance(node, ast.BinOp):
             left = self._parse_node(node.left)
             right = self._parse_node(node.right)
+            assert left.dtype == NodeDType.Numeric
+            assert right.dtype == NodeDType.Numeric
 
             if isinstance(node.op, ast.Add):
                 return left + right
@@ -62,9 +64,11 @@ class ExprParser:
         # ===== 比较 =====
         if isinstance(node, ast.Compare):
             left = self._parse_node(node.left)
-
+            assert left.dtype == NodeDType.Numeric
+            
             for op, comparator in zip(node.ops, node.comparators):
                 right = self._parse_node(comparator)
+                assert right.dtype == NodeDType.Numeric
 
                 if isinstance(op, ast.Gt):
                     left = left > right
@@ -85,8 +89,10 @@ class ExprParser:
         if isinstance(node, ast.BoolOp):
             values = [self._parse_node(v) for v in node.values]
             result = values[0]
+            assert result in {NodeDType.Bool, NodeDType.Signal}
 
             for v in values[1:]:
+                assert v in {NodeDType.Bool, NodeDType.Signal}
                 if isinstance(node.op, ast.And):
                     result = result & v
                 elif isinstance(node.op, ast.Or):
@@ -97,7 +103,9 @@ class ExprParser:
         # ===== NOT (~) =====
         if isinstance(node, ast.UnaryOp):
             if isinstance(node.op, ast.Invert):
-                return ~self._parse_node(node.operand)
+                n = self._parse_node(node.operand)
+                assert n.dtype == NodeDType.Bool
+                return ~n
 
         # ===== 函数调用（核心）=====
         if isinstance(node, ast.Call):
