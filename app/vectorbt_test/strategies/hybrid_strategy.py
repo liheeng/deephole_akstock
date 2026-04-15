@@ -39,7 +39,7 @@ class HybridStrategy(Strategy):
             assert factor is not None and factor.type == NodeType.Factor
             self.factors.append(factor)
 
-        self.signal: Signal | None = NodeBuilder().build(signal) if isinstance(signal, str) else signal  # type: ignore
+        self.signal: Signal | None = Signal.build(signal) if signal is not None else None 
         if self.signal is not None:
             assert self.signal.is_signal
 

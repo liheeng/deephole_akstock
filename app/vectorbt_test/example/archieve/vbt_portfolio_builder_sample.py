@@ -10,7 +10,7 @@ from db.duckdb import DuckDBController
 from db.stock_daily_util import get_symbol_data
 import pandas as pd
 
-from vectorbt_test.engine.portofilo_builder import PortfolioBuilder
+from vectorbt_test.engine.portfolio_builder import PortfolioBuilder
 
 
 def print_trades(pf):

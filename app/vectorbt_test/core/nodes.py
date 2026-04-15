@@ -49,15 +49,15 @@ class Node(ABC):
 
     @property
     def is_numeric(self):
-        return self._dtype == NodeDType.Numeric
+        return self.dtype == NodeDType.Numeric
 
     @property
     def is_bool(self):
-        return self._dtype == NodeDType.Bool
+        return self.dtype == NodeDType.Bool
 
     @property
     def is_signal(self):
-        return self._dtype == NodeDType.Signal
+        return self.dtype == NodeDType.Signal
 
     # ===== evaluate（统一缓存入口）=====
     def evaluate(self, data, context: PortfolioContext = PortfolioContext()):
@@ -130,6 +130,8 @@ class FeatureNode(Node):
 
 
 class ConstNode(FeatureNode):
+    dtype = NodeDType.Numeric
+
     def __init__(self, value):
         super().__init__(NodeType.Indicator)
         self.value = value
@@ -149,11 +151,11 @@ def to_node(x):
 
 
 class ArgNode(ConstNode):
+    dtype = NodeDType.Any
+
     def __init__(self, value):
         super().__init__(value)
-        self._type = NodeType.Unknown
-        self._dtype = NodeDType.Any
-
+        
     def compute(self, data, context: PortfolioContext):
         raise NotImplementedError("DO NOT call this, the ArgNode does not have busisness usage, only for framework to handle argument.")
 
