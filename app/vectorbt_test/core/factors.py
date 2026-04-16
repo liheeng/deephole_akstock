@@ -9,7 +9,7 @@ import pandas as pd
 
 class Factor(FeatureNode):
     scope = Scope.TS
-    dtype = NodeDType.Numeric
+    dtype = NodeDType.NUMERIC
 
     def __init__(self, name: str | None, expr_str: str | Node):
         super().__init__(NodeType.Factor)
@@ -40,12 +40,12 @@ class Factor(FeatureNode):
 
 
 class BoolFactor(Factor):
-    dtype = NodeDType.Bool
+    dtype = NodeDType.BOOL
 
 
 class SignalToFactor(Factor):
     def __init__(self, name: str | None, signal_node):
-        if signal_node.dtype != NodeDType.Signal:
+        if signal_node.dtype != NodeDType.SIGNAL:
             raise TypeError("Expect signal")
         super().__init__(name, signal_node)
 
@@ -55,7 +55,7 @@ class SignalToFactor(Factor):
 
 class FactorWrapper(Factor):
     def __init__(self, name: str | None, node: Node):
-        if node.dtype != NodeDType.Numeric:
+        if node.dtype != NodeDType.NUMERIC:
             raise TypeError("Expect numberic type of node")
         super().__init__(name, node)
 
@@ -64,7 +64,7 @@ class FactorWrapper(Factor):
 
 
 def wrap_numberic_node_as_factor(name: str | None, node: Node):
-    if node.type == NodeType.Signal and node.dtype == NodeDType.Numeric:
+    if node.type == NodeType.Signal and node.dtype == NodeDType.NUMERIC:
         return SignalToFactor(name, node)
     return FactorWrapper(name, node)
 

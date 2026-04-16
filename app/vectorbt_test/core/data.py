@@ -5,7 +5,7 @@ from vectorbt_test.core.nodes import NodeDType, NodeType, Node
 
 
 class DataNode(Node):
-    dtype = NodeDType.Any
+    dtype = NodeDType.ANY
 
     def __init__(self, type=NodeType.Data):
         super().__init__(type=type)
@@ -18,7 +18,7 @@ class RawDataNode(DataNode):
 
 
 class Price(RawDataNode):
-    dtype = NodeDType.Numeric
+    dtype = NodeDType.NUMERIC
 
     def __init__(self, column="close"):
         super().__init__(type=NodeType.Data)
@@ -39,7 +39,7 @@ class Price(RawDataNode):
 # DB Node（优先用数据库）
 # =========================
 class DBNode(RawDataNode):
-    dtype = NodeDType.Any
+    dtype = NodeDType.ANY
 
     def __init__(self, field_name: str):
         super().__init__()

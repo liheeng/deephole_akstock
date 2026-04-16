@@ -15,10 +15,17 @@ class NodeType(enum.Enum):
 
 
 class NodeDType(enum.Enum):
-    Any = "any"
-    Numeric = "numeric"
-    Bool = "bool"
-    Signal = "signal"
+    ANY = "any"
+
+    # 数值类
+    NUMERIC = "numeric"     # Series (float/int)
+
+    # 布尔类
+    BOOL = "bool"           # 普通布尔（中间态）
+    SIGNAL = "signal"       # 交易信号（最终态）
+
+    # 结构类（你缺的）
+    FRAME = "frame"         # DataFrame
 
 
 class Node(ABC):
@@ -51,18 +58,22 @@ class Node(ABC):
 
     @property
     def is_numeric(self):
-        return self.dtype == NodeDType.Numeric
+        return self.dtype == NodeDType.NUMERIC
 
     @property
     def is_bool(self):
-        return self.dtype == NodeDType.Bool
+        return self.dtype == NodeDType.BOOL
 
     @property
     def is_signal(self):
-        return self.dtype == NodeDType.Signal
+        return self.dtype == NodeDType.SIGNAL
+
+    @property
+    def is_frame(self):
+        return self.dtype == NodeDType.FRAME
 
     # ===== evaluate（统一缓存入口）=====
-    def evaluate(self, data, context: PortfolioContext = PortfolioContext()):
+    def evaluate(self, data, context: PortfolioContext = PortfolioContext(), return_result=False):
         assert context.data_provider is not None
         return context.data_provider.get(self, data, context)
 
@@ -132,7 +143,7 @@ class FeatureNode(Node):
 
 
 class ConstNode(FeatureNode):
-    dtype = NodeDType.Numeric
+    dtype = NodeDType.NUMERIC
 
     def __init__(self, value):
         super().__init__(NodeType.Indicator)
@@ -153,7 +164,7 @@ def to_node(x):
 
 
 class ArgNode(ConstNode):
-    dtype = NodeDType.Any
+    dtype = NodeDType.ANY
 
     def __init__(self, value):
         super().__init__(value)
@@ -191,22 +202,22 @@ class BinaryOp(FeatureNode):
 
         # ===== 数值运算 =====
         if self.op in {"add", "sub", "mul", "div"}:
-            if l != NodeDType.Numeric or r != NodeDType.Numeric:
+            if l != NodeDType.NUMERIC or r != NodeDType.NUMERIC:
                 raise TypeError("Arithmetic requires numeric inputs")
-            return NodeDType.Numeric
+            return NodeDType.NUMERIC
 
         # ===== 比较 =====
         if self.op in {"gt", "lt", "ge", "le", "eq", "ne"}:
-            return NodeDType.Bool
+            return NodeDType.BOOL
 
         # ===== 布尔 =====
         if self.op in {"and", "or"}:
-            if l not in {NodeDType.Bool, NodeDType.Signal}:
+            if l not in {NodeDType.BOOL, NodeDType.SIGNAL}:
                 raise TypeError("AND requires bool/signal")
-            if r not in {NodeDType.Bool, NodeDType.Signal}:
+            if r not in {NodeDType.BOOL, NodeDType.SIGNAL}:
                 raise TypeError("AND requires bool/signal")
 
-            return NodeDType.Bool
+            return NodeDType.BOOL
 
         raise ValueError(self.op)
 
@@ -250,7 +261,7 @@ class BinaryOp(FeatureNode):
    
 
 class UnaryOp(FeatureNode):
-    dtype = NodeDType.Bool
+    dtype = NodeDType.BOOL
 
     def __init__(self, node, op):
         super().__init__(NodeType.Factor)
@@ -270,7 +281,7 @@ class UnaryOp(FeatureNode):
    
 
 class Slope(FeatureNode):
-    dtype = NodeDType.Numeric
+    dtype = NodeDType.NUMERIC
 
     def __init__(self, node):
         super().__init__(node.type)

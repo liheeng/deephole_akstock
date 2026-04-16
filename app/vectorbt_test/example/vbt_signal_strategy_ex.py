@@ -1,13 +1,11 @@
 
 from db.duckdb import DuckDBController
 from db.stock_daily_util import get_symbol_data
-import pandas as pd
 
 from vectorbt_test.engine.portfolio_builder import PortfolioBuilder
 from vectorbt_test.portfolios.signal_strategy_portfolio import StrategyOp
 from vectorbt_test.core.portfolio import PortfolioParameters
 from vectorbt_test.engine.data_provider import DataProvider
-from vectorbt_test.core.registry import NodeRegistry
 from vectorbt_test.engine.init import load_register_nodes
 
 

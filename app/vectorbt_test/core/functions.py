@@ -10,10 +10,10 @@ class Function(FeatureNode):
 
 
 class Cross(Function):
-    dtype = NodeDType.Bool
+    dtype = NodeDType.BOOL
 
     def __init__(self, left, right):
-        if left.dtype != NodeDType.Numeric or right.dtype != NodeDType.Numeric:
+        if left.dtype != NodeDType.NUMERIC or right.dtype != NodeDType.NUMERIC:
             raise TypeError("Cross requires numeric inputs")
         super().__init__()
         self.left = left
@@ -36,10 +36,10 @@ class Cross(Function):
 
 class Rank(Function):
     scope = Scope.CS
-    dtype = NodeDType.Numeric
+    dtype = NodeDType.NUMERIC
 
     def __init__(self, node):
-        if node.dtype != NodeDType.Numeric:
+        if node.dtype != NodeDType.NUMERIC:
             raise TypeError("rank() requires numeric input")
         super().__init__()
         self.node = node
@@ -69,7 +69,7 @@ def get_value(x, data, context: PortfolioContext):
 
 class Top(Function):
     scope = Scope.CS
-    dtype = NodeDType.Bool
+    dtype = NodeDType.BOOL
 
     def __init__(self, node, window):
         super().__init__()
@@ -97,10 +97,10 @@ class Top(Function):
 
 
 class Delay(Function):
-    dtype = NodeDType.Any
+    dtype = NodeDType.ANY
 
     def __init__(self, node, window):
-        if node.dtype != NodeDType.Numeric:
+        if node.dtype != NodeDType.NUMERIC:
             raise TypeError("mean requires numeric input")
         super().__init__()
         self.node = node
@@ -116,10 +116,10 @@ class Delay(Function):
 
 
 class Mean(Function):
-    dtype = NodeDType.Numeric
+    dtype = NodeDType.NUMERIC
 
     def __init__(self, node, window):
-        if node.dtype != NodeDType.Numeric:
+        if node.dtype != NodeDType.NUMERIC:
             raise TypeError("mean requires numeric input")
         super().__init__()
         self.node = node
@@ -136,10 +136,10 @@ class Mean(Function):
 
 class ZScore(Function):
     scope = Scope.CS
-    dtype = NodeDType.Numeric
+    dtype = NodeDType.NUMERIC
 
     def __init__(self, node):
-        if node.dtype != NodeDType.Numeric:
+        if node.dtype != NodeDType.NUMERIC:
             raise TypeError("zscore() requires numeric input")
         super().__init__()
         self.node = node
@@ -159,10 +159,10 @@ class ZScore(Function):
 
 class ZScoreTS(Function):
     scope = Scope.TS
-    dtype = NodeDType.Numeric
+    dtype = NodeDType.NUMERIC
 
     def __init__(self, node, window):
-        if node.dtype != NodeDType.Numeric:
+        if node.dtype != NodeDType.NUMERIC:
             raise TypeError("zscore() requires numeric input")
         super().__init__()
         self.node = node

@@ -45,8 +45,8 @@ class ExprParser:
         if isinstance(node, ast.BinOp):
             left = self._parse_node(node.left)
             right = self._parse_node(node.right)
-            assert left.dtype == NodeDType.Numeric
-            assert right.dtype == NodeDType.Numeric
+            assert left.dtype == NodeDType.NUMERIC
+            assert right.dtype == NodeDType.NUMERIC
 
             if isinstance(node.op, ast.Add):
                 return left + right
@@ -91,10 +91,10 @@ class ExprParser:
         if isinstance(node, ast.BoolOp):
             values = [self._parse_node(v) for v in node.values]
             result = values[0]
-            assert result.dtype in {NodeDType.Bool, NodeDType.Signal}
+            assert result.dtype in {NodeDType.BOOL, NodeDType.SIGNAL}
 
             for v in values[1:]:
-                assert v in {NodeDType.Bool, NodeDType.Signal}
+                assert v in {NodeDType.BOOL, NodeDType.SIGNAL}
                 if isinstance(node.op, ast.And):
                     result = result & v
                 elif isinstance(node.op, ast.Or):
@@ -106,7 +106,7 @@ class ExprParser:
         if isinstance(node, ast.UnaryOp):
             if isinstance(node.op, ast.Invert):
                 n = self._parse_node(node.operand)
-                assert n.dtype in {NodeDType.Bool, NodeDType.Signal}
+                assert n.dtype in {NodeDType.BOOL, NodeDType.SIGNAL}
                 return ~n
 
         # ===== 函数调用（核心）=====

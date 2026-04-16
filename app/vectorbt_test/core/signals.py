@@ -16,7 +16,7 @@ class SignalGroup(enum.Enum):
 
 
 class Signal(FeatureNode, ABC):
-    dtype = NodeDType.Signal
+    dtype = NodeDType.SIGNAL
 
     @staticmethod
     def build(node_expr: str | GeneralExpr | Node) -> "Signal":
@@ -84,7 +84,7 @@ class SignalWrapper(Signal):
     def __init__(self, name: str | None, node: Node, group: SignalGroup = SignalGroup.TS_CS):
         super().__init__(signal_group=group)
         self._name = name or self.__class__.__name__
-        if node.dtype != NodeDType.Bool:
+        if node.dtype != NodeDType.BOOL:
             raise ValueError("wrong node dtype, expect bool type for Signal")
         self.dtype = node.dtype
         self.node = node
@@ -204,7 +204,7 @@ class BinarySignalOp(ComplexSignal):
 
 class Cross(ComplexSignal):
     def __init__(self, left, right):
-        if left.dtype != NodeDType.Numeric or right.dtype != NodeDType.Numeric:
+        if left.dtype != NodeDType.NUMERIC or right.dtype != NodeDType.NUMERIC:
             raise TypeError("Cross requires numeric inputs")
         super().__init__(left, right)
         self.signal_group = SignalGroup.TS_CS
