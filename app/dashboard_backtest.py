@@ -43,16 +43,115 @@ class BacktestPage:
     def _build_snippet(self, name: str):
         meta = self.node_meta_map.get(name)
 
-        if not meta or not meta["params"]:
+        if not meta:
             return name
 
-        # 生成参数占位
-        placeholders = ", ".join(" " for _ in meta["params"])
+        if not meta["params"]:
+            return name
 
-        return f"{name}({placeholders})"
+        args = []
+
+        for p in meta["params"]:
+            default = p.get("default")
+
+            # ✅ 没默认值就给安全值
+            if default is None:
+                if p["type"] == "int":
+                    default = 1
+                elif p["type"] == "float":
+                    default = 0.0
+                else:
+                    default = ""
+
+            # 字符串加引号
+            if isinstance(default, str) and not default.isdigit():
+                default = f"'{default}'"
+
+            args.append(str(default))
+
+        return f"{name}({', '.join(args)})"
+
+    def _extract_functions(self, expr: str):
+        import re
+
+        pattern = r"([A-Za-z_][A-Za-z0-9_]*)\((.*?)\)"
+        matches = re.finditer(pattern, expr)
+
+        results = []
+
+        for m in matches:
+            name = m.group(1)
+            args = m.group(2)
+            full = m.group(0)
+
+            results.append({
+                "name": name,
+                "args": args,
+                "full": full,
+                "start": m.start(),
+                "end": m.end()
+            })
+
+        return results
+
+    def _parse_args(self, args_str: str):
+        args = args_str.split(",")
+        return [a.strip() for a in args if a.strip()]
+
+    def _edit_function_ui(self, expr: str, key: str):
+
+        funcs = self._extract_functions(expr)
+
+        if not funcs:
+            return expr
+
+        st.markdown("### 🛠 编辑函数参数")
+
+        labels = [f["full"] for f in funcs]
+
+        selected = st.selectbox(
+            "选择函数",
+            labels,
+            key=f"{key}_func_select"
+        )
+
+        func = next(f for f in funcs if f["full"] == selected)
+
+        meta = self.node_meta_map.get(func["name"])
+
+        if not meta:
+            return expr
+
+        args = self._parse_args(func["args"])
+
+        new_params = {}
+
+        for i, p in enumerate(meta["params"]):
+            default = args[i] if i < len(args) else p.get("default")
+
+            new_params[p["name"]] = st.text_input(
+                p["name"],
+                value=str(default),
+                key=f"{key}_param_{p['name']}"
+            )
+
+        if st.button("✅ 更新函数", key=f"{key}_update_func"):
+
+            new_expr_part = self._build_expr(func["name"], new_params)
+
+            # 替换原表达式
+            new_expr = (
+                expr[:func["start"]] +
+                new_expr_part +
+                expr[func["end"]:]
+            )
+
+            st.session_state[key] = new_expr
+            st.rerun()
+
+        return expr
 
     def _expr_with_autocomplete(self, label: str, key: str, default=""):
-
         if key not in st.session_state:
             st.session_state[key] = default
 
@@ -60,20 +159,8 @@ class BacktestPage:
 
         st.session_state[key] = expr
 
-        # ===== 获取当前 token =====
+        # ===== 提取 token =====
         token = self._get_last_token(expr)
-
-        # == show parameters
-        if token in self.node_meta_map:
-            meta = self.node_meta_map[token]
-
-            if meta["params"]:
-                params_str = ", ".join(
-                    f"{p['name']}={p['default']}"
-                    for p in meta["params"]
-                )
-
-                st.caption(f"👉 参数: {token}({params_str})")
 
         suggestions = self._suggest_nodes(token) if token else []
 
@@ -84,25 +171,119 @@ class BacktestPage:
                 key=f"{key}_suggest"
             )
 
-            if st.button("插入", key=f"{key}_insert"):
-                # 替换最后一个 token
-                new_expr = expr[: -len(token)] + selected
-                st.session_state[key] = new_expr
-                st.rerun()
+            col1, col2 = st.columns(2)
+
+            with col1:
+                if st.button("插入名称", key=f"{key}_insert_name"):
+                    # new_expr = expr[: -len(token)] + selected
+                    snippet = self._build_snippet(selected)
+                    new_expr = expr[: -len(token)] + snippet    
+                    st.session_state[key] = new_expr
+                    st.rerun()
+
+            with col2:
+                # if st.button("插入函数", key=f"{key}_insert_func"):
+                #     snippet = self._build_snippet(selected)
+                #     new_expr = expr[: -len(token)] + snippet
+                #     st.session_state[key] = new_expr
+                #     st.rerun()
+
+                if st.button("插入函数", key=f"{key}_insert_func"):
+                    snippet = self._build_snippet(selected)
+
+                    if token:
+                        new_expr = expr[: -len(token)] + snippet
+                    else:
+                        new_expr = expr + snippet
+
+                    st.session_state[key] = new_expr
+                    st.rerun()
+                    
+            # ===== 参数提示 =====
+            if selected in self.node_meta_map:
+                meta = self.node_meta_map[selected]
+
+                if meta["params"]:
+                    params_str = ", ".join(
+                        f"{p['name']}={p['default']}"
+                        for p in meta["params"]
+                    )
+                    st.caption(f"👉 {selected}({params_str})")
+
+            expr = self._edit_function_ui(expr, key)
 
         return st.session_state[key]
+
+    def _format_error_pointer(self, expr: str, error: Exception):
+        """
+        返回：
+        RSI(14 >
+            ^
+        """
+
+        if hasattr(error, "offset") and error.offset:
+            pos = error.offset - 1  # Python offset 从1开始
+        else:
+            return expr  # 无法定位
+
+        pointer = " " * pos + "^"
+        return f"{expr}\n{pointer}"
 
     def _validate_expr(self, expr: str, label: str = ""):
         if not expr or not expr.strip():
             return False
+        
+        # =========================
+        # ❗ 裸函数名（如 MA）
+        # =========================
+        if expr.strip() in self.node_meta_map:
+            meta = self.node_meta_map[expr.strip()]
 
+            if meta["params"]:
+                st.warning(f"⚠️ {label} 需要参数，例如: {expr}(...)")
+                return False
+    
         try:
             self.parser.parse(expr)
             st.success(f"✅ {label} 表达式合法")
             return True
+
         except Exception as e:
-            e.__traceback__
-            st.error(f"❌ {label} 错误: {str(e)}\n{traceback.format_exc()}")
+            msg = str(e)
+
+            # =========================
+            # 🟡 未完成输入（忽略）
+            # =========================
+            incomplete_patterns = [
+                "was never closed",
+                "unexpected EOF",
+                "EOF while parsing",
+            ]
+
+            if any(p in msg for p in incomplete_patterns):
+                st.info(f"⌛ {label} 输入中...")
+                return False
+
+            # =========================
+            # ❗ 参数缺失
+            # =========================
+            if "missing 1 required positional argument" in msg:
+                st.error(f"❌ {label} 参数缺失，例如: MA(5)")
+                return False
+
+            # =========================
+            # 🔥 语法错误定位
+            # =========================
+            if isinstance(e, SyntaxError):
+                pointer_text = self._format_error_pointer(expr, e)
+                st.error(f"❌ {label} 语法错误")
+                st.code(pointer_text)
+                return False
+
+            # =========================
+            # ❌ 其他错误
+            # =========================
+            st.error(f"❌ {label} 错误: {msg}")
             return False
         
     def _build_expr(self, name, params):
