@@ -22,14 +22,16 @@ class NodeDType(enum.Enum):
 
 
 class Node(ABC):
+    _name: str = ""
     scope: Scope | None = None
     dtype: NodeDType | None = None
 
-    def __init__(self, type: NodeType = NodeType.Unknown):
+    def __init__(self, name: str | None = None, type: NodeType = NodeType.Unknown):
         self._type = type
+        self._name = name or self.__class__.__name__
 
     def _args(self):
-        return [self._type.value, self.dtype.value, self.scope]
+        return [self.name, self._type.value, self.dtype.value, self.scope]
     
     # ===== cache key =====
     def cache_key(self):
@@ -45,7 +47,7 @@ class Node(ABC):
 
     @property
     def name(self):
-        return self.__class__.__name__
+        return self._name
 
     @property
     def is_numeric(self):

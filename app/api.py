@@ -13,6 +13,7 @@ import subprocess
 import asyncio
 from pydantic import BaseModel
 import pandas as pd
+import traceback
 
 from core.task_manager import task_manager
 from db.db_common import DB
@@ -211,7 +212,7 @@ async def export_stream(req: ExportRequest):
 @app.get("/nodes")
 def get_nodes():
     nodes = NodeRegistry.to_dict()
-    logger.info(f"nodes: {nodes}")
+    # logger.info(f"nodes: {nodes}")
     logger.info(f"get all nodes: {nodes.keys()}")
     return nodes
 
@@ -240,37 +241,58 @@ def load_data_somehow():
 
 @app.post("/backtest")
 def run_backtest(req: PortfolioRequest):
-    builder = PortfolioBuilder.new(req.name, req.mode)
+    try:
+        builder = PortfolioBuilder.new(req.name, req.mode)
 
-    for s in req.strategies:
-        builder.add_strategy(s.name)
+        for s in req.strategies:
+            builder.add_strategy(s.name)
 
-        for f in s.factors:
-            builder.add_factor(f)
+            for f in s.factors:
+                builder.add_factor(f)
 
-        builder.end_strategy()
+            builder.end_strategy()
 
-    builder.set_strategy_op(req.strategy_op)
+        builder.set_strategy_op(req.strategy_op)
 
-    if req.schedule_signal:
-        builder.set_schedule_signal(req.schedule_signal)
+        if req.schedule_signal:
+            builder.set_schedule_signal(req.schedule_signal)
 
-    builder.set_portfolio_params(
-        PortfolioParameters(**req.params)
-    )
+        builder.set_portfolio_params(
+            PortfolioParameters(**req.params)
+        )
 
-    portfolio = builder.build()
+        portfolio = builder.build()
 
-    # === 数据 ===
-    df = load_data_somehow()
+        # === 数据 ===
+        df = load_data_somehow()
 
-    pf = portfolio.run(DataProvider(None), df)
+        pf = portfolio.run(DataProvider(None), df)
 
-    return {
-        "stats": pf.stats().to_dict(),
-        "trades": pf.trades.records_readable.to_dict(orient="records"),
-        "equity": pf.value().tolist()
-    }
+        # return {
+        #     "stats": pf.stats().to_dict(),
+        #     "trades": pf.trades.records_readable.to_dict(orient="records"),
+        #     "equity": pf.value().squeeze().tolist()
+        # }
+        equity_curve = pf.value()
+
+        # 兼容处理净值曲线
+        if isinstance(equity_curve, pd.DataFrame):
+            equity_series = equity_curve.iloc[:, 0]
+        else:
+            equity_series = equity_curve
+
+        # 回测结果（完全稳定版）
+        return {
+            "stats": pf.stats()
+                .replace([float("inf"), -float("inf")], 0)
+                .fillna(0)
+                .to_dict(),
+            "trades": pf.trades.records_readable.to_dict(orient="records"),
+            "equity": equity_series.tolist()
+        }
+    except Exception as e:
+        logger.exception(f"failed to run backtest\n{e}")
+        raise HTTPException(status_code=500, detail=f"错误: {str(e)}\n{traceback.format_exc()}")
 
 
 @app.websocket("/ws/terminal/{container}")

@@ -27,8 +27,7 @@ def print_trades(pf):
 if __name__ == "__main__":
     load_register_nodes()
 
-    dd = NodeRegistry.to_dict()
-    print(dd)
+    # dd = NodeRegistry.to_dict()
     
     db_controller = DuckDBController(db_path="../data/stock.duckdb")
     df = get_symbol_data(db_controller, "603259.SH", "2025-01-01", "2026-03-31")
@@ -37,7 +36,7 @@ if __name__ == "__main__":
     
     builder = (
         PortfolioBuilder
-        .new("SP1", mode="signal_strategy")
+        .new("SP1", portfolio_mode="signal_strategy")
         .add_strategy("trend")
             .add_factor("(MA(5) - MA(20)) / MA(20)")
             .end_factor()

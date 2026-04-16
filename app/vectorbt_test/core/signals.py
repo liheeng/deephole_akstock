@@ -1,5 +1,6 @@
 import enum
 from abc import ABC
+from vectorbt_test.core.base import GeneralExpr
 from vectorbt_test.core.nodes import Node, FeatureNode, NodeType, NodeDType, BinaryOp, to_args
 from vectorbt_test.core.node_builder import NodeBuilder
 from vectorbt_test.core.registry import NodeRegistry, NodeMeta, NodeParam
@@ -18,18 +19,26 @@ class Signal(FeatureNode, ABC):
     dtype = NodeDType.Signal
 
     @staticmethod
-    def build(node_expr: str | Node) -> "Signal":
+    def build(node_expr: str | GeneralExpr | Node) -> "Signal":
+        name: str | None = None
         node: Node | None = None
+        if isinstance(node_expr, GeneralExpr):
+            name = node_expr.name
+            node_expr = node_expr.expr
+
         if isinstance(node_expr, str):
             node = NodeBuilder().build(node_expr)
         else:
             node = node_expr
+
         if not node.is_signal:
-            return SignalWrapper(node)
-        return node
+            return SignalWrapper(name=name, node=node)
+        else:
+            return node
     
-    def __init__(self, signal_group: SignalGroup = SignalGroup.Null):
+    def __init__(self, name: str | None = None, signal_group: SignalGroup = SignalGroup.Null):
         super().__init__(NodeType.Signal)
+        self._name = name or self.__class__.__name__
         self.signal_group = signal_group
         # self.args = super()._args + [self.signal_group] + [to_args(a) for a in args]
 
@@ -72,8 +81,9 @@ class Signal(FeatureNode, ABC):
 
 
 class SignalWrapper(Signal):
-    def __init__(self, node: Node, group: SignalGroup = SignalGroup.TS_CS):
+    def __init__(self, name: str | None, node: Node, group: SignalGroup = SignalGroup.TS_CS):
         super().__init__(signal_group=group)
+        self._name = name or self.__class__.__name__
         if node.dtype != NodeDType.Bool:
             raise ValueError("wrong node dtype, expect bool type for Signal")
         self.dtype = node.dtype

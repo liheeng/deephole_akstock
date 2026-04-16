@@ -15,7 +15,7 @@ class HybridStrategy(Strategy):
             name: str,
             factors: List[Factor | str],
             signal: str | Signal | None = None,
-            mode=StrategyMode.AUTO, 
+            strategy_mode=StrategyMode.AUTO, 
             top_n=10,
             threshold=0):
         """
@@ -43,7 +43,7 @@ class HybridStrategy(Strategy):
         if self.signal is not None:
             assert self.signal.is_signal
 
-        self.mode = mode
+        self.strategy_mode = strategy_mode
         self.top_n = top_n
         self.threshold = threshold
     
@@ -55,7 +55,7 @@ class HybridStrategy(Strategy):
             alpha = s if alpha is None else alpha + s
 
         # ===== 2. 判断模式 =====
-        mode = self.mode
+        mode = self.strategy_mode
 
         if mode == StrategyMode.AUTO:
             mode = StrategyMode.CROSS_SECTION if self.data_adapter.is_cross_section else StrategyMode.TIME_SERIES

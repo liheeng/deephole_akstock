@@ -1,8 +1,10 @@
 import streamlit as st
 import requests
+from vectorbt_test.core.portfolio import PortfolioType
 from vectorbt_test.core.expr_parser import ExprParser
-import traceback
 from vectorbt_test.engine.init import load_register_nodes
+import re
+
 
 @st.cache_data
 def load_nodes(api_base: str):
@@ -29,7 +31,9 @@ class BacktestPage:
         self.parser = ExprParser()
 
     def _get_last_token(self, expr: str):
-        import re
+        if not expr:
+            return ""
+
         tokens = re.findall(r"[A-Za-z_]+", expr)
         return tokens[-1] if tokens else ""
 
@@ -152,8 +156,8 @@ class BacktestPage:
         return expr
 
     def _expr_with_autocomplete(self, label: str, key: str, default=""):
-        if key not in st.session_state:
-            st.session_state[key] = default
+        if key not in st.session_state or st.session_state[key] is None:
+            st.session_state[key] = default or ""
 
         expr = st.text_input(label, value=st.session_state[key], key=f"{key}_input")
 
@@ -334,133 +338,52 @@ class BacktestPage:
 
             factor_key = f"factors_{idx}"
             if factor_key not in st.session_state:
-                st.session_state[factor_key] = [{"mode": "dsl", "value": ""}]
+                st.session_state[factor_key] = []
 
             factors = st.session_state[factor_key]
-            new_factors = []
 
             for i, f in enumerate(factors):
+                col1, col2 = st.columns([8, 1])
 
-                st.markdown(f"##### Factor {i}")
+                with col1:
+                    st.code(f)
 
-                col_mode, col_del = st.columns([6, 1])
-
-                with col_mode:
-                    mode = st.selectbox(
-                        "模式",
-                        ["dsl", "visual"],
-                        index=0 if f["mode"] == "dsl" else 1,
-                        key=f"{factor_key}_mode_{i}"
-                    )
-
-                with col_del:
+                with col2:
                     if st.button("❌", key=f"del_factor_{idx}_{i}"):
-                        continue
-
-                # ===== DSL 模式 =====
-                if mode == "dsl":
-                    # val = st.text_input(
-                    #     "表达式",
-                    #     value=f["value"],
-                    #     key=f"{factor_key}_dsl_{i}"
-                    # )
-                    val = self._expr_with_autocomplete(
-                        f"Factor {i}",
-                        key=f"{factor_key}_dsl_{i}",
-                        default=f["value"]
-                    )
-
-                # ===== 可视化模式 =====
-                else:
-                    col1, col2, col3 = st.columns(3)
-
-                    with col1:
-                        group = st.selectbox(
-                            "类型",
-                            list(self.nodes.keys()),
-                            key=f"{factor_key}_g_{i}"
-                        )
-                        meta = st.selectbox(
-                            "节点",
-                            self.nodes[group],
-                            format_func=lambda x: x["name"],
-                            key=f"{factor_key}_n_{i}"
-                        )
-
-                    with col2:
-                        params = self._render_params(meta, f"{factor_key}_p_{i}")
-
-                    with col3:
-                        op = st.selectbox(
-                            "运算符",
-                            ["", "+", "-", "*", "/", "&", "|"],
-                            key=f"{factor_key}_op_{i}"
-                        )
-
-                    val = self._build_expr(meta["name"], params)
-
-                    # 可扩展：简单二元
-                    if op:
-                        val = f"{val} {op} {val}"
-
-                new_factors.append({
-                    "mode": mode,
-                    "value": val
-                })
-
-                st.code(val)
-                self._validate_expr(val, f"Factor {i}")
+                        factors.pop(i)
+                        st.rerun()
 
             if st.button("➕ 添加 Factor", key=f"add_factor_{idx}"):
-                new_factors.append({"mode": "dsl", "value": ""})
-
-            st.session_state[factor_key] = new_factors
+                # st.session_state[f"show_factor_dialog_{idx}"] = True
+                st.session_state["active_dialog"] = ("factor", idx)
 
             # =========================
             # SIGNAL
             # =========================
             st.markdown("#### Signal")
 
-            signal_mode = st.selectbox(
-                "Signal 模式",
-                ["dsl", "visual"],
-                key=f"signal_mode_{idx}"
-            )
-
-            if signal_mode == "dsl":
-                # signal_val = st.text_input("Signal 表达式", key=f"signal_{idx}")
-                signal_val = self._expr_with_autocomplete(
-                    "Signal 表达式",
-                    key=f"signal_{idx}",
-                    default=""
-                )
-
-            else:
-                col1, col2 = st.columns(2)
-
-                with col1:
-                    meta = st.selectbox(
-                        "节点",
-                        self.nodes["indicator"],
-                        format_func=lambda x: x["name"],
-                        key=f"signal_node_{idx}"
-                    )
-                    params = self._render_params(meta, f"signal_p_{idx}")
-
-                with col2:
-                    cmp_op = st.selectbox("比较符", [">", "<", ">=", "<="])
-                    cmp_val = st.number_input("阈值", value=0.0)
-
-                signal_val = f"{self._build_expr(meta['name'], params)} {cmp_op} {cmp_val}"
+            signal_val = st.session_state.get(f"signal_{idx}", "")
 
             if signal_val:
                 st.code(signal_val)
-                self._validate_expr(signal_val, "Strategy Signal")
+
+            if st.button("✏️ 编辑 Signal", key=f"edit_signal_{idx}"):
+                # st.session_state[f"show_signal_dialog_{idx}"] = True
+                st.session_state["active_dialog"] = ("signal", idx)
 
             # =========================
-            # 输出（重要）
+            # Dialog 触发（关键）
             # =========================
-            factor_exprs = [f["value"] for f in new_factors if f["value"].strip()]
+            # if st.session_state.get(f"show_factor_dialog_{idx}"):
+            #     self.factor_dialog(idx)
+
+            # if st.session_state.get(f"show_signal_dialog_{idx}"):
+            #     self.signal_dialog(idx)
+
+            # =========================
+            # 输出
+            # =========================
+            factor_exprs = [f for f in factors if f.strip()]
 
             return {
                 "name": name,
@@ -472,79 +395,84 @@ class BacktestPage:
     # Portfolio UI（核心修正）
     # =========================
     def _render_portfolio(self, strategies):
-
         st.subheader("📦 Portfolio 配置")
 
-        portfolio_mode = st.selectbox("Portfolio Mode", ["ts", "cs"])
+        # =========================
+        # Mode
+        # =========================
+        portfolio_mode = st.selectbox(
+            "Portfolio Mode",
+            [PortfolioType.SIGNAL_STRATEGY.value, 
+             PortfolioType.WEIGHT_STRATEGY.value])
 
+        # =========================
+        # Schedule Signal（展示 + 弹窗）
+        # =========================
         st.markdown("### ⏱ Schedule Signal")
+    
+        # 初始化
+        if "schedule_signal" not in st.session_state:
+            # st.session_state["schedule_signal"] = "RSI(14) > 70"
+            st.session_state["schedule_signal"] = None
 
-        signal_mode = st.selectbox(
-            "Schedule Signal 模式",
-            ["dsl", "visual"],
-            key="schedule_signal_mode"
+        schedule_s_enabled = st.checkbox(
+            "启用 Schedule Signal",
+            value=st.session_state["schedule_signal"] is not None,
+            key="schedule_signal_enabled"
         )
 
-        # ===== DSL 模式 =====
-        if signal_mode == "dsl":
-            # schedule_signal = st.text_input(
-            #     "表达式",
-            #     value=st.session_state.get("schedule_signal", "RSI(14) > 70"),
-            #     key="schedule_signal_input"
-            # )
-            schedule_signal = self._expr_with_autocomplete(
-                "Schedule Signal",
-                key="schedule_signal",
-                default="RSI(14) > 70"
-            )
+        if schedule_s_enabled:
+            schedule_signal = st.session_state.get("schedule_signal") or ""
 
-        # ===== 可视化模式 =====
+            if schedule_signal:
+                st.code(schedule_signal)
+                self._validate_expr(schedule_signal, "Schedule Signal")
+
+            if st.button("✏️ 编辑 Schedule Signal", key="edit_schedule_signal"):
+                st.session_state["active_dialog"] = ("schedule", None)
         else:
-            col1, col2 = st.columns(2)
+            st.info("未启用 Schedule Signal")
+            st.session_state["schedule_signal"] = None
+            schedule_signal = None
 
-            with col1:
-                meta = st.selectbox(
-                    "节点",
-                    self.nodes["indicator"],
-                    format_func=lambda x: x["name"],
-                    key="schedule_signal_node"
-                )
-                params = self._render_params(meta, "schedule_signal_p")
+        # 按钮
+        # if st.button("✏️ 编辑 Schedule Signal", key="edit_schedule_signal"):
+            # st.session_state["show_schedule_dialog"] = True
+            # st.session_state["active_dialog"] = ("schedule", None)
 
-            with col2:
-                cmp_op = st.selectbox(
-                    "比较符",
-                    [">", "<", ">=", "<=", "=="],
-                    key="schedule_signal_op"
-                )
-                cmp_val = st.number_input(
-                    "阈值",
-                    value=0.0,
-                    key="schedule_signal_val"
-                )
+        # 弹窗触发（关键）
+        # if st.session_state.get("show_schedule_dialog"):
+        #     self.schedule_signal_dialog()
 
-            schedule_signal = f"{self._build_expr(meta['name'], params)} {cmp_op} {cmp_val}"
-
-        # ===== 展示 =====
-        if schedule_signal:
-            st.code(schedule_signal)
-            self._validate_expr(schedule_signal, "Schedule Signal")
-
-        st.session_state["schedule_signal"] = schedule_signal
-
+        # =========================
+        # TS / CS 配置
+        # =========================
         extra = {}
 
-        # ===== TS =====
-        if portfolio_mode == "ts":
-            st.markdown("### TS 配置")
+        if portfolio_mode == PortfolioType.SIGNAL_STRATEGY.value:
+            st.markdown("### Signal Strategy 配置")
 
             strategy_op = st.selectbox("Strategy Op", ["AND", "OR"])
 
-            vote_weights = st.text_input("Vote Weights（逗号分隔）", value="1,1")
+            # 初始化vote_weights
+            if "vote_weights" not in st.session_state:
+                st.session_state["vote_weights"] = None
 
-            vote_weights_list = [float(x) for x in vote_weights.split(",") if x]
+            vote_weights_enabled = st.checkbox(
+                "启用 Vote Weights",
+                value=st.session_state["vote_weights"] is not None,
+                key="vote_weights_enabled"
+            )
 
-            if len(vote_weights_list) != len(strategies):
+            if vote_weights_enabled:
+                vote_weights = st.text_input("Vote Weights（逗号分隔）", value="1,1")
+                vote_weights_list = [float(x) for x in vote_weights.split(",") if x]
+            else:
+                st.info("未启用 Vote Weights")
+                vote_weights_list = None
+                vote_weights = None
+                
+            if vote_weights_list is not None and len(vote_weights_list) != len(strategies):
                 st.error("❗ vote_weights 数量必须等于 strategy 数量")
 
             extra = {
@@ -552,9 +480,8 @@ class BacktestPage:
                 "vote_weights": vote_weights_list
             }
 
-        # ===== CS =====
         else:
-            st.markdown("### CS 配置")
+            st.markdown("### Weight Strategy 配置")
 
             strategy_weights = st.text_input("Strategy Weights（逗号分隔）", value="1,1")
 
@@ -601,6 +528,15 @@ class BacktestPage:
             return None
         return res.json()
 
+    def _validate_strategies(self, strategies):
+        errors = []
+
+        for s in strategies:
+            if not any(f.strip() for f in s["factors"]):
+                errors.append(f"{s['name']} 没有 factor")
+
+        return errors
+
     # =========================
     # 主入口
     # =========================
@@ -616,10 +552,14 @@ class BacktestPage:
             strategies.append(self._render_strategy(i))
 
         # ===== factor 非空校验 =====
-        for s in strategies:
-            if not any(f.strip() for f in s["factors"]):
-                st.error(f"❗ {s['name']} 至少需要一个有效 factor")
-                return
+        # has_error = False
+        # for s in strategies:
+        #     if not any(f.strip() for f in s["factors"]):
+        #         st.error(f"❗ {s['name']} 至少需要一个有效 factor")
+        #         has_error = True
+        errors = self._validate_strategies(strategies)
+        for e in errors:
+            st.error(e)
 
         # ===== Portfolio =====
         portfolio_mode, schedule_signal, extra = self._render_portfolio(strategies)
@@ -640,6 +580,10 @@ class BacktestPage:
         st.json(payload)
 
         if st.button("🚀 Run Backtest"):
+            if errors and len(errors) > 0:
+                st.error("❌ 请先修复策略配置")
+                return
+            
             all_valid = True
 
             # 校验 factors
@@ -677,3 +621,251 @@ class BacktestPage:
 
                 st.subheader("📋 Trades")
                 st.dataframe(data["trades"])
+
+        self._render_dialogs()
+
+    def _render_dialogs(self):
+
+        dialog = st.session_state.get("active_dialog")
+
+        if not dialog:
+            return
+
+        dialog_type, idx = dialog
+
+        if dialog_type == "factor":
+            self.factor_dialog(idx)
+
+        elif dialog_type == "signal":
+            self.signal_dialog(idx)
+
+        elif dialog_type == "schedule":
+            self.schedule_signal_dialog()
+
+    def factor_dialog(self, idx):
+        @st.dialog("添加 Factor")
+        def _dialog():
+
+            dialog_key = f"factor_dialog_expr_{idx}"
+
+            # 初始化
+            if dialog_key not in st.session_state:
+                st.session_state[dialog_key] = ""
+
+            mode = st.radio("模式", ["dsl", "visual"])
+
+            if mode == "dsl":
+
+                # ❗ 不用返回值，直接用 session_state
+                self._expr_with_autocomplete(
+                    "表达式",
+                    key=dialog_key
+                )
+
+                expr = st.session_state[dialog_key] or ""
+
+            else:
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    # 1️⃣ 选择 group
+                    group = st.selectbox(
+                        "类型",
+                        list(self.nodes.keys()),
+                        key=f"factor_group_{idx}"
+                    )
+
+                    # 2️⃣ 选择 node
+                    meta = st.selectbox(
+                        "节点",
+                        self.nodes[group],
+                        format_func=lambda x: x["name"],
+                        key=f"factor_node_{idx}"
+                    )
+                    params = self._render_params(meta, f"factor_dialog_p_{idx}")
+
+                with col2:
+                    op = st.selectbox("运算符", ["", "+", "-", "*", "/"])
+
+                expr = self._build_expr(meta["name"], params)
+
+            # 展示
+            if expr:
+                st.code(expr)
+
+            # ===== 按钮 =====
+            col1, col2 = st.columns(2)
+
+            with col1:
+                if st.button("取消"):
+                    # st.session_state[f"show_factor_dialog_{idx}"] = False
+                    st.session_state["active_dialog"] = None
+                    
+                    st.rerun()
+
+            with col2:
+                if st.button("确定"):
+
+                    # ❗ 从 session_state 拿最终值
+                    final_expr = expr.strip()
+
+                    if not final_expr:
+                        st.error("表达式不能为空")
+                        return
+
+                    key = f"factors_{idx}"
+                    if key not in st.session_state:
+                        st.session_state[key] = []
+
+                    st.session_state[key].append(final_expr)
+
+                    # 清理 dialog state（非常重要）
+                    del st.session_state[dialog_key]
+
+                    # st.session_state[f"show_factor_dialog_{idx}"] = False
+                    st.session_state["active_dialog"] = None
+                    st.rerun()
+
+        _dialog()
+
+    def signal_dialog(self, idx):
+
+        @st.dialog("编辑 Signal")
+        def _dialog():
+
+            mode = st.radio("模式", ["dsl", "visual"], key=f"signal_mode_{idx}")
+
+            if mode == "dsl":
+                # expr = self._expr_with_autocomplete(
+                #     "Signal 表达式",
+                #     key=f"signal_dialog_expr_{idx}"
+                # )
+
+                dialog_key = f"signal_dialog_expr_{idx}"
+
+                if dialog_key not in st.session_state:
+                    st.session_state[dialog_key] = ""
+
+                self._expr_with_autocomplete(
+                    "Signal 表达式",
+                    key=dialog_key
+                )
+
+                expr = st.session_state[dialog_key] or ""
+
+            else:
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    # 1️⃣ 选择 group
+                    group = st.selectbox(
+                        "类型",
+                        list(self.nodes.keys()),
+                        key=f"factor_group_{idx}"
+                    )
+
+                    # 2️⃣ 选择 node
+                    meta = st.selectbox(
+                        "节点",
+                        self.nodes[group],
+                        format_func=lambda x: x["name"],
+                        key=f"factor_node_{idx}"
+                    )
+                    params = self._render_params(meta, f"signal_dialog_p_{idx}")
+
+                with col2:
+                    op = st.selectbox("比较符", [">", "<", ">=", "<="])
+                    val = st.number_input("阈值", value=0.0)
+
+                expr = f"{self._build_expr(meta['name'], params)} {op} {val}"
+                st.code(expr)
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                if st.button("取消"):
+                    # st.session_state[f"show_signal_dialog_{idx}"] = False
+                    st.session_state["active_dialog"] = None
+                    st.rerun()
+
+            with col2:
+                if st.button("确定"):
+                    # st.session_state[f"show_signal_dialog_{idx}"] = False
+                    st.session_state["active_dialog"] = None
+                    st.rerun()
+            
+        _dialog()
+
+    def schedule_signal_dialog(self):
+        @st.dialog("编辑 Schedule Signal")
+        def _dialog():
+
+            mode = st.radio(
+                "模式",
+                ["dsl", "visual"],
+                key="schedule_signal_mode_dialog"
+            )
+
+            # ===== DSL =====
+            if mode == "dsl":
+                expr = self._expr_with_autocomplete(
+                    "表达式",
+                    key="schedule_signal_dialog_expr",
+                    default=st.session_state.get("schedule_signal", "RSI(14) > 70")
+                )
+
+            # ===== 可视化 =====
+            else:
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    # 1️⃣ 选择 group
+                    group = st.selectbox(
+                        "类型",
+                        list(self.nodes.keys()),
+                        key=f"factor_group_{idx}"
+                    )
+
+                    # 2️⃣ 选择 node
+                    meta = st.selectbox(
+                        "节点",
+                        self.nodes[group],
+                        format_func=lambda x: x["name"],
+                        key=f"factor_node_{idx}"
+                    )
+                    params = self._render_params(meta, "schedule_signal_p_dialog")
+
+                with col2:
+                    op = st.selectbox("比较符", [">", "<", ">=", "<="])
+                    val = st.number_input("阈值", value=0.0)
+
+                expr = f"{self._build_expr(meta['name'], params)} {op} {val}"
+                st.code(expr)
+
+            # ===== 校验 =====
+            if expr:
+                self._validate_expr(expr, "Schedule Signal")
+
+            # ===== 按钮 =====
+            col1, col2 = st.columns(2)
+
+            with col1:
+                if st.button("取消"):
+                    # st.session_state["show_schedule_dialog"] = False
+                    st.session_state["active_dialog"] = None
+                    st.rerun()
+
+            with col2:
+                if st.button("确定"):
+
+                    final_expr = expr.strip()
+
+                    if not final_expr:
+                        st.session_state["schedule_signal"] = None
+                    else:
+                        st.session_state["schedule_signal"] = final_expr
+
+                    st.session_state["active_dialog"] = None
+                    st.rerun()
+
+        _dialog()

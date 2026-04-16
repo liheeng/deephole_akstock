@@ -1,3 +1,4 @@
+import enum
 from dataclasses import dataclass
 from typing import Sequence
 from abc import ABC, abstractmethod
@@ -5,6 +6,11 @@ import pandas as pd
 from vectorbt_test.core.strategy import Strategy
 from vectorbt_test.core.signals import Signal, SignalGroup
 from vectorbt_test.core.node_builder import NodeBuilder
+
+
+class PortfolioType(enum.Enum):
+    SIGNAL_STRATEGY = "signal_strategy"
+    WEIGHT_STRATEGY = "weight_strategy"
 
 
 @dataclass

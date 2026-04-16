@@ -1,4 +1,3 @@
-import enum
 from typing import Dict, List, Any
 from vectorbt_test.core.factors import Factor
 from vectorbt_test.core.portfolio import PortfolioParameters
@@ -8,11 +7,7 @@ from vectorbt_test.portfolios.signal_strategy_portfolio import StrategyOp, Signa
 from vectorbt_test.portfolios.weight_strategy_portfolio import WeightStrategy
 from vectorbt_test.core.signals import Signal
 from vectorbt_test.core.strategy import StrategyMode
-
-
-class PortfolioType(enum.Enum):
-    SIGNAL_STRATEGY = "signal_strategy"
-    WEIGHT_STRATEGY = "wight_strategy"
+from vectorbt_test.core.portfolio import PortfolioType
 
 
 class PortfolioBuilder:
@@ -25,9 +20,9 @@ class PortfolioBuilder:
     _current_strategy: Dict[str, Any] | None
     _current_factor: Factor | str
     
-    def __init__(self, name: str, mode: str):
+    def __init__(self, name: str, portfolio_mode: str):
         self.name = name
-        self.mode = mode
+        self.portfolio_mode = portfolio_mode
         self.strategies = []
         self.strategy_weights = None
         self.vote_weights = None
@@ -39,15 +34,15 @@ class PortfolioBuilder:
         self._current_factor = None
 
     @classmethod
-    def new(cls, name: str, mode: str):
-        return cls(name, mode)
+    def new(cls, name: str, portfolio_mode: str):
+        return cls(name, portfolio_mode)
     
     def add_strategy(self, name: str):
         strategy = {
             "name": name,
             "factors": [],
             "signal": None,
-            "mode": None
+            "strategy_mode": None
         }
         self.strategies.append(strategy)
         self._current_strategy = strategy
@@ -68,9 +63,9 @@ class PortfolioBuilder:
             self._current_strategy['signal'] = signal
         return self
     
-    def set_strategy_mode(self, mode: str | StrategyMode):
+    def set_strategy_mode(self, strategy_mode: str | StrategyMode):
         if self._current_strategy:
-            self._current_strategy['mode'] = StrategyMode(mode) if isinstance(mode, str) else mode
+            self._current_strategy['strategy_mode'] = StrategyMode(strategy_mode) if isinstance(strategy_mode, str) else strategy_mode
         return self
       
     def end_strategy(self):
@@ -82,7 +77,7 @@ class PortfolioBuilder:
         return self
     
     def set_strategy_op(self, op: str):
-        self.strategy_op = StrategyOp(op)
+        self.strategy_op = StrategyOp(op.lower())
         return self
     
     def set_strategy_weights(self, weights):
@@ -101,7 +96,7 @@ class PortfolioBuilder:
         strategies_obj = []
 
         for s in self.strategies:
-            if self.mode == StrategyMode.TIME_SERIES:
+            if PortfolioType(self.portfolio_mode.lower()) == PortfolioType.SIGNAL_STRATEGY:
                 strategies_obj.append(
                     SignalStrategy(
                         name=s["name"],
@@ -118,7 +113,7 @@ class PortfolioBuilder:
                     )
                 )
 
-        if self.mode == StrategyMode.TIME_SERIES:
+        if PortfolioType(self.portfolio_mode.lower()) == PortfolioType.SIGNAL_STRATEGY:
             return SignalStrategyPortfolio(
                 strategies=strategies_obj,
                 strategy_op=self.strategy_op,

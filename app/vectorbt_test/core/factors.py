@@ -11,9 +11,9 @@ class Factor(FeatureNode):
     scope = Scope.TS
     dtype = NodeDType.Numeric
 
-    def __init__(self, name: str, expr_str: str | Node):
+    def __init__(self, name: str | None, expr_str: str | Node):
         super().__init__(NodeType.Factor)
-        self._name = name
+        self._name = name or self.__class__.__name__
         if isinstance(expr_str, str):
             self.node = NodeBuilder().build(expr_str)
         else:
@@ -44,29 +44,29 @@ class BoolFactor(Factor):
 
 
 class SignalToFactor(Factor):
-    def __init__(self, signal_node):
+    def __init__(self, name: str | None, signal_node):
         if signal_node.dtype != NodeDType.Signal:
             raise TypeError("Expect signal")
-        super().__init__("signal_node", signal_node)
+        super().__init__(name, signal_node)
 
     def compute(self, data, context):
         return self.node.evaluate(data, context).astype(float)
 
 
 class FactorWrapper(Factor):
-    def __init__(self, node: Node):
+    def __init__(self, name: str | None, node: Node):
         if node.dtype != NodeDType.Numeric:
             raise TypeError("Expect numberic type of node")
-        super().__init__(node.__class__.__name__, node)
+        super().__init__(name, node)
 
     def compute(self, data, context):
         return self.node.evaluate(data, context)
 
 
-def wrap_numberic_node_as_factor(node: Node):
+def wrap_numberic_node_as_factor(name: str | None, node: Node):
     if node.type == NodeType.Signal and node.dtype == NodeDType.Numeric:
-        return SignalToFactor(node)
-    return FactorWrapper(node)
+        return SignalToFactor(name, node)
+    return FactorWrapper(name, node)
 
 
 class GeneralFactor(Factor):
