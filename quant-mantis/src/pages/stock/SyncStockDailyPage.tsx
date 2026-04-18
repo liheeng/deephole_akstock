@@ -13,7 +13,7 @@ import {
 } from "@mui/material";
 import axios from "axios";
 
-import { apiClient } from "../../api/client";
+import { apiClient } from "../../api/Client";
 
 const DATA_SOURCES = [
   "IFIND_API",

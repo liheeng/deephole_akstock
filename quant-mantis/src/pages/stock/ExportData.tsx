@@ -15,7 +15,7 @@ import {
     LinearProgress
 } from "@mui/material";
 
-import { apiClient } from "../../api/client";
+import { apiClient } from "../../api/Client";
 import UniDataGrid from "../../components/table/UniDataGrid";
 
 const ALL_COLS = [

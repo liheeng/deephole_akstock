@@ -61,7 +61,11 @@ interface BacktestState {
         factorIndex?: number
     }
 
+    backtestResult: any; // or specify the type of backtestResult
+
     // ===== Actions =====
+    setBacktestResult: (result: any) => void
+    
     setPortfolioMode: (mode: PortfolioMode) => void
 
     setParams: (patch: Partial<{ freq: string; init_cash: number }>) => void
@@ -145,6 +149,13 @@ export const useBacktestStore = create<BacktestState>((set, get) => ({
         type: "factor"
     },
 
+    backtestResult: null,
+
+    setBacktestResult: (result: any) => {
+        set({
+            backtestResult: result
+        })
+    },
     // =========================
     // Portfolio
     // =========================
@@ -341,7 +352,7 @@ export const useBacktestStore = create<BacktestState>((set, get) => ({
         set(state => {
             const next = [...state.strategies]
             const factors = next[strategyIndex].factors
-           
+
             if (afterIndex === undefined) {
                 factors.push({ added: true, expr: "" })
             } else {
@@ -389,52 +400,70 @@ export const useBacktestStore = create<BacktestState>((set, get) => ({
     buildPayload: () => {
         const s = get()
 
-        return {
+        const mode =
+            s.portfolio_mode === "signal_strategy"
+                ? "SIGNAL_STRATEGY"
+                : "WEIGHT_STRATEGY"
+
+        const strategies = s.strategies.map(st => ({
+            name: st.name,
+
+            factors: st.factors
+                .map(f => f.expr)
+                .filter(f => f && f.trim()),
+
+            signal:
+                st.signal.enabled && st.signal.value
+                    ? st.signal.value
+                    : null,
+
+            // ✅ 核心：按模式输出
+            threshold:
+                mode === "SIGNAL_STRATEGY" && st.threshold.enabled
+                    ? st.threshold.value
+                    : null,
+
+            top_n:
+                mode === "WEIGHT_STRATEGY" && st.top_n.enabled
+                    ? st.top_n.value
+                    : null
+        }))
+
+        const payload: any = {
             name: s.name,
-            portfolio_mode: s.portfolio_mode,
-            params: s.params,
+            mode,
+            strategies,
 
             schedule_signal:
                 s.schedule_signal.enabled && s.schedule_signal.value
                     ? s.schedule_signal.value
                     : null,
 
-            strategies: s.strategies.map(st => ({
-                name: st.name,
-                strategy_mode: st.strategy_mode,
-                factors: st.factors.map(f => f.expr).filter(Boolean),
-
-                signal:
-                    st.signal.enabled && st.signal.value
-                        ? st.signal.value
-                        : null,
-
-                threshold:
-                    s.portfolio_mode === "signal_strategy" && st.threshold.enabled
-                        ? st.threshold.value
-                        : null,
-
-                top_n:
-                    s.portfolio_mode === "weight_strategy" && st.top_n.enabled
-                        ? st.top_n.value
-                        : null
-            })),
-
-            strategy_op:
-                s.portfolio_mode === "signal_strategy" && s.strategy_op.enabled
-                    ? s.strategy_op.value
-                    : null,
-
-            vote_weights:
-                s.portfolio_mode === "signal_strategy" && s.vote_weights.enabled
-                    ? s.vote_weights.value
-                    : null,
-
-            strategy_weights:
-                s.portfolio_mode === "weight_strategy" && s.strategy_weights.enabled
-                    ? s.strategy_weights.value
-                    : null
+            params: {
+                freq: s.params.freq,
+                init_cash: s.params.init_cash
+            }
         }
+
+        // ===== SIGNAL_STRATEGY =====
+        if (mode === "SIGNAL_STRATEGY") {
+            if (s.strategy_op.enabled) {
+                payload.strategy_op = s.strategy_op.value
+            }
+
+            if (s.vote_weights.enabled) {
+                payload.vote_weights = s.vote_weights.value
+            }
+        }
+
+        // ===== WEIGHT_STRATEGY =====
+        if (mode === "WEIGHT_STRATEGY") {
+            if (s.strategy_weights.enabled) {
+                payload.strategy_weights = s.strategy_weights.value
+            }
+        }
+
+        return payload
     }
 
 }))

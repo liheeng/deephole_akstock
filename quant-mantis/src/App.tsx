@@ -26,7 +26,7 @@ import { initMonacoEnv } from "./monacoEnv";
 // 👇 加上这两行！！！
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 // Init nodes
-import { initRegisteredNodes } from "./api/client";
+import { initRegisteredNodes } from "./api/Client";
 initRegisteredNodes();
 // import { NodeRegistry } from "./model/dsl_node/node_registry";
 // import { useNodes } from "./hooks/useNodes"

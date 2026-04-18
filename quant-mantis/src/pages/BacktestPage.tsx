@@ -9,14 +9,25 @@ import TopToolbar from "../components/layout/TopToolbar"
 import PortfolioPanel from "../components/portfolio/PortfolioPanel"
 import BacktestResult from "../components/backtest/BacktestResult"
 import StrategyGraph from "../components/backtest/StrategyGraph"
-
+import { useBacktestStore } from "../store/backtest.store"
 import GlobalDialogs from "../components/dsl/GlobalEditorDialog"
+import { run_backtest } from "../api/Client";
+
+const { buildPayload, setBacktestResult } = useBacktestStore()
 
 export default function BacktestPage() {
     // const nodes = useNodes()
     const nodes = NodeRegistry.toDict()
 
     // ❗防止未加载
+
+    function runBacktest() {
+        const payload = buildPayload()
+        const data = run_backtest(payload)
+        if (data) {
+            setBacktestResult(data)
+        }
+    }
 
     if (!nodes || Object.keys(nodes).length === 0) {
         return <div>Loading nodes...</div>
@@ -26,7 +37,7 @@ export default function BacktestPage() {
         <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
 
             {/* Toolbar */}
-            <TopToolbar />
+            <TopToolbar runBacktest={runBacktest} />
 
             {/* 垂直 Split（上下） */}
             <Split
@@ -65,7 +76,7 @@ export default function BacktestPage() {
                             overflow: "hidden"
                         }}
                     >
-                        <BacktestResult />
+                        <BacktestResult runBacktest={runBacktest} />
                     </Box>
 
                 </Split>

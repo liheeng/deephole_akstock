@@ -2,7 +2,7 @@
 
 import { Box, Button } from "@mui/material"
 
-export default function TopToolbar() {
+export default function TopToolbar({runBacktest}: any) {
   return (
     <Box
       sx={{
@@ -13,7 +13,7 @@ export default function TopToolbar() {
         borderBottom: "1px solid #333"
       }}
     >
-      <Button variant="contained">Run</Button>
+      <Button variant="contained" onClick={runBacktest}>Run</Button>
       <Button sx={{ ml: 1 }}>Save</Button>
     </Box>
   )
