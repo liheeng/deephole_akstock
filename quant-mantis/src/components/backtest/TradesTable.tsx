@@ -1,4 +1,4 @@
-import { DataGrid } from "@mui/x-data-grid"
+import UniDataGrid from "../table/UniDataGrid"
 import { Card } from "@mui/material"
 
 export default function TradesTable({ trades = [] }: any) {
@@ -17,7 +17,7 @@ export default function TradesTable({ trades = [] }: any) {
 
   return (
     <Card sx={{ mt: 2 }}>
-      <DataGrid
+      <UniDataGrid
         rows={rows}
         columns={columns}
         autoHeight

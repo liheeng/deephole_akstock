@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { TextField, Button, Box, Paper } from '@mui/material';
-import { DataGrid, GridToolbar } from '@mui/x-data-grid';
+import UniDataGrid from '../../components/table/UniDataGrid';
+import { GridToolbar } from '@mui/x-data-grid';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import MainCard from '../../components/visual/MainCard';
-// import axios from "axios"
 import { Stack } from "@mui/material"
-import {apiClient} from "../../api/client"
+import { apiClient } from "../../api/client"
 
 export const SqlExecutor = () => {
   const [sql, setSql] = useState('SELECT * FROM stock_daily LIMIT 100;');
@@ -13,9 +13,8 @@ export const SqlExecutor = () => {
 
   const handleRun = async () => {
     const res = await apiClient.post("/execute_sql", { sql }, {
-            withCredentials: true, // 跨域必须加
+      withCredentials: true,
     });
-    // const res = await axios.post('/execute_sql', { sql });
     if (res.data.status === 'success') {
       const rows = res.data.data;
       if (rows.length > 0) {
@@ -24,16 +23,25 @@ export const SqlExecutor = () => {
           headerName: key.toUpperCase(),
           width: 150
         }));
-        setData({ 
-          columns: columns as any, 
-          rows: rows.map((r: any, i: number) => ({ id: i, ...r })) 
+        setData({
+          columns: columns as any,
+          rows: rows.map((r: any, i: number) => ({ id: i, ...r }))
         });
       }
     }
   };
 
   return (
-    <Stack sx={{spacing:3}}>
+    // 👇 最外层改成：占满视口高度 + 弹性布局
+    <Stack
+      sx={{
+        height: '100vh',
+        spacing: 3,
+        padding: 2,
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
       <MainCard title="SQL 工具">
         <TextField
           fullWidth
@@ -44,9 +52,9 @@ export const SqlExecutor = () => {
           placeholder="请输入 SQL..."
           sx={{ mb: 2, '& .MuiInputBase-input': { fontFamily: 'Monaco, monospace' } }}
         />
-        <Button 
-          variant="contained" 
-          startIcon={<PlayArrowIcon />} 
+        <Button
+          variant="contained"
+          startIcon={<PlayArrowIcon />}
           onClick={handleRun}
         >
           执行查询
@@ -54,17 +62,18 @@ export const SqlExecutor = () => {
       </MainCard>
 
       {data.rows.length > 0 && (
-        <MainCard content={false}>
-          <Box sx={{ height: 600, width: '100%' }}>
-            <DataGrid 
-              rows={data.rows} 
-              columns={data.columns} 
-              slots={{ toolbar: GridToolbar }} // 自带导出和筛选功能
-              density="compact"
-            />
-          </Box>
-        </MainCard>
-      )}
+  <MainCard content={false} sx={{ flex: 1, minHeight: 0 }}>
+    <Box sx={{ height: 'calc(100vh - 420px)', width: '100%' }}>
+      <UniDataGrid 
+        sx={{ height: '100%' }}
+        rows={data.rows} 
+        columns={data.columns} 
+        slots={{ toolbar: GridToolbar }} 
+        density="compact"
+      />
+    </Box>
+  </MainCard>
+)}
     </Stack>
   );
 };
