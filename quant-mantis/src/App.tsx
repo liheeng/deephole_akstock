@@ -6,7 +6,6 @@ import {
     Divider, ListItem, ListItemButton, ListItemIcon, ListItemText
 } from "@mui/material";
 
-// 图标导入
 import {
     DashboardOutlined,
     AnalyticsOutlined,
@@ -14,7 +13,6 @@ import {
     AssignmentOutlined
 } from "@mui/icons-material";
 
-// 页面组件导入
 import BacktestPage from "./pages/BacktestPage";
 import { ExportDataPage } from "./pages/stock/ExportData";
 import { SqlExecutor } from "./pages/stock/SqlExecutor";
@@ -23,15 +21,8 @@ import { SyncStockDailyPage } from "./pages/stock/SyncStockDailyPage";
 
 import { initMonacoEnv } from "./monacoEnv";
 
-// 👇 加上这两行！！！
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-// Init nodes
 import { initRegisteredNodes } from "./api/Client";
-initRegisteredNodes();
-// import { NodeRegistry } from "./model/dsl_node/node_registry";
-// import { useNodes } from "./hooks/useNodes"
-// import { apiClient } from "../../api/client";
-// NodeRegistry.fromDict(useNodes())
 
 const drawerWidth = 240;
 
@@ -42,7 +33,6 @@ const theme = createTheme({
     }
 });
 
-// 侧边栏菜单配置
 const menuItems = [
     { text: '仪表盘', icon: <DashboardOutlined />, path: '/' },
     { text: '回测系统', icon: <AnalyticsOutlined />, path: '/backtest' },
@@ -52,14 +42,12 @@ const menuItems = [
     { text: '导出数据', icon: <StorageOutlined />, path: '/export_data' },
 ];
 
-// 布局组件：包含侧边栏和顶部栏
 function MainLayout({ children }: { children: React.ReactNode }) {
     const location = useLocation();
 
     return (
         <Box sx={{ display: 'flex' }}>
             <CssBaseline />
-            {/* 顶部标题栏 */}
             <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
                 <Toolbar>
                     <Typography variant="h6" noWrap component="div">
@@ -68,7 +56,6 @@ function MainLayout({ children }: { children: React.ReactNode }) {
                 </Toolbar>
             </AppBar>
 
-            {/* 侧边栏 */}
             <Drawer
                 variant="permanent"
                 sx={{
@@ -98,7 +85,6 @@ function MainLayout({ children }: { children: React.ReactNode }) {
                 </Box>
             </Drawer>
 
-            {/* 主内容区域 */}
             <Box component="main" sx={{ flexGrow: 1, p: 3, mt: 8 }}>
                 {children}
             </Box>
@@ -107,30 +93,58 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-    // 👇 加上这一行！！！
     const queryClient = new QueryClient();
+    // 👇 控制初始化完成才渲染页面
+    const [ready, setReady] = useState(false);
 
     useEffect(() => {
-        initMonacoEnv();
+        const initAll = async () => {
+            try {
+                // 1. 先初始化节点（必须等它！）
+                await initRegisteredNodes();
+                // 2. 再初始化编辑器
+                initMonacoEnv();
+            } catch (err) {
+                console.error("初始化失败", err);
+            } finally {
+                // 3. 全部做完，才允许渲染页面
+                setReady(true);
+            }
+        };
+
+        initAll();
     }, []);
+
+    // 👇 初始化没完成，显示加载中
+    if (!ready) {
+        return (
+            <ThemeProvider theme={theme}>
+                <Box sx={{
+                    height: '100vh',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                }}>
+                    <Typography variant="h5">
+                        ⏳ 正在初始化系统...
+                    </Typography>
+                </Box>
+            </ThemeProvider>
+        );
+    }
 
     return (
         <ThemeProvider theme={theme}>
-            {/* 👇 关键：用 QueryClientProvider 把整个应用包起来 */}
             <QueryClientProvider client={queryClient}>
                 <BrowserRouter>
                     <MainLayout>
                         <Routes>
                             <Route path="/" element={<Typography variant="h4">欢迎来到DeepHole股票回测系统</Typography>} />
                             <Route path="/backtest" element={<BacktestPage />} />
-                            {/* <Route path="/sql" element={<Typography variant="h4">SQL 执行器界面 (待开发)</Typography>} /> */}
                             <Route path="/sync_daily" element={<SyncStockDailyPage />} />
                             <Route path="/sql_executor" element={<SqlExecutor />} />
-                            {/* <Route path="/tasks_monitor" element={<Typography variant="h4">任务管理界面 (待开发)</Typography>} /> */}
                             <Route path="/tasks_monitor" element={<TasksMonitorPage />} />
-                            {/* <Route path="/export" element={<Typography variant="h4">任务管理界面 (待开发)</Typography>} /> */}
                             <Route path="/export_data" element={<ExportDataPage />} />
-                            {/* 可以在这里添加更多路由 */}
                         </Routes>
                     </MainLayout>
                 </BrowserRouter>

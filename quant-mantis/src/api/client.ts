@@ -1,4 +1,4 @@
-// src/api/client.ts
+// src/api/Client.ts
 import axios from 'axios';
 // Init nodes
 import { NodeRegistry } from "../model/dsl_node/node_registry";
@@ -32,22 +32,36 @@ export interface Job {
   job_type: string;
 }
 
-export function initRegisteredNodes() {
-    try {
-        const nodes = apiClient.get('/nodes', { withCredentials: true }).then((res) => {
-            if (res.status !== 200) return [];
-            return res.data;
-          }),
-          NodeRegistry.fromDict(nodes)
-    } catch (err: any) {
-        NodeRegistry.fromDict(useNodes())
-    }
+export async function initRegisteredNodes() {
+  try {
+    const response = await apiClient.get('/nodes', { withCredentials: true });
+    if (response.status !== 200) return [];
+    const nodes = response.data;
+    NodeRegistry.fromDict(nodes);
+  } catch (err: any) {
+    NodeRegistry.fromDict(useNodes());
+  }
 }
 
-export function run_backtest(payload: any) {
-    const res = await apiClient.post("/backtest", payload, { withCredentials: true })
-    if (res.status !== 200) {
-        return null
-    }
-    return res.data
+export async function callBacktest(payload: any) {
+  try {
+    // 1. 确保是 JSON 对象
+    const jsonPayload = typeof payload === 'string' ? JSON.parse(payload) : payload;
+
+    // 2. 等待请求完成
+    const res = await apiClient.post("/backtest", jsonPayload, {
+      withCredentials: true,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    // 3. 成功 → 返回数据
+    return res.data;
+
+  } catch (err) {
+    // 4. 失败 → 返回 null
+    console.error("回测失败", err);
+    return null;
+  }
 }

@@ -11,19 +11,20 @@ import BacktestResult from "../components/backtest/BacktestResult"
 import StrategyGraph from "../components/backtest/StrategyGraph"
 import { useBacktestStore } from "../store/backtest.store"
 import GlobalDialogs from "../components/dsl/GlobalEditorDialog"
-import { run_backtest } from "../api/Client";
+import { callBacktest } from "../api/Client";
 
-const { buildPayload, setBacktestResult } = useBacktestStore()
+
 
 export default function BacktestPage() {
+    const { buildPayload, setBacktestResult } = useBacktestStore()
     // const nodes = useNodes()
     const nodes = NodeRegistry.toDict()
 
     // ❗防止未加载
 
-    function runBacktest() {
+    const runBacktest = async () => {
         const payload = buildPayload()
-        const data = run_backtest(payload)
+        const data = await callBacktest(payload)
         if (data) {
             setBacktestResult(data)
         }

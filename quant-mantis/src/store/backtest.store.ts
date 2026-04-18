@@ -8,7 +8,7 @@ type PortfolioMode = "signal_strategy" | "weight_strategy"
 type StrategyMode = "ts" | "cs"
 
 interface Factor {
-    id?: string
+    id: string
     name?: string
     added: boolean
     expr: string
@@ -65,7 +65,7 @@ interface BacktestState {
 
     // ===== Actions =====
     setBacktestResult: (result: any) => void
-    
+
     setPortfolioMode: (mode: PortfolioMode) => void
 
     setParams: (patch: Partial<{ freq: string; init_cash: number }>) => void
@@ -249,7 +249,7 @@ export const useBacktestStore = create<BacktestState>((set, get) => ({
                     id: `signal_strategy_${uuidv4()}`,
                     name: `strategy_${state.strategies.length + 1}`,
                     strategy_mode: "ts",
-                    factors: [{ added: false, expr: "" }],
+                    factors: [{ id: 'factor_' +uuidv4(), added: false, expr: "" }],
                     signal: { enabled: false, value: "" },
                     threshold: { enabled: false, value: 0.5 },
                     top_n: { enabled: false, value: 10 },
@@ -260,7 +260,7 @@ export const useBacktestStore = create<BacktestState>((set, get) => ({
                     id: `weight_strategy_${uuidv4()}`,
                     name: `strategy_${state.strategies.length + 1}`,
                     strategy_mode: "cs",
-                    factors: [{ added: false, expr: "" }],
+                    factors: [{ id: 'factor_' +uuidv4(), added: false, expr: "" }],
                     signal: { enabled: false, value: "" },
                     threshold: { enabled: false, value: 0.5 },
                     top_n: { enabled: false, value: 10 },
@@ -354,9 +354,9 @@ export const useBacktestStore = create<BacktestState>((set, get) => ({
             const factors = next[strategyIndex].factors
 
             if (afterIndex === undefined) {
-                factors.push({ added: true, expr: "" })
+                factors.push({ id: 'factor_' +uuidv4(), added: true, expr: "" })
             } else {
-                factors.splice(afterIndex + 1, 0, { added: true, expr: "" })
+                factors.splice(afterIndex + 1, 0, { id: 'factor_' +uuidv4(), added: true, expr: "" })
             }
 
             return { strategies: next }

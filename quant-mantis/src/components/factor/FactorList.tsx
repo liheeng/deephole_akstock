@@ -1,37 +1,24 @@
 // components/factor/FactorList.tsx
-
-import { Box } from "@mui/material"
-import FactorItem from "./FactorItem"
-import { useBacktestStore } from "../../store/backtest.store"
+import { Box } from "@mui/material";
+import FactorItem from "./FactorItem";
+import { useBacktestStore } from "../../store/backtest.store";
 
 export default function FactorList({ strategyIndex }: any) {
-
-  const {
-    strategies,
-    updateFactor,
-    addFactor,
-    deleteFactor
-  } = useBacktestStore()
-
-  const factors = strategies[strategyIndex]?.factors || []
+  // 精准订阅，只有当前策略的 factors 变化时才重新渲染列表
+  const factors = useBacktestStore(s => s.strategies[strategyIndex]?.factors || []);
 
   return (
-    <Box sx={{display: "flex", flexDirection:"column", gap:1}}>
-
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
       {factors.map((f: any, i: number) => (
         <FactorItem
-          key={i}
+          key={f.id} // ✅ 保持 UUID 稳定
           strategyIndex={strategyIndex}
-          factors={factors}
           factorIndex={i}
           factor={f}
-          onChange={(v: string) => updateFactor(strategyIndex, i, v)}
-          onAdd={() => addFactor(strategyIndex, i)}
-          onDelete={() => deleteFactor(strategyIndex, i)}
-          canDelete={i > 0}
+          isLast={i === factors.length - 1} // 替代之前的逻辑判断
+          canDelete={factors.length > 1}    // 至少保留一个因子
         />
       ))}
-
     </Box>
-  )
+  );
 }
