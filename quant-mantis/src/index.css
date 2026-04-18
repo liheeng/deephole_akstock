@@ -114,3 +114,25 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+/* Split gutter（拖拽条） */
+
+.gutter {
+  background-color: #222;
+  background-repeat: no-repeat;
+  background-position: 50%;
+}
+
+.gutter.gutter-horizontal {
+  cursor: col-resize;
+  width: 6px;
+}
+
+.gutter.gutter-vertical {
+  cursor: row-resize;
+  height: 6px;
+}
+
+.gutter:hover {
+  background-color: #555;
+}

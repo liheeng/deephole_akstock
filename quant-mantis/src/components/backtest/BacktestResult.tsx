@@ -5,7 +5,13 @@ import TradesTable from "./TradesTable"
 export default function BacktestResult() {
 
   return (
-    <Card sx={{ p: 2, height: "100%", display: "flex", flexDirection: "column" }}>
+    <Card 
+        sx={{
+            p: 2,
+            height: "100%",
+            display: "flex",
+            flexDirection: "column"
+        }}>
 
       <Button variant="contained">Run Backtest</Button>
 

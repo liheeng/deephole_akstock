@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from typing import List, Dict, Any
-
+from vectorbt_test.utils.misc import lambda_to_str
 
 @dataclass
 class NodeParam:
@@ -84,6 +84,7 @@ class NodeRegistry:
 
                 result[group].append({
                     "name": meta.name,
+                    "factory": lambda_to_str(cls._factories[name]),
                     "desc": meta.desc,
                     "params": [
                         {

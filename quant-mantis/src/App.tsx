@@ -1,5 +1,12 @@
 import { CssBaseline, ThemeProvider, createTheme } from "@mui/material"
 import BacktestPage from "./pages/BacktestPage"
+import { initMonacoEnv } from "./monacoEnv"
+import { useEffect } from "react"
+import { NodeRegistry } from "./model/dsl_node/node_registry"
+import { useNodes } from "./hooks/useNodes"
+
+NodeRegistry.fromDict(useNodes())
+console.log(NodeRegistry.toDict())
 
 const theme = createTheme({
   palette: {
@@ -8,6 +15,11 @@ const theme = createTheme({
 })
 
 export default function App() {
+    useEffect(() => {
+        initMonacoEnv()
+    }, [])
+
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />

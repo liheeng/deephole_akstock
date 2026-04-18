@@ -474,3 +474,4 @@ def register_indicators():
             ]
         )
     )
+    
