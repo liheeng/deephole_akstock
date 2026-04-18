@@ -11,6 +11,7 @@ import { useBacktestStore } from "../../store/backtest.store"
 
 export default function FactorItem({
     strategyIndex,
+    factors,
     factorIndex,
     factor,
     onChange,
@@ -47,7 +48,8 @@ export default function FactorItem({
             </IconButton>
 
             {/* Add */}
-            <IconButton onClick={onAdd} disabled={!factor.expr}>
+            {/* <IconButton onClick={onAdd} disabled={!factor.added || !factor.expr}> */}
+            <IconButton onClick={onAdd} disabled={factorIndex != (factors.length - 1)}>
                 <AddIcon />
             </IconButton>
 

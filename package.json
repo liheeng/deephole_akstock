@@ -1,6 +1,10 @@
 {
   "dependencies": {
     "@monaco-editor/loader": "^1.7.0",
-    "acorn": "^8.16.0"
+    "acorn": "^8.16.0",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/uuid": "^10.0.0"
   }
 }

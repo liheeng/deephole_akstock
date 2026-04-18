@@ -8,7 +8,7 @@ export default function StrategyList() {
   return (
     <Stack spacing={2}>
       {strategies.map((s, i) => (
-        <StrategyCard key={s.name} index={i} strategy={s} />
+        <StrategyCard key={s.id} index={i} strategy={s} />
       ))}
 
       <Button onClick={addStrategy}>

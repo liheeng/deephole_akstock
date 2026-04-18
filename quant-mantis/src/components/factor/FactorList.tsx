@@ -22,6 +22,7 @@ export default function FactorList({ strategyIndex }: any) {
         <FactorItem
           key={i}
           strategyIndex={strategyIndex}
+          factors={factors}
           factorIndex={i}
           factor={f}
           onChange={(v: string) => updateFactor(strategyIndex, i, v)}

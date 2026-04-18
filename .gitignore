@@ -6,6 +6,17 @@ logs/
 **/logs/
 **/output.prof
 
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
 # 忽略 所有目录下的 __pycache__ 文件夹
 **/__pycache__/
 
