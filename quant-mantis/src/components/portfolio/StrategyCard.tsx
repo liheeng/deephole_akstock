@@ -18,11 +18,13 @@ import { useState } from "react";
 import FactorList from "../factor/FactorList";
 import SignalEditor from "../signal/SignalEditor";
 import { useBacktestStore } from "../../store/backtest.store";
-import { useNodes } from "../../hooks/useNodes";
+// import { useNodes } from "../../hooks/useNodes"
+import { NodeRegistry } from "../../model/dsl_node/node_registry";
 
 export default function StrategyCard({ index, strategy }: any) {
     const [expanded, setExpanded] = useState(true);
-    const nodes = useNodes();
+    // const nodes = useNodes()
+    const nodes = NodeRegistry.toDict()
 
     const {
         updateStrategy,

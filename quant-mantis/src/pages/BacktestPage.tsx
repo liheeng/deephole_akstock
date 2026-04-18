@@ -3,7 +3,8 @@
 import { Box } from "@mui/material"
 import Split from "react-split"
 
-import { useNodes } from "../hooks/useNodes"
+// import { useNodes } from "../../hooks/useNodes"
+import { NodeRegistry } from "../model/dsl_node/node_registry";
 import TopToolbar from "../components/layout/TopToolbar"
 import PortfolioPanel from "../components/portfolio/PortfolioPanel"
 import BacktestResult from "../components/backtest/BacktestResult"
@@ -12,7 +13,8 @@ import StrategyGraph from "../components/backtest/StrategyGraph"
 import GlobalDialogs from "../components/dsl/GlobalEditorDialog"
 
 export default function BacktestPage() {
-    const nodes = useNodes()
+    // const nodes = useNodes()
+    const nodes = NodeRegistry.toDict()
 
     // ❗防止未加载
 

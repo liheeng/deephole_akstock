@@ -1,5 +1,8 @@
 // src/api/client.ts
 import axios from 'axios';
+// Init nodes
+import { NodeRegistry } from "../model/dsl_node/node_registry";
+import { useNodes } from "../hooks/useNodes"
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -27,4 +30,24 @@ export interface Job {
   name: string;
   status: string;
   job_type: string;
+}
+
+export function initRegisteredNodes() {
+    try {
+        const nodes = apiClient.get('/nodes', { withCredentials: true }).then((res) => {
+            if (res.status !== 200) return [];
+            return res.data;
+          }),
+          NodeRegistry.fromDict(nodes)
+    } catch (err: any) {
+        NodeRegistry.fromDict(useNodes())
+    }
+}
+
+export function run_backtest(payload: any) {
+    const res = await apiClient.post("/backtest", payload, { withCredentials: true })
+    if (res.status !== 200) {
+        return null
+    }
+    return res.data
 }

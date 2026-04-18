@@ -15,10 +15,12 @@ import {
 import { useBacktestStore } from "../../store/backtest.store"
 import StrategyList from "./StrategyList"
 import SignalEditor from "../signal/SignalEditor"
-import { useNodes } from "../../hooks/useNodes"
+// import { useNodes } from "../../hooks/useNodes"
+import { NodeRegistry } from "../../model/dsl_node/node_registry";
 
 export default function PortfolioPanel() {
-    const nodes = useNodes()
+    // const nodes = useNodes()
+    const nodes = NodeRegistry.toDict()
 
     const {
         portfolio_mode,

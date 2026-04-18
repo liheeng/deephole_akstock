@@ -7,7 +7,6 @@ import AddIcon from "@mui/icons-material/Add"
 import DeleteIcon from "@mui/icons-material/Delete"
 
 import { useBacktestStore } from "../../store/backtest.store"
-// import { useNodes } from "../../hooks/useNodes"
 
 export default function FactorItem({
     strategyIndex,
