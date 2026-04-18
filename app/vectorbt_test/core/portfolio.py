@@ -17,8 +17,8 @@ class PortfolioType(enum.Enum):
 class PortfolioParameters:
     freq: str
     init_cash: float
-    top_n: int | None
-    hold_days: int
+    top_n: int | None = 10
+    hold_days: int = 5
 
 
 class StrategyPortfolio(ABC):

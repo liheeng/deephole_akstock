@@ -14,6 +14,9 @@ import asyncio
 from pydantic import BaseModel
 import pandas as pd
 import traceback
+import re
+
+from fastapi.middleware.cors import CORSMiddleware
 
 from core.task_manager import task_manager
 from db.db_common import DB
@@ -69,6 +72,13 @@ async def lifespan(app: FastAPI):
     logger.error("API servide is shutting down")
 
 app = FastAPI(lifespan=lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://192.168.50.11:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 if is_running_in_docker():
     app.mount("/terminal", StaticFiles(directory="terminal", html=True), name="terminal")
@@ -97,7 +107,9 @@ def call_task(
 @app.get("/tasks")
 def list_tasks(limit: int = 20):
     try:
-        return task_manager.list_tasks(limit)
+        tasks = task_manager.list_tasks(limit)
+        logger.info("list tasks: %s", tasks)
+        return tasks
     except Exception as e:
         raise HTTPException(
             status_code=400,
@@ -164,20 +176,127 @@ class ExportRequest(BaseModel):
     where_sql: Optional[str] = None
     export_format: str = "csv"
 
+def validate_sql(sql: str):
+    if not sql:
+        raise ValueError("SQL 不能为空")
+
+    s = sql.strip().lower()
+
+    # ======================
+    # 1. 只允许 SELECT
+    # ======================
+    if not s.startswith("select"):
+        raise ValueError("只允许 SELECT 查询")
+
+    # ======================
+    # 2. 禁止多语句
+    # ======================
+    if ";" in s:
+        raise ValueError("不允许多语句执行")
+
+    # ======================
+    # 3. 禁止危险关键字
+    # ======================
+    forbidden = [
+        "insert", "update", "delete",
+        "drop", "alter", "truncate",
+        "create", "replace"
+    ]
+
+    for word in forbidden:
+        if re.search(rf"\b{word}\b", s):
+            raise ValueError(f"SQL 包含非法关键字: {word}")
+
+    # ======================
+    # 4. 禁止注释绕过
+    # ======================
+    if "--" in s or "/*" in s:
+        raise ValueError("不允许 SQL 注释")
+
+    return True
+
+
+def build_sql(req: dict, for_count=False):
+    cols = ", ".join(req["columns"]) if not for_count else "COUNT(*) as cnt"
+
+    sql = f"SELECT {cols} FROM stock_daily WHERE 1=1"
+
+    if req.get("where"):
+        sql += f" AND {req['where']}"
+
+    if req.get("group_by"):
+        sql += f" GROUP BY {req['group_by']}"
+
+    if req.get("order_by") and not for_count:
+        sql += f" ORDER BY {req['order_by']}"
+
+    if req.get("limit") and not for_count:
+        sql += f" LIMIT {req['limit']}"
+
+    return sql
+
+
+ALLOWED_COLUMNS = {
+    "symbol", "symbol_name", "market", "date",
+    "open", "high", "low", "close", "volume", "amount",
+    "pct", "turnover", "adjust_mode", "adjust_factor"
+}
+
+MAX_LIMIT = 1_000_000
+
+
+def validate_req(req: dict):
+    # 字段校验
+    for col in req["columns"]:
+        if col not in ALLOWED_COLUMNS:
+            raise ValueError(f"非法字段: {col}")
+
+    # limit限制
+    if req.get("limit"):
+        if int(req["limit"]) > MAX_LIMIT:
+            raise ValueError("limit过大")
+        
+
+@app.post("/export/preview")
+def export_preview(req: dict):
+    validate_req(req)
+    _req = {**req}
+    if _req.get("limit") and int(_req["limit"]) > 50:
+        _req["limit"] = 50
+    sql = build_sql(_req)
+    validate_sql(sql)
+
+    with closing(db_controller._get_connection(read_only=True)) as con:
+        # 查询数据
+        
+        cursor = con.execute(sql)
+        rows = cursor.fetchall()
+        
+        # ✅ 关键修复：description 不加 ()
+        columns = [desc[0] for desc in cursor.description]
+
+        # 查询总数
+        count_sql = build_sql(_req, for_count=True)
+        total = con.execute(count_sql).fetchone()
+        total = total[0] if total else 0
+
+        return {
+            "rows": [dict(zip(columns, row)) for row in rows],
+            "total": total
+        }
+
 
 @app.post("/export/stream")
-async def export_stream(req: ExportRequest):
-    cols = req.columns
-    where = req.where_sql
-    fmt = req.export_format.lower()
+async def export_stream(req):
+    validate_req(req)
+    cols = req["columns"]
+    fmt = req.get("export_format", "csv").lower()
+    sql = build_sql(req)
+    validate_sql(sql)
 
     def generate():
         # 🔥 安全关闭连接
-        with closing(db_controller._get_connection()) as con:
-            sql = f"SELECT {','.join(cols)} FROM stock_daily"
-            if where and where.strip():
-                sql += f" WHERE {where.strip()}"
-
+        with closing(db_controller._get_connection()) as con:            
             # CSV
             if fmt == "csv":
                 yield ','.join(cols) + '\n'
@@ -202,12 +321,16 @@ async def export_stream(req: ExportRequest):
                         os.remove(tmp)
 
     media_type = "text/csv" if fmt == "csv" else "application/octet-stream"
-    return StreamingResponse(
-        generate(),
-        media_type=media_type,
-        headers={"Content-Disposition": f"attachment; filename=stock_daily.{fmt}"}
-    )
-
+    try:
+        return StreamingResponse(
+            generate(),
+            media_type=media_type,
+            headers={"Content-Disposition": f"attachment; filename=stock_daily.{fmt}"}
+        )
+    except Exception as e:
+        logger.exception(f"failed to export stream, error: {str(e)}")
+        # raise HTTPException(status_code=500, detail=str(e))
+        return {"status": "error", "message": str(e)}
 
 @app.get("/nodes")
 def get_nodes():

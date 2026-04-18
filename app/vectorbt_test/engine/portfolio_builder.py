@@ -42,7 +42,9 @@ class PortfolioBuilder:
             "name": name,
             "factors": [],
             "signal": None,
-            "strategy_mode": None
+            "strategy_mode": None,
+            "top_n": None,
+            "threshold": None,
         }
         self.strategies.append(strategy)
         self._current_strategy = strategy
@@ -101,7 +103,8 @@ class PortfolioBuilder:
                     SignalStrategy(
                         name=s["name"],
                         factors=s["factors"],
-                        signal=s["signal"]
+                        signal=s["signal"],
+                        threshold=float(s["threshold"]) if s["threshold"] is not None else 0.0
                     )
                 )
             else:
@@ -109,7 +112,8 @@ class PortfolioBuilder:
                     WeightStrategy(
                         name=s["name"],
                         factors=s["factors"],
-                        signal=s["signal"]
+                        signal=s["signal"],
+                        top_n=int(s["top_n"]) if s["top_n"] is not None else 10
                     )
                 )
 
