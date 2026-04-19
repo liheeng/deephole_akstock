@@ -22,7 +22,7 @@ import { SyncStockDailyPage } from "./pages/stock/SyncStockDailyPage";
 import { initMonacoEnv } from "./monacoEnv";
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { initRegisteredNodes } from "./api/Client_u";
+import { initRegisteredNodes } from "./api/Client";
 
 const drawerWidth = 240;
 
