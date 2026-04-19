@@ -9,7 +9,8 @@ import TopToolbar from "../components/layout/TopToolbar"
 import PortfolioPanel from "../components/portfolio/PortfolioPanel"
 import BacktestResult from "../components/backtest/BacktestResult"
 import StrategyGraph from "../components/backtest/StrategyGraph"
-import { useBacktestStore, useBacktestResultStore } from "../store/backtest.store"
+import { useBacktestStore} from "../store/backtest/backtest.store"
+import { useBacktestResultStore } from "../store/backtestresult.store"
 import GlobalDialogs from "../components/dsl/GlobalEditorDialog"
 import { callBacktest } from "../api/Client";
 

@@ -1,70 +1,85 @@
 import VisualEditorDialog from "../visual/VisualEditorDialog"
-import { useBacktestStore } from "../../store/backtest.store"
+
+import { useDialogStore } from "../../store/uiDialog.store"
+
+import { useFactorStore } from "../../store/backtest/factor.store"
+import { useSignalStore } from "../../store/backtest/signal.store"
+import { useStrategyStore } from "../../store/backtest/strategy.store"
+import { useBacktestStore } from "../../store/backtest/backtest.store"
 
 export default function GlobalDialogs({ nodes }: any) {
 
-    const {
-        dialog,
-        closeDialog,
+    const dialog = useDialogStore(state => state.dialog)
+    const closeDialog = useDialogStore(state => state.closeDialog)
 
-        updateFactor,
-        updateStrategy,
+    const updateFactor = useFactorStore(state => state.updateFactor)
 
-        strategies
-    } = useBacktestStore()
+    const createSignal = useSignalStore(state => state.createSignal)
+    const updateSignal = useSignalStore(state => state.updateSignal)
+
+    const setStrategySignal = useStrategyStore(state => state.setStrategySignal)
+
+    const setScheduleSignal = useBacktestStore(state => state.setScheduleSignal)
 
     return (
         <VisualEditorDialog
             open={dialog.open}
             nodes={nodes}
             onClose={closeDialog}
+
             onConfirm={(expr: string) => {
+
+                const payload = dialog.payload || {}
 
                 // =========================
                 // Factor
                 // =========================
                 if (dialog.type === "factor") {
-                    if (
-                        dialog.strategyIndex === undefined ||
-                        dialog.factorIndex === undefined
-                    ) return
 
-                    updateFactor(
-                        dialog.strategyIndex,
-                        dialog.factorIndex,
-                        expr
-                    )
+                    const { factorId } = payload
+                    if (!factorId) return
+
+                    updateFactor(factorId, expr)
                 }
 
                 // =========================
                 // Strategy Signal
                 // =========================
                 if (dialog.type === "signal") {
-                    if (dialog.strategyIndex === undefined) return
 
-                    const s = strategies[dialog.strategyIndex]
-                    if (!s) return
+                    const { strategyId, signalId } = payload
+                    if (!strategyId) return
 
-                    updateStrategy(dialog.strategyIndex, {
-                        signal: {
-                            ...s.signal,
-                            enabled: true,
-                            value: expr
-                        }
-                    })
+                    let sid = signalId
+
+                    // 没有 signal 就创建一个
+                    if (!sid) {
+                        sid = createSignal()
+                        setStrategySignal(strategyId, sid)
+                    }
+
+                    updateSignal(sid, expr)
                 }
 
                 // =========================
                 // Schedule Signal（Portfolio）
                 // =========================
                 if (dialog.type === "schedule_signal") {
-                    useBacktestStore.setState(state => ({
-                        schedule_signal: {
-                            ...state.schedule_signal,
-                            enabled: true,
-                            value: expr
-                        }
-                    }))
+
+                    const { signalId } = payload
+
+                    let sid = signalId
+
+                    if (!sid) {
+                        sid = createSignal()
+                    }
+
+                    updateSignal(sid, expr)
+
+                    setScheduleSignal({
+                        enabled: true,
+                        signalId: sid
+                    })
                 }
 
                 closeDialog()

@@ -8,68 +8,106 @@ import {
     Stack,
     Chip,
     Tooltip
-} from "@mui/material";
+} from "@mui/material"
 
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import ExpandLessIcon from "@mui/icons-material/ExpandLess";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined"; // 引入删除图标
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore"
+import ExpandLessIcon from "@mui/icons-material/ExpandLess"
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined"
 
-import { useState } from "react";
-import FactorList from "../factor/FactorList";
-import SignalEditor from "../signal/SignalEditor";
-import { useBacktestStore } from "../../store/backtest.store";
-// import { useNodes } from "../../hooks/useNodes"
-import { NodeRegistry } from "../../model/dsl_node/node_registry";
+import { useState, useCallback } from "react"
 
-export default function StrategyCard({ index, strategy }: any) {
-    const [expanded, setExpanded] = useState(true);
-    // const nodes = useNodes()
+import FactorList from "../factor/FactorList"
+import SignalEditor from "../signal/SignalEditor"
+
+import { useStrategyStore } from "../../store/backtest/strategy.store"
+import { useSignalStore } from "../../store/backtest/signal.store"
+import { useDialogStore } from "../../store/uiDialog.store"
+
+import { NodeRegistry } from "../../model/dsl_node/node_registry"
+
+export default function StrategyCard({ strategyId }: any) {
+
+    const [expanded, setExpanded] = useState(true)
     const nodes = NodeRegistry.toDict()
 
-    const updateStrategy = useBacktestStore(state => state.updateStrategy)
-    const removeStrategy = useBacktestStore(state => state.removeStrategy)
-    const openDialog = useBacktestStore(state => state.openDialog)
+    // =========================
+    // ✅ 细粒度 selector（核心）
+    // =========================
 
-    // const factorCount = strategy.factors?.length || 0;
-    const factorCount = 0;
-    const hasSignal = strategy.signal_enabled;
+    const name = useStrategyStore(s => s.strategies[strategyId]?.name)
+    const factorIds = useStrategyStore(s => s.strategies[strategyId]?.factorIds || [])
+    const signalId = useStrategyStore(s => s.strategies[strategyId]?.signalId)
+    const config = useStrategyStore(s => s.strategies[strategyId]?.config)
 
-    // ===== 更新函数 =====
-    const update = (patch: any) => {
-        updateStrategy(index, patch);
-    };
+    // =========================
+    // actions（稳定引用）
+    // =========================
 
-    // 嵌入式边框标题的公用样式组件（内部使用）
-    const TitledBox = ({ title, children }: { title: string, children: React.ReactNode }) => (
-        <Box
-            sx={{
-                position: 'relative',
-                border: '1px solid rgba(255, 255, 255, 0.23)',
-                borderRadius: 1,
-                p: 2,
-                pt: 2.5,
-                mt: 2,
-                backgroundColor: 'rgba(0,0,0,0.1)' // 增加一点区分度
-            }}
-        >
-            <Typography
-                variant="caption"
-                sx={{
-                    position: 'absolute',
-                    top: -10,
-                    left: 12,
-                    bgcolor: '#1e1e1e', // ⚠️ 请确保此颜色与你的背景色一致
-                    px: 0.5,
-                    color: 'text.secondary',
-                    fontSize: '0.75rem',
-                    fontWeight: 'bold'
-                }}
-            >
-                {title}
-            </Typography>
-            {children}
-        </Box>
-    );
+    const updateStrategyMeta = useStrategyStore(s => s.updateStrategyMeta)
+    const deleteStrategy = useStrategyStore(s => s.deleteStrategy)
+    const setStrategySignal = useStrategyStore(s => s.setStrategySignal)
+    const updateStrategyConfig = useStrategyStore(s => s.updateStrategyConfig)
+
+    const signal = useSignalStore(s =>
+        signalId ? s.signals[signalId] : null
+    )
+    const updateSignal = useSignalStore(s => s.updateSignal)
+    const createSignal = useSignalStore(s => s.createSignal)
+
+    const openDialog = useDialogStore(s => s.openDialog)
+
+    if (!name) return null
+
+    // =========================
+    // handlers
+    // =========================
+
+    const handleNameChange = useCallback((e: any) => {
+        updateStrategyMeta(strategyId, { name: e.target.value })
+    }, [strategyId, updateStrategyMeta])
+
+    const handleDelete = useCallback((e: any) => {
+        e.stopPropagation()
+        if (window.confirm(`Delete "${name}"?`)) {
+            deleteStrategy(strategyId)
+        }
+    }, [strategyId, name, deleteStrategy])
+
+    const handleSignalChange = useCallback((v: string) => {
+        let sid = signalId
+
+        if (!sid) {
+            sid = createSignal()
+            setStrategySignal(strategyId, sid)
+        }
+
+        updateSignal(sid, v)
+    }, [strategyId, signalId, createSignal, setStrategySignal, updateSignal])
+
+    const handleSignalToggle = useCallback(() => {
+        if (!signalId) {
+            const sid = createSignal()
+            setStrategySignal(strategyId, sid)
+        } else {
+            setStrategySignal(strategyId, undefined as any)
+        }
+    }, [strategyId, signalId, createSignal, setStrategySignal])
+
+    const handleOpenSignalEditor = useCallback(() => {
+        openDialog(
+            "signal",
+            {
+                strategyId,
+                signalId
+            }
+        )
+    }, [strategyId, signalId, openDialog])
+
+    const factorCount = factorIds.length
+
+    // =========================
+    // render
+    // =========================
 
     return (
         <Card
@@ -82,125 +120,99 @@ export default function StrategyCard({ index, strategy }: any) {
         >
             {/* ===== Header ===== */}
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'primary.light' }}>
-                    {strategy.name || `Strategy ${index + 1}`}
+                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                    {name}
                 </Typography>
 
                 <Stack direction="row" spacing={0.5}>
-                    {/* 删除按钮 */}
                     <Tooltip title="Delete Strategy">
-                        <IconButton 
-                            size="small" 
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                if (window.confirm(`Delete "${strategy.name || 'this strategy'}"?`)) {
-                                    removeStrategy(index);
-                                }
-                            }}
-                            sx={{ 
-                                color: 'text.secondary',
-                                '&:hover': { color: 'error.main', bgcolor: 'rgba(211, 47, 47, 0.1)' }
-                            }}
-                        >
+                        <IconButton size="small" onClick={handleDelete}>
                             <DeleteOutlineIcon fontSize="small" />
                         </IconButton>
                     </Tooltip>
 
-                    {/* 折叠按钮 */}
                     <IconButton size="small" onClick={() => setExpanded(!expanded)}>
                         {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                     </IconButton>
                 </Stack>
             </Box>
 
-            {/* ===== 折叠 summary (仅在关闭时显示) ===== */}
+            {/* ===== 折叠 summary ===== */}
             {!expanded && (
-                <Box sx={{ display: "flex", gap: 1, mt: 1, flexWrap: "wrap" }}>
-                    <Tooltip title="Number of factors">
-                        <Chip size="small" label={`📊 ${factorCount}`} variant="outlined" />
-                    </Tooltip>
-                    <Tooltip title="Signal status">
-                        <Chip 
-                            size="small" 
-                            label={hasSignal ? "⚡ Signal" : "❌ No Signal"} 
-                            color={hasSignal ? "primary" : "default"}
-                            variant="outlined"
-                        />
-                    </Tooltip>
-                    {strategy.strategy_mode === "ts" && (
-                        <Chip size="small" label={`🎯 ${strategy.threshold?.value || 0}`} variant="outlined" />
-                    )}
-                    {strategy.strategy_mode === "cs" && (
-                        <Chip size="small" label={`🏆 Top ${strategy.top_n?.value || 0}`} variant="outlined" />
-                    )}
+                <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
+                    <Chip size="small" label={`📊 ${factorCount}`} variant="outlined" />
+                    <Chip
+                        size="small"
+                        label={signalId ? "⚡ Signal" : "❌ No Signal"}
+                        variant="outlined"
+                    />
                 </Box>
             )}
 
-            {/* ===== 展开内容 ===== */}
+            {/* ===== 展开 ===== */}
             <Collapse in={expanded}>
                 <Stack spacing={2} sx={{ mt: 2 }}>
-                    
-                    {/* 1. Strategy Name */}
+
+                    {/* name */}
                     <TextField
                         fullWidth
                         size="small"
                         label="Strategy Name"
-                        value={strategy.name || ""}
-                        onChange={(e) => update({ name: e.target.value })}
+                        value={name}
+                        onChange={handleNameChange}
                     />
 
-                    {/* 2. Factors Section */}
-                    <TitledBox title="Factors">
-                        <FactorList strategyIndex={index} />
-                    </TitledBox>
+                    {/* factors */}
+                    <Box>
+                        <Typography variant="caption">Factors</Typography>
+                        <FactorList strategyId={strategyId} />
+                    </Box>
 
-                    {/* 3. Strategy Signal Section */}
-                    <TitledBox title="Strategy Signal">
+                    {/* signal */}
+                    <Box>
+                        <Typography variant="caption">Strategy Signal</Typography>
+
                         <SignalEditor
-                            value={strategy.signal.value || ""}
-                            enabled={strategy.signal_enabled}
-                            onChange={(v: string) => update({ signal: v })}
-                            onToggle={() => update({ signal_enabled: !strategy.signal_enabled })}
-                            onVisual={() =>
-                                openDialog({
-                                    type: "signal",
-                                    strategyIndex: index
-                                })
-                            }
+                            value={signal?.expr || ""}
+                            enabled={!!signalId}
+                            onChange={handleSignalChange}
+                            onToggle={handleSignalToggle}
+                            onVisual={handleOpenSignalEditor}
                             nodes={nodes}
                         />
-                    </TitledBox>
-
-                    {/* 4. Mode Specific Settings */}
-                    <Box sx={{ mt: 1 }}>
-                        {strategy.strategy_mode === "ts" && (
-                            <TextField
-                                fullWidth
-                                size="small"
-                                label="Threshold"
-                                type="number"
-                                value={strategy.threshold?.value ?? ""}
-                                onChange={(e) =>
-                                    update({ threshold: { ...strategy.threshold, value: Number(e.target.value) } })
-                                }
-                            />
-                        )}
-
-                        {strategy.strategy_mode === "cs" && (
-                            <TextField
-                                fullWidth
-                                size="small"
-                                label="Top N"
-                                type="number"
-                                value={strategy.top_n?.value ?? ""}
-                                onChange={(e) =>
-                                    update({ top_n: { ...strategy.top_n, value: Number(e.target.value) } })
-                                }
-                            />
-                        )}
                     </Box>
+
+                    {/* config */}
+                    {config?.mode === "ts" && (
+                        <TextField
+                            size="small"
+                            label="Threshold"
+                            type="number"
+                            value={config.threshold ?? ""}
+                            onChange={(e) =>
+                                updateStrategyConfig(strategyId, {
+                                    threshold: Number(e.target.value)
+                                })
+                            }
+                        />
+                    )}
+
+                    {config?.mode === "cs" && (
+                        <TextField
+                            size="small"
+                            label="Top N"
+                            type="number"
+                            value={config.top_n ?? ""}
+                            onChange={(e) =>
+                                updateStrategyConfig(strategyId, {
+                                    top_n: Number(e.target.value)
+                                })
+                            }
+                        />
+                    )}
+
                 </Stack>
             </Collapse>
         </Card>
-    );
+    )
 }

@@ -1,24 +1,34 @@
 // components/factor/FactorList.tsx
-import { Box } from "@mui/material";
-import FactorItem from "./FactorItem";
-import { useBacktestStore } from "../../store/backtest.store";
 
-export default function FactorList({ strategyIndex }: any) {
-  // 精准订阅，只有当前策略的 factors 变化时才重新渲染列表
-  const factors = useBacktestStore(s => s.strategies[strategyIndex]?.factors || []);
+import { Box } from "@mui/material"
+import { useMemo } from "react"
 
-  return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-      {factors.map((f: any, i: number) => (
-        <FactorItem
-          key={f.id} // ✅ 保持 UUID 稳定
-          strategyIndex={strategyIndex}
-          factorIndex={i}
-          factor={f}
-          isLast={i === factors.length - 1} // 替代之前的逻辑判断
-          canDelete={factors.length > 1}    // 至少保留一个因子
-        />
-      ))}
-    </Box>
-  );
+import FactorItem from "./FactorItem"
+import { useStrategyStore } from "../../store/backtest/strategy.store"
+
+export default function FactorList({ strategyId }: any) {
+
+    // ✅ 只订阅当前 strategy 的 factorIds（极致精细）
+    const factorIds = useStrategyStore(
+        s => s.strategies[strategyId]?.factorIds || []
+    )
+
+    // ✅ 避免每次 render 生成新数组引用（可选优化）
+    const ids = useMemo(() => factorIds, [factorIds])
+
+    return (
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+
+            {ids.map((factorId, i) => (
+                <FactorItem
+                    key={factorId}               // ✅ 稳定 key（核心）
+                    strategyId={strategyId}
+                    factorId={factorId}
+                    isLast={i === ids.length - 1}
+                    canDelete={ids.length > 1}
+                />
+            ))}
+
+        </Box>
+    )
 }

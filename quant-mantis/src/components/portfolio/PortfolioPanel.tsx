@@ -8,39 +8,59 @@ import {
     Select,
     MenuItem,
     TextField,
-    Switch,
-    // FormControlLabel
+    Switch
 } from "@mui/material"
 
-import { useBacktestStore } from "../../store/backtest.store"
+import { useSignalStore } from "../../store/backtest/signal.store"
+import { useStrategyStore } from "../../store/backtest/strategy.store"
+import { useDialogStore } from "../../store/uiDialog.store"
+import { useBacktestStore } from "../../store/backtest/backtest.store"
 import StrategyList from "./StrategyList"
 import SignalEditor from "../signal/SignalEditor"
-// import { useNodes } from "../../hooks/useNodes"
-import { NodeRegistry } from "../../model/dsl_node/node_registry";
+import { NodeRegistry } from "../../model/dsl_node/node_registry"
 
 export default function PortfolioPanel() {
-    // const nodes = useNodes()
+
     const nodes = NodeRegistry.toDict()
 
-    const {
-        portfolio_mode,
-        setPortfolioMode,
+    // =========================
+    // ✅ 精细订阅（核心）
+    // =========================
 
-        strategies,
+    const portfolioMode = useBacktestStore(s => s.portfolio_mode)
+    const setPortfolioMode = useBacktestStore(s => s.setPortfolioMode)
+    
+    const freq = useBacktestStore(s => s.params.freq)
+    const initCash = useBacktestStore(s => s.params.init_cash)
 
-        params,
-        schedule_signal,
-        strategy_op,
-        vote_weights,
-        strategy_weights,
+    const strategyCount = useStrategyStore(s => s.strategyIds.length)
+    
+    const scheduleEnabled = useBacktestStore(s => s.schedule_signal.enabled)
+    const scheduleSignalId = useBacktestStore(s => s.schedule_signal.signalId)
+    const setScheduleSignal = useBacktestStore(s => s.setScheduleSignal)
 
-        // updateStrategy,
-        openDialog,
+    const strategyOp = useBacktestStore(s => s.strategy_op)
+    const setStrategyOp = useBacktestStore(s => s.setStrategyOp)
+    
+    const voteWeights = useBacktestStore(s => s.vote_weights)
+    const setVoteWeights = useBacktestStore(s => s.setVoteWeights)
 
-        setScheduleSignal
-    } = useBacktestStore()
+    const strategyWeights = useBacktestStore(s => s.strategy_weights)
+    const setStrategyWeights = useBacktestStore(s => s.setStrategyWeights)
 
-    const mode = portfolio_mode
+    const portfolioParams = useBacktestStore(s => s.params)
+    const updatePortfolioParams = useBacktestStore(s => s.updatePortfolioParams)    
+
+    // 👉 从 signal store 取 expr
+    const scheduleValue = useSignalStore(s =>
+        scheduleSignalId ? s.signals[scheduleSignalId]?.expr || "" : ""
+    )
+
+    // 👉 action
+    const updateSignal = useSignalStore(s => s.updateSignal)
+    const createSignal = useSignalStore(s => s.createSignal)
+
+    const openDialog = useDialogStore(s => s.openDialog)
 
     // ===== helper =====
     const parseArray = (v: string) =>
@@ -51,16 +71,15 @@ export default function PortfolioPanel() {
 
             {/* ================= Header ================= */}
             <Box sx={{ mb: 1 }}>
-
                 <Typography variant="subtitle1">
                     Portfolio
                 </Typography>
 
-                {/* ===== mode switch ===== */}
+                {/* mode */}
                 <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
                     <Select
                         size="small"
-                        value={mode}
+                        value={portfolioMode}
                         onChange={(e) => setPortfolioMode(e.target.value as any)}
                     >
                         <MenuItem value="signal_strategy">Signal Strategy</MenuItem>
@@ -69,85 +88,48 @@ export default function PortfolioPanel() {
                 </Box>
 
                 {/* ===== Summary ===== */}
-                <Box
-                    sx={{
-                        display: "flex",
-                        gap: 1,
-                        mt: 1,
-                        flexWrap: "wrap"
-                    }}
-                >
+                <Box sx={{ display: "flex", gap: 1, mt: 1, flexWrap: "wrap" }}>
 
-                    <Tooltip title="Number of strategies">
-                        <Chip size="small" label={`📦 ${strategies.length}`} />
-                    </Tooltip>
+                    <Chip size="small" label={`📦 ${strategyCount}`} />
 
-                    <Tooltip title="Mode">
-                        <Chip size="small" label={`⚙ ${mode}`} />
-                    </Tooltip>
+                    <Chip size="small" label={`⚙ ${portfolioMode}`} />
 
-                    <Tooltip title={schedule_signal.value ? schedule_signal.value : "Schedule Signal"}>
+                    <Chip
+                        size="small"
+                        color={scheduleEnabled ? (scheduleValue ? "success" : "warning") : "default"}
+                        label={
+                            scheduleEnabled
+                                ? (scheduleValue ? `⚡ ${scheduleValue}` : "⚡ Schedule")
+                                : "❌ Schedule"
+                        }
+                    />
+
+                    {portfolioMode === "signal_strategy" && (
+                        <>
+                            <Chip
+                                size="small"
+                                label={`🔗 ${strategyOp.value}`}
+                                color={strategyOp.enabled ? "success" : "default"}
+                            />
+
+                            <Chip
+                                size="small"
+                                label={`🔗 [${voteWeights.value}]`}
+                                color={voteWeights.enabled ? "success" : "default"}
+                            />
+                        </>
+                    )}
+
+                    {portfolioMode === "weight_strategy" && (
                         <Chip
                             size="small"
-                            color={schedule_signal.enabled ? (schedule_signal.value ? "success" : "warning") : 
-                                "default"}
-                            label={schedule_signal.enabled ? (schedule_signal.value ? `⚡ Schedule Signal: ${schedule_signal.value}` : "⚡ Schedule Signal") 
-                                : "❌ Schedule Signal"}
+                            label={`🔗 [${strategyWeights.value}]`}
+                            color={strategyWeights.enabled ? "success" : "default"}
                         />
-                    </Tooltip>
+                    )}
 
-                    {/* {mode === "signal_strategy" && strategy_op.enabled && ( */}
-                    {mode === "signal_strategy" 
-                        && (
-                            <Tooltip title="Vote Weights">
-                                <Chip 
-                                    size="small" 
-                                    color={
-                                        vote_weights.enabled 
-                                            ? (vote_weights.value.length > 0 ? "success" :"warning")
-                                            : "default"
-                                    }
-                                    label={vote_weights.enabled ? `🔗 Vote Weights: [${vote_weights.value}]` : '🔗 Vote Weights'} />
-                            </Tooltip>
-                        )
-                    }
-                    {mode === "signal_strategy" 
-                        && (
-                            <Tooltip title="Strategy Operation">
-                                <Chip 
-                                    size="small" 
-                                    color={
-                                        strategy_op.enabled 
-                                            ? (strategy_op.value === "OR" ? "success" : "warning") 
-                                            : "default"
-                                    }
-                                    label={`🔗 Strategy OP: ${strategy_op.value}`} />
-                            </Tooltip>
-                        )
-                    }
-
-                    {mode === "weight_strategy" 
-                        && (
-                            <Tooltip title="Strategy Weights">
-                                <Chip 
-                                    size="small" 
-                                    color={
-                                        strategy_weights.enabled 
-                                            ? (strategy_weights.value.length > 0 ? "success" :"warning")
-                                            : "default"
-                                    }
-                                    label={strategy_weights.enabled ? `🔗 Strategy Weights: [${strategy_weights.value}]` : '🔗 Strategy Weights'} />
-                            </Tooltip>
-                        )
-                    }
-
-                    <Tooltip title="Frequency">
-                        <Chip size="small" label={`🕒 ${params.freq}`} />
-                    </Tooltip>
-
-                    <Tooltip title="Initial Cash">
-                        <Chip size="small" label={`💰 ${params.init_cash}`} />
-                    </Tooltip>
+                    <Chip size="small" label={`🕒 ${freq}`} />
+                    <Chip size="small" label={`💰 ${initCash}`} />
 
                 </Box>
             </Box>
@@ -157,199 +139,157 @@ export default function PortfolioPanel() {
             {/* ================= Strategy ================= */}
             <Stack spacing={2}>
 
+                {/* ✅ 已经隔离 */}
                 <StrategyList />
 
                 {/* ================= Schedule Signal ================= */}
-                {/* <SignalEditor
-                    value={schedule_signal.value}
-                    enabled={schedule_signal.enabled}
-                    onChange={(v: string) =>
-                        setScheduleSignal({ ...schedule_signal, value: v })
-                    }
-                    onToggle={() =>
-                        setScheduleSignal({
-                            ...schedule_signal,
-                            enabled: !schedule_signal.enabled
-                        })
-                    }
-                    onVisual={() =>
-                        openDialog({
-                            open: true,
-                            type: "schedule_signal"
-                        })
-                    }
-                    nodes={nodes}
-                /> */}
-
-                <Box
-                    sx={{
-                        position: 'relative',
-                        border: '1px solid rgba(255, 255, 255, 0.23)', // 标准 MUI 边框色
-                        borderRadius: 1,
-                        p: 2,    // 内部间距
-                        pt: 2.5,  // 顶部留出空间给标题
-                        mt: 2    // 外部间距
-                    }}
-                >
-                    {/* 标题部分 */}
-                    <Typography
-                        variant="caption"
-                        sx={{
-                            position: 'absolute',
-                            top: -10,        // 向上偏移一半
-                            left: 12,        // 左右边距
-                            bgcolor: '#1e1e1e', // 必须设置为与背景相同的颜色，用于遮挡后面的边框线
-                            px: 0.5,         // 文字左右的小垫片
-                            color: 'text.secondary',
-                            fontSize: '0.75rem'
-                        }}
-                    >
-                        Schedule Signal
-                    </Typography>
+                <Box sx={{ border: '1px solid rgba(255,255,255,0.2)', borderRadius: 1, p: 2 }}>
+                    <Typography variant="caption">Schedule Signal</Typography>
 
                     <SignalEditor
-                        value={schedule_signal.value}
-                        enabled={schedule_signal.enabled}
-                        onChange={(v: string) => setScheduleSignal({ ...schedule_signal, value: v })}
-                        onToggle={() => setScheduleSignal({ ...schedule_signal, enabled: !schedule_signal.enabled })}
-                        onVisual={() => openDialog({ open: true, type: "schedule_signal" })}
+                        value={scheduleValue}
+                        enabled={scheduleEnabled}
+
+                        onChange={(v: string) => {
+                            // ✅ 没有 signalId → 先创建
+                            if (!scheduleSignalId) {
+                                const id = createSignal(v)
+
+                                setScheduleSignal({
+                                    signalId: id,
+                                    enabled: true
+                                })
+                            } else {
+                                updateSignal(scheduleSignalId, v)
+                            }
+                        }}
+
+                        onToggle={() =>
+                            setScheduleSignal({ enabled: !scheduleEnabled })
+                        }
+
+                        onVisual={() =>
+                            openDialog("schedule_signal", scheduleSignalId)
+                        }
+
                         nodes={nodes}
                     />
                 </Box>
 
-                {/* ================= Signal Mode Config ================= */}
-                {mode === "signal_strategy" && (
-                <Stack spacing={1}>
+{/* ================= Portfolio Config ================= */}
+{portfolioMode === "signal_strategy" && (
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
 
-                    {/* ===== Strategy OP ===== */}
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        {/* ================= Strategy OP ================= */}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
 
-                    <Switch
-                        checked={strategy_op.enabled}
-                        onChange={() =>
-                        useBacktestStore.setState({
-                            strategy_op: {
-                                ...strategy_op,
-                                enabled: !strategy_op.enabled
-                            }
-                        })
-                        }
-                    />
+            <Switch
+                checked={strategyOp.enabled}
+                onChange={() =>
+                    setStrategyOp({
+                        enabled: !strategyOp.enabled
+                    })
+                }
+            />
 
-                    <Typography sx={{ width: 180 }}>
-                        Enable Strategy OP
-                    </Typography>
+            <Typography sx={{ width: 180 }}>
+                Strategy OP
+            </Typography>
 
-                    <Select
-                        size="small"
-                        value={strategy_op.value}
-                        disabled={!strategy_op.enabled}   // ⭐关键
-                        sx={{ width: 120 }}
-                        onChange={(e) =>
-                            useBacktestStore.setState({
-                                strategy_op: {
-                                    ...strategy_op,
-                                    value: e.target.value as any
-                                }
-                            })
-                        }
-                    >
-                        <MenuItem value="AND">AND</MenuItem>
-                        <MenuItem value="OR">OR</MenuItem>
-                    </Select>
+            <Select
+                size="small"
+                value={strategyOp.value}
+                disabled={!strategyOp.enabled}
+                sx={{ width: 120 }}
+                onChange={(e) =>
+                    setStrategyOp({
+                        value: e.target.value as any
+                    })
+                }
+            >
+                <MenuItem value="AND">AND</MenuItem>
+                <MenuItem value="OR">OR</MenuItem>
+            </Select>
 
-                    </Box>
+        </Box>
 
-                    {/* ===== Vote Weights ===== */}
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        {/* ================= Vote Weights ================= */}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
 
-                    <Switch
-                        checked={vote_weights.enabled}
-                        onChange={() =>
-                            useBacktestStore.setState({
-                                vote_weights: {
-                                    ...vote_weights,
-                                    enabled: !vote_weights.enabled
-                                }
-                        })
-                        }
-                    />
+            <Switch
+                checked={voteWeights.enabled}
+                onChange={() =>
+                    setVoteWeights({
+                        enabled: !voteWeights.enabled
+                    })
+                }
+            />
 
-                    <Typography sx={{ width: 180 }}>
-                        Enable Vote Weights
-                    </Typography>
+            <Typography sx={{ width: 180 }}>
+                Vote Weights
+            </Typography>
 
-                    <TextField
-                        size="small"
-                        placeholder="0.5,0.5"
-                        value={vote_weights.value.join(",")}
-                        disabled={!vote_weights.enabled}   // ⭐关键
-                        sx={{ flex: 1, maxWidth: 200 }}
-                        onChange={(e) =>
-                            useBacktestStore.setState({
-                                vote_weights: {
-                                    ...vote_weights,
-                                    value: parseArray(e.target.value)
-                                }
-                            })
-                        }
-                    />
+            <TextField
+                size="small"
+                value={voteWeights.value.join(",")}
+                disabled={!voteWeights.enabled}
+                sx={{ flex: 1, maxWidth: 200 }}
+                onChange={(e) =>
+                    setVoteWeights({
+                        value: e.target.value
+                            .split(",")
+                            .map(x => Number(x.trim()))
+                            .filter(x => !isNaN(x))
+                    })
+                }
+            />
 
-                    </Box>
+        </Box>
+    </Box>
+)}
 
-                </Stack>
-                )}
+{portfolioMode === "weight_strategy" && (
+    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
 
-                {/* ================= Weight Mode Config ================= */}
-                {mode === "weight_strategy" && (
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <Switch
+            checked={strategyWeights.enabled}
+            onChange={() =>
+                setStrategyWeights({
+                    enabled: !strategyWeights.enabled
+                })
+            }
+        />
 
-                    <Switch
-                    checked={strategy_weights.enabled}
-                    onChange={() =>
-                        useBacktestStore.setState({
-                        strategy_weights: {
-                            ...strategy_weights,
-                            enabled: !strategy_weights.enabled
-                        }
-                        })
-                    }
-                    />
+        <Typography sx={{ width: 180 }}>
+            Strategy Weights
+        </Typography>
 
-                    <Typography sx={{ width: 180 }}>
-                    Enable Strategy Weights
-                    </Typography>
+        <TextField
+            size="small"
+            value={strategyWeights.value.join(",")}
+            disabled={!strategyWeights.enabled}
+            sx={{ flex: 1 }}
+            onChange={(e) =>
+                setStrategyWeights({
+                    value: e.target.value
+                        .split(",")
+                        .map(x => Number(x.trim()))
+                        .filter(x => !isNaN(x))
+                })
+            }
+        />
 
-                    <TextField
-                    size="small"
-                    placeholder="0.3,0.7"
-                    value={strategy_weights.value.join(",")}
-                    disabled={!strategy_weights.enabled}   // ⭐关键
-                    sx={{ flex: 1 }}
-                    onChange={(e) =>
-                        useBacktestStore.setState({
-                        strategy_weights: {
-                            ...strategy_weights,
-                            value: parseArray(e.target.value)
-                        }
-                        })
-                    }
-                    />
-
-                </Box>
-                )}
+    </Box>
+)}
 
                 {/* ================= Params ================= */}
                 <Stack direction="row" spacing={1}>
-
                     <TextField
                         size="small"
                         label="Freq"
-                        value={params.freq}
+                        value={freq}
                         onChange={(e) =>
-                            useBacktestStore.setState({
-                                params: { ...params, freq: e.target.value }
-                            })
+                            updatePortfolioParams({ freq: e.target.value })
                         }
                     />
 
@@ -357,14 +297,11 @@ export default function PortfolioPanel() {
                         size="small"
                         label="Init Cash"
                         type="number"
-                        value={params.init_cash}
+                        value={initCash}
                         onChange={(e) =>
-                            useBacktestStore.setState({
-                                params: { ...params, init_cash: Number(e.target.value) }
-                            })
+                            updatePortfolioParams( { init_cash: Number(e.target.value) })
                         }
                     />
-
                 </Stack>
 
             </Stack>

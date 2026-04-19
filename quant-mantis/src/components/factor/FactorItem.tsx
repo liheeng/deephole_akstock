@@ -1,49 +1,66 @@
 // components/factor/FactorItem.tsx
-import React, { useCallback } from "react";
-import { Box, IconButton } from "@mui/material";
-import DSLInput from "../dsl/DSLInput";
-import SettingsIcon from "@mui/icons-material/Settings";
-import AddIcon from "@mui/icons-material/Add";
-import DeleteIcon from "@mui/icons-material/Delete";
-import { useBacktestStore } from "../../store/backtest.store";
+
+import React, { useCallback } from "react"
+import { Box, IconButton } from "@mui/material"
+import DSLInput from "../dsl/DSLInput"
+
+import SettingsIcon from "@mui/icons-material/Settings"
+import AddIcon from "@mui/icons-material/Add"
+import DeleteIcon from "@mui/icons-material/Delete"
+
+import { useFactorStore } from "../../store/backtest/factor.store"
+import { useStrategyStore } from "../../store/backtest/strategy.store"
+import { useDialogStore } from "../../store/uiDialog.store"
 
 const FactorItem = React.memo(({
-    strategyIndex,
-    factorIndex,
-    factor,
+    strategyId,
+    factorId,
     isLast,
     canDelete
 }: any) => {
-    // ✅ 直接从 store 中提取稳定的 Action 引用
-    const updateFactor = useBacktestStore(s => s.updateFactor);
-    const addFactor = useBacktestStore(s => s.addFactor);
-    const deleteFactor = useBacktestStore(s => s.deleteFactor);
-    const openDialog = useBacktestStore(s => s.openDialog);
 
-    // ✅ 这里的 handleChange 引用现在是永久稳定的
+    // ===== state =====
+    const factor = useFactorStore(s => s.factors[factorId])
+
+    // ===== actions =====
+    const updateFactor = useFactorStore(s => s.updateFactor)
+    const createFactor = useFactorStore(s => s.createFactor)
+
+    const addFactorToStrategy = useStrategyStore(s => s.addFactorToStrategy)
+    const removeFactorFromStrategy = useStrategyStore(s => s.removeFactorFromStrategy)
+
+    const openDialog = useDialogStore(s => s.openDialog)
+
+    // =========================
+    // handlers
+    // =========================
+
     const handleChange = useCallback((v: string) => {
-        updateFactor(strategyIndex, factorIndex, v);
-    }, [strategyIndex, factorIndex, updateFactor]);
+        updateFactor(factorId, v)
+    }, [factorId, updateFactor])
 
-    // ✅ 按钮逻辑也改为内部处理，避免父组件传递匿名函数
     const handleAdd = useCallback(() => {
-        addFactor(strategyIndex, factorIndex);
-    }, [strategyIndex, factorIndex, addFactor]);
+        const newId = createFactor()
+        addFactorToStrategy(strategyId, newId)
+    }, [strategyId, createFactor, addFactorToStrategy])
 
     const handleDelete = useCallback(() => {
-        deleteFactor(strategyIndex, factorIndex);
-    }, [strategyIndex, factorIndex, deleteFactor]);
+        removeFactorFromStrategy(strategyId, factorId)
+    }, [strategyId, factorId, removeFactorFromStrategy])
 
     const handleOpenSettings = useCallback(() => {
-        openDialog({
-            type: "factor",
-            strategyIndex,
-            factorIndex
-        });
-    }, [strategyIndex, factorIndex, openDialog]);
+        openDialog("factor", factor)
+    }, [factorId, openDialog])
+
+    // =========================
+    // render
+    // =========================
+
+    if (!factor) return null
 
     return (
         <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+
             <Box sx={{ flex: 1 }}>
                 <DSLInput
                     value={factor.expr}
@@ -62,8 +79,9 @@ const FactorItem = React.memo(({
             <IconButton onClick={handleDelete} disabled={!canDelete}>
                 <DeleteIcon />
             </IconButton>
-        </Box>
-    );
-});
 
-export default FactorItem;
+        </Box>
+    )
+})
+
+export default FactorItem

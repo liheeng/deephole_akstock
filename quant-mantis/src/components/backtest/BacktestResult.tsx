@@ -1,17 +1,17 @@
 import { Card, Button, Box } from "@mui/material"
 import ReactECharts from "echarts-for-react"
 import TradesTable from "./TradesTable"
-import { useBacktestResultStore } from "../../store/backtest.store"
-import { useRef, useState } from "react"
+import { useBacktestResultStore } from "../../store/backtestresult.store"
+import { useRef, useState, useMemo } from "react"
 import UniDataGrid from "../table/UniDataGrid"
-// import { shallow } from 'zustand/shallow'
-export default function BacktestResult({ runBacktest }: any) {
-    // const backtestResult = useBacktestStore(state => state.backtestResult)
-    
+import type { GridColDef } from '@mui/x-data-grid'
 
-    const equity = useBacktestResultStore(state => state.backtestResult.equity)
-    const stats = useBacktestResultStore(state => state.backtestResult.stats)
-    const trades = useBacktestResultStore(state => state.backtestResult.trades)
+export default function BacktestResult({ runBacktest }: any) {
+
+    // ✅ 完全独立订阅（不会互相影响）
+    const equity = useBacktestResultStore(s => s.equity)
+    const stats = useBacktestResultStore(s => s.stats)
+    const trades = useBacktestResultStore(s => s.trades)
 
     const [topHeight, setTopHeight] = useState(50)
     const containerRef = useRef<HTMLDivElement>(null)
@@ -35,30 +35,48 @@ export default function BacktestResult({ runBacktest }: any) {
     }
 
     // ==================
-    // 统计表格：表头居中，内容左对齐
+    // stats → rows（useMemo 防抖）
     // ==================
-    const statColumns = [
+    const statRows = useMemo(() => {
+        return Object.entries(stats).map(([k, v], index) => ({
+            id: index,
+            name: k,
+            value: typeof v === "number" ? v.toFixed(4) : String(v),
+        }))
+    }, [stats])
+
+    const statColumns: GridColDef<any>[] = useMemo(() => [
         {
             field: "name",
             headerName: "Indicator",
             flex: 1,
-            headerAlign: "center", // 表头居中
-            align: "left"          // 内容左对齐
+            headerAlign: "center",
+            align: "left"
         },
         {
             field: "value",
             headerName: "Value",
             flex: 1,
-            headerAlign: "center", // 表头居中
-            align: "left"          // 内容左对齐
+            headerAlign: "center",
+            align: "left"
         }
-    ]
+    ], [])
 
-    const statRows = Object.entries(stats).map(([k, v], index) => ({
-        id: index,
-        name: k,
-        value: typeof v === "number" ? v.toFixed(4) : String(v),
-    }))
+    // ==================
+    // chart option（避免重复创建）
+    // ==================
+    const chartOption = useMemo(() => ({
+        tooltip: { trigger: "axis" },
+        xAxis: { type: "category", data: equity.map((_, i) => i) },
+        yAxis: { type: "value", scale: true },
+        series: [{
+            name: "Equity",
+            type: "line",
+            smooth: true,
+            showSymbol: false,
+            data: equity
+        }]
+    }), [equity])
 
     return (
         <Card
@@ -78,33 +96,22 @@ export default function BacktestResult({ runBacktest }: any) {
                 Run Backtest
             </Button>
 
-            {/* 上半部分：左图表 右统计表格 */}
+            {/* 上半 */}
             <Box sx={{
                 display: "flex",
                 gap: 2,
                 height: `${topHeight}%`,
                 minHeight: 200
             }}>
-                {/* 左侧 2/3 图表 */}
+                {/* 图表 */}
                 <Box sx={{ flex: 2, height: "100%" }}>
                     <ReactECharts
-                        option={{
-                            tooltip: { trigger: "axis" },
-                            xAxis: { type: "category", data: equity.map((_, i) => i) },
-                            yAxis: { type: "value", scale: true },
-                            series: [{
-                                name: "Equity",
-                                type: "line",
-                                smooth: true,
-                                showSymbol: false,
-                                data: equity
-                            }]
-                        }}
+                        option={chartOption}
                         style={{ height: "100%" }}
                     />
                 </Box>
 
-                {/* 右侧 1/3 双列表格 */}
+                {/* stats */}
                 <Box sx={{ flex: 1, height: "100%" }}>
                     <UniDataGrid
                         rows={statRows}
@@ -134,7 +141,7 @@ export default function BacktestResult({ runBacktest }: any) {
                 }}
             />
 
-            {/* 下半部分：交易表格 */}
+            {/* trades */}
             <Box sx={{ flex: 1, overflow: "auto" }}>
                 <TradesTable trades={trades} />
             </Box>

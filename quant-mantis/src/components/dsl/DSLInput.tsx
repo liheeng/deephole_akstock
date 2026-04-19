@@ -14,7 +14,19 @@ import {
 } from "@mui/material";
 import { NodeRegistry } from "../../model/dsl_node/node_registry";
 
-interface DSLInputProps {
+// interface DSLInputProps {
+//     value: string;
+//     onChange: (v: string) => void;
+//     onConfirm?: (v: string) => void;
+//     onCancel?: () => void;
+//     placeholder?: string;
+//     fullWidth?: boolean;
+// }
+
+import type { TextFieldProps } from "@mui/material";
+
+// 👇 正确写法：Omit 掉 TextField 自带的 onChange，避免冲突
+interface DSLInputProps extends Omit<TextFieldProps, 'onChange' | 'value'> {
     value: string;
     onChange: (v: string) => void;
     onConfirm?: (v: string) => void;
@@ -29,7 +41,9 @@ export default function DSLInput({
     onConfirm,
     onCancel,
     placeholder,
-    fullWidth = true
+    fullWidth = true,
+    // 👇 收集所有剩下的原生 TextField 属性
+    ...restProps
 }: DSLInputProps) {
     const inputRef = useRef<HTMLInputElement>(null);
     const [open, setOpen] = useState(false);
@@ -147,6 +161,8 @@ export default function DSLInput({
         <ClickAwayListener onClickAway={() => setOpen(false)}>
             <div style={{ width: fullWidth ? "100%" : undefined }}>
                 <TextField
+                    // 👇 原生属性全部透传
+                    {...restProps}
                     fullWidth
                     inputRef={inputRef}
                     value={value}
