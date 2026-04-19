@@ -1,15 +1,17 @@
 import { Card, Button, Box } from "@mui/material"
 import ReactECharts from "echarts-for-react"
 import TradesTable from "./TradesTable"
-import { useBacktestStore } from "../../store/backtest.store"
+import { useBacktestResultStore } from "../../store/backtest.store"
 import { useRef, useState } from "react"
 import UniDataGrid from "../table/UniDataGrid"
-
+// import { shallow } from 'zustand/shallow'
 export default function BacktestResult({ runBacktest }: any) {
-    const backtestResult = useBacktestStore(state => state.backtestResult)
-    const equity = backtestResult?.equity || []
-    const stats = backtestResult?.stats || {}
-    const trades = backtestResult?.trades || []
+    // const backtestResult = useBacktestStore(state => state.backtestResult)
+    
+
+    const equity = useBacktestResultStore(state => state.backtestResult.equity)
+    const stats = useBacktestResultStore(state => state.backtestResult.stats)
+    const trades = useBacktestResultStore(state => state.backtestResult.trades)
 
     const [topHeight, setTopHeight] = useState(50)
     const containerRef = useRef<HTMLDivElement>(null)

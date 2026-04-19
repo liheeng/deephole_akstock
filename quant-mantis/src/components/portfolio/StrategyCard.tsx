@@ -26,13 +26,12 @@ export default function StrategyCard({ index, strategy }: any) {
     // const nodes = useNodes()
     const nodes = NodeRegistry.toDict()
 
-    const {
-        updateStrategy,
-        removeStrategy, // 从 store 中获取删除方法
-        openDialog,
-    } = useBacktestStore();
+    const updateStrategy = useBacktestStore(state => state.updateStrategy)
+    const removeStrategy = useBacktestStore(state => state.removeStrategy)
+    const openDialog = useBacktestStore(state => state.openDialog)
 
-    const factorCount = strategy.factors?.length || 0;
+    // const factorCount = strategy.factors?.length || 0;
+    const factorCount = 0;
     const hasSignal = strategy.signal_enabled;
 
     // ===== 更新函数 =====

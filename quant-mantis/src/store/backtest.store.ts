@@ -61,11 +61,7 @@ interface BacktestState {
         factorIndex?: number
     }
 
-    backtestResult: any; // or specify the type of backtestResult
-
     // ===== Actions =====
-    setBacktestResult: (result: any) => void
-
     setPortfolioMode: (mode: PortfolioMode) => void
 
     setParams: (patch: Partial<{ freq: string; init_cash: number }>) => void
@@ -108,6 +104,32 @@ interface BacktestState {
     buildPayload: () => any
 }
 
+// 结果类型
+interface BacktestResult {
+    equity: any[];
+    stats: Record<string, any>;
+    trades: any[];
+}
+
+// State 类型
+interface BacktestResultState {
+    backtestResult: BacktestResult; // 类型一定是对象，不能是 null
+    setBacktestResult: (result: BacktestResult) => void;
+}
+
+export const useBacktestResultStore = create<BacktestResultState>((set) => ({
+    // ✅ 关键修复：默认必须给空对象 + 空数组，不能给 null
+    backtestResult: {
+        equity: [],
+        stats: {},
+        trades: [],
+    },
+
+    setBacktestResult: (result) => {
+        set({ backtestResult: result });
+    },
+}));
+
 // =========================
 // Store
 // =========================
@@ -149,13 +171,6 @@ export const useBacktestStore = create<BacktestState>((set, get) => ({
         type: "factor"
     },
 
-    backtestResult: null,
-
-    setBacktestResult: (result: any) => {
-        set({
-            backtestResult: result
-        })
-    },
     // =========================
     // Portfolio
     // =========================
@@ -249,7 +264,7 @@ export const useBacktestStore = create<BacktestState>((set, get) => ({
                     id: `signal_strategy_${uuidv4()}`,
                     name: `strategy_${state.strategies.length + 1}`,
                     strategy_mode: "ts",
-                    factors: [{ id: 'factor_' +uuidv4(), added: false, expr: "" }],
+                    factors: [{ id: 'factor_' + uuidv4(), added: false, expr: "" }],
                     signal: { enabled: false, value: "" },
                     threshold: { enabled: false, value: 0.5 },
                     top_n: { enabled: false, value: 10 },
@@ -260,7 +275,7 @@ export const useBacktestStore = create<BacktestState>((set, get) => ({
                     id: `weight_strategy_${uuidv4()}`,
                     name: `strategy_${state.strategies.length + 1}`,
                     strategy_mode: "cs",
-                    factors: [{ id: 'factor_' +uuidv4(), added: false, expr: "" }],
+                    factors: [{ id: 'factor_' + uuidv4(), added: false, expr: "" }],
                     signal: { enabled: false, value: "" },
                     threshold: { enabled: false, value: 0.5 },
                     top_n: { enabled: false, value: 10 },
@@ -354,9 +369,9 @@ export const useBacktestStore = create<BacktestState>((set, get) => ({
             const factors = next[strategyIndex].factors
 
             if (afterIndex === undefined) {
-                factors.push({ id: 'factor_' +uuidv4(), added: true, expr: "" })
+                factors.push({ id: 'factor_' + uuidv4(), added: true, expr: "" })
             } else {
-                factors.splice(afterIndex + 1, 0, { id: 'factor_' +uuidv4(), added: true, expr: "" })
+                factors.splice(afterIndex + 1, 0, { id: 'factor_' + uuidv4(), added: true, expr: "" })
             }
 
             return { strategies: next }

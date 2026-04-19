@@ -9,14 +9,15 @@ import TopToolbar from "../components/layout/TopToolbar"
 import PortfolioPanel from "../components/portfolio/PortfolioPanel"
 import BacktestResult from "../components/backtest/BacktestResult"
 import StrategyGraph from "../components/backtest/StrategyGraph"
-import { useBacktestStore } from "../store/backtest.store"
+import { useBacktestStore, useBacktestResultStore } from "../store/backtest.store"
 import GlobalDialogs from "../components/dsl/GlobalEditorDialog"
 import { callBacktest } from "../api/Client";
 
 
 
 export default function BacktestPage() {
-    const { buildPayload, setBacktestResult } = useBacktestStore()
+    const buildPayload = useBacktestStore((state) => state.buildPayload)
+    const setBacktestResult = useBacktestResultStore((state) => state.setBacktestResult)
     // const nodes = useNodes()
     const nodes = NodeRegistry.toDict()
 
