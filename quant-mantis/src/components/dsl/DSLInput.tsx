@@ -14,18 +14,8 @@ import {
 } from "@mui/material";
 import { NodeRegistry } from "../../model/dsl_node/node_registry";
 
-// interface DSLInputProps {
-//     value: string;
-//     onChange: (v: string) => void;
-//     onConfirm?: (v: string) => void;
-//     onCancel?: () => void;
-//     placeholder?: string;
-//     fullWidth?: boolean;
-// }
-
 import type { TextFieldProps } from "@mui/material";
 
-// 👇 正确写法：Omit 掉 TextField 自带的 onChange，避免冲突
 interface DSLInputProps extends Omit<TextFieldProps, 'onChange' | 'value'> {
     value: string;
     onChange: (v: string) => void;
@@ -42,7 +32,6 @@ export default function DSLInput({
     onCancel,
     placeholder,
     fullWidth = true,
-    // 👇 收集所有剩下的原生 TextField 属性
     ...restProps
 }: DSLInputProps) {
     const inputRef = useRef<HTMLInputElement>(null);
@@ -51,12 +40,10 @@ export default function DSLInput({
     const [filtered, setFiltered] = useState<string[]>([]);
     const [selectedIndex, setSelectedIndex] = useState(0);
 
-    // 获取所有可用的函数列表
     const allFunctions = useMemo(() => 
         Object.values(NodeRegistry.listGroups()).flatMap(g => g), 
     []);
 
-    // 辅助函数：格式化显示名称 (Name + Parameters)
     const formatFunctionName = (name: string) => {
         const meta = NodeRegistry.getMeta(name);
         if (!meta) return name;
@@ -68,7 +55,6 @@ export default function DSLInput({
         return `${name}(${params.join(", ")})`;
     };
 
-    // 获取当前输入光标前的单词前缀
     const getPrefix = () => {
         if (!inputRef.current) return "";
         const caret = inputRef.current.selectionStart || 0;
@@ -87,7 +73,6 @@ export default function DSLInput({
             setOpen(suggestions.length > 0);
             setSelectedIndex(0);
         } else {
-            // 如果没有前缀，可以决定是否关闭，或者展示全部（类似图2下拉效果）
             setOpen(false);
         }
     };
@@ -95,7 +80,6 @@ export default function DSLInput({
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const v = e.target.value;
         onChange(v);
-        // 在 state 更新后异步获取最新前缀，或直接根据新值判断
         setTimeout(() => updateSuggestions(v), 0);
     };
 
@@ -105,7 +89,6 @@ export default function DSLInput({
         const meta = NodeRegistry.getMeta(name);
         let insertText = name;
 
-        // 构建带参数的插入文本
         if (meta) {
             const params = meta.params.map(p =>
                 p.default !== null && p.default !== undefined
@@ -122,7 +105,6 @@ export default function DSLInput({
         const newValue = before + insertText + after;
         onChange(newValue);
 
-        // 处理光标定位：定位到第一个参数后面
         requestAnimationFrame(() => {
             const firstParamPos = insertText.indexOf("=") + 1;
             const pos = firstParamPos > 0
@@ -161,7 +143,6 @@ export default function DSLInput({
         <ClickAwayListener onClickAway={() => setOpen(false)}>
             <div style={{ width: fullWidth ? "100%" : undefined }}>
                 <TextField
-                    // 👇 原生属性全部透传
                     {...restProps}
                     fullWidth
                     inputRef={inputRef}
@@ -169,15 +150,24 @@ export default function DSLInput({
                     onChange={handleChange}
                     onKeyDown={handleKeyDown}
                     onFocus={() => {
-                        // 如果想在点击时就显示全部，可以调用 updateSuggestions
                         if (value.length === 0) {
-                             setFiltered(allFunctions.slice(0, 10)); // 展示前10个作为参考
+                             setFiltered(allFunctions.slice(0, 10));
                              setAnchorEl(inputRef.current?.parentElement as HTMLElement | null);
                              setOpen(true);
                         }
                     }}
                     placeholder={placeholder}
                     autoComplete="off"
+                    // 👇 核心修改：调整字体大小
+                    sx={{
+                        "& .MuiInputBase-input": {
+                            fontSize: "1rem", // 输入文字大小
+                        },
+                        "& .MuiInputBase-input::placeholder": {
+                            fontSize: "1rem", // 占位符文字大小
+                            opacity: 0.7,
+                        }
+                    }}
                 />
 
                 <Popper
@@ -190,7 +180,7 @@ export default function DSLInput({
                         elevation={3}
                         sx={{
                             mt: 1,
-                            width: 380, // 适当加宽以容纳长参数
+                            width: 380,
                             maxHeight: 300,
                             overflowY: "auto",
                             borderRadius: 2
@@ -215,7 +205,7 @@ export default function DSLInput({
                                                     "& .MuiListItemText-primary": {
                                                         fontSize: 14,
                                                         fontWeight: 600,
-                                                        fontFamily: "Monospace", // 使用等宽字体更有代码感
+                                                        fontFamily: "Monospace",
                                                         color: "primary.main"
                                                     },
                                                     "& .MuiListItemText-secondary": {

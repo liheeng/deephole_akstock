@@ -9,7 +9,7 @@ import DeleteIcon from "@mui/icons-material/Delete"
 
 import { useFactorStore } from "../../store/backtest/factor.store"
 import { useStrategyStore } from "../../store/backtest/strategy.store"
-import { useDialogStore } from "../../store/uiDialog.store"
+import { useDialogStore } from "../../store/dialog.store"
 
 const FactorItem = React.memo(({
     strategyId,

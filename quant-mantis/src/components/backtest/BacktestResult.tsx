@@ -1,7 +1,7 @@
 import { Card, Button, Box } from "@mui/material"
 import ReactECharts from "echarts-for-react"
 import TradesTable from "./TradesTable"
-import { useBacktestResultStore } from "../../store/backtestresult.store"
+import { useBacktestResultStore } from "../../store/backtest/backtestresult.store"
 import { useRef, useState, useMemo } from "react"
 import UniDataGrid from "../table/UniDataGrid"
 import type { GridColDef } from '@mui/x-data-grid'

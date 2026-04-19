@@ -21,7 +21,7 @@ import SignalEditor from "../signal/SignalEditor"
 
 import { useStrategyStore } from "../../store/backtest/strategy.store"
 import { useSignalStore } from "../../store/backtest/signal.store"
-import { useDialogStore } from "../../store/uiDialog.store"
+import { useDialogStore } from "../../store/dialog.store"
 
 import { NodeRegistry } from "../../model/dsl_node/node_registry"
 

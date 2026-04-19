@@ -1,6 +1,6 @@
 import VisualEditorDialog from "../visual/VisualEditorDialog"
 
-import { useDialogStore } from "../../store/uiDialog.store"
+import { useDialogStore } from "../../store/dialog.store"
 
 import { useFactorStore } from "../../store/backtest/factor.store"
 import { useSignalStore } from "../../store/backtest/signal.store"

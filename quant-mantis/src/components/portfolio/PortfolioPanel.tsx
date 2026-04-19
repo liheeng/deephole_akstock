@@ -13,7 +13,7 @@ import {
 
 import { useSignalStore } from "../../store/backtest/signal.store"
 import { useStrategyStore } from "../../store/backtest/strategy.store"
-import { useDialogStore } from "../../store/uiDialog.store"
+import { useDialogStore } from "../../store/dialog.store"
 import { useBacktestStore } from "../../store/backtest/backtest.store"
 import StrategyList from "./StrategyList"
 import SignalEditor from "../signal/SignalEditor"

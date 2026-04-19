@@ -58,15 +58,17 @@ export default function SignalEditor({
                 />
 
                 {/* placeholder */}
+                {/* placeholder (字体更大更清晰) */}
                 {!value && (
                     <Typography
-                        variant="caption"
                         sx={{
                             position: "absolute",
-                            top: 8,
-                            left: 8,
-                            opacity: 0.4,
-                            pointerEvents: "none"
+                            top: 12,
+                            left: 12,
+                            opacity: 0.5,
+                            pointerEvents: "none",
+                            fontSize: "1rem",      /* 变大 */
+                            lineHeight: 1.5,
                         }}
                     >
                         {type === "schedule_signal"

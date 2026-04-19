@@ -35,7 +35,7 @@ const theme = createTheme({
 
 const menuItems = [
     { text: '仪表盘', icon: <DashboardOutlined />, path: '/' },
-    { text: '回测系统', icon: <AnalyticsOutlined />, path: '/backtest' },
+    { text: '回测管理', icon: <AnalyticsOutlined />, path: '/backtest' },
     { text: '同步日线数据', icon: <StorageOutlined />, path: '/sync_daily' },
     { text: 'SQL执行器', icon: <StorageOutlined />, path: '/sql_executor' },
     { text: '任务监视', icon: <AssignmentOutlined />, path: '/tasks_monitor' },
