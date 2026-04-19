@@ -1,5 +1,4 @@
 // components/factor/FactorItem.tsx
-
 import React, { useCallback } from "react"
 import { Box, IconButton } from "@mui/material"
 import DSLInput from "../dsl/DSLInput"
@@ -19,10 +18,14 @@ const FactorItem = React.memo(({
     canDelete
 }: any) => {
 
-    // ===== state =====
+    // =========================
+    // state
+    // =========================
     const factor = useFactorStore(s => s.factors[factorId])
 
-    // ===== actions =====
+    // =========================
+    // actions
+    // =========================
     const updateFactor = useFactorStore(s => s.updateFactor)
     const createFactor = useFactorStore(s => s.createFactor)
 
@@ -49,17 +52,23 @@ const FactorItem = React.memo(({
     }, [strategyId, factorId, removeFactorFromStrategy])
 
     const handleOpenSettings = useCallback(() => {
-        openDialog("factor", factor)
-    }, [factorId, openDialog])
+        openDialog("factor",{
+            strategyId,
+            factorId
+        })
+    }, [strategyId, factorId, openDialog])
+
+    // =========================
+    // guard
+    // =========================
+    if (!factor) return null
 
     // =========================
     // render
     // =========================
-
-    if (!factor) return null
-
     return (
-        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+        /* 👇 只改了这里：gap 从 1 → 0.5，让图标更紧凑 */
+        <Box sx={{ display: "flex", gap: 0, alignItems: "center" }}>
 
             <Box sx={{ flex: 1 }}>
                 <DSLInput

@@ -1,5 +1,6 @@
 import { create } from "zustand"
 import { v4 as uuidv4 } from "uuid"
+import { useFactorStore } from "./factor.store"
 
 type StrategyMode = "ts" | "cs"
 
@@ -41,16 +42,19 @@ export const useStrategyStore = create<StrategyState>((set) => ({
     strategies: {},
     strategyIds: [],
 
-    createStrategy: () => {
-        const id = `strategy_${uuidv4()}`
+    
 
+    createStrategy: () => {
+        const { createFactor } = useFactorStore.getState()
+        const factorId = createFactor()
+        const id = `strategy_${uuidv4()}`
         set(state => ({
             strategies: {
                 ...state.strategies,
                 [id]: {
                     id,
                     name: `strategy_${state.strategyIds.length + 1}`,
-                    factorIds: [],
+                    factorIds: [factorId],
                     config: {
                         mode: "ts",
                         threshold: 0.5

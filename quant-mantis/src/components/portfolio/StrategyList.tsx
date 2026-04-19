@@ -7,7 +7,7 @@ export default function StrategyList() {
     const strategyIds = useStrategyStore(s => s.strategyIds)
 
     const addStrategy = useStrategyStore(s => s.createStrategy)
-
+   
     return (
         <Stack spacing={2}>
             {strategyIds.map((id) => (

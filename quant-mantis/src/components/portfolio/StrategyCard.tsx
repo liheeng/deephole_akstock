@@ -77,7 +77,7 @@ export default function StrategyCard({ strategyId }: any) {
         let sid = signalId
 
         if (!sid) {
-            sid = createSignal()
+            sid = createSignal(v)
             setStrategySignal(strategyId, sid)
         }
 
@@ -86,7 +86,7 @@ export default function StrategyCard({ strategyId }: any) {
 
     const handleSignalToggle = useCallback(() => {
         if (!signalId) {
-            const sid = createSignal()
+            const sid = createSignal("")
             setStrategySignal(strategyId, sid)
         } else {
             setStrategySignal(strategyId, undefined as any)
@@ -163,15 +163,63 @@ export default function StrategyCard({ strategyId }: any) {
                     />
 
                     {/* factors */}
-                    <Box>
-                        <Typography variant="caption">Factors</Typography>
+                    <Box
+                        sx={{
+                            gap: 0,
+                            position: 'relative',
+                            border: '1px solid rgba(255, 255, 255, 0.23)', // 标准 MUI 边框色
+                            borderRadius: 1,
+                            p: 2,    // 内部间距
+                            pt: 2.5,  // 顶部留出空间给标题
+                            mt: 2    // 外部间距
+                        }}
+                    >
+
+                        <Typography
+                            variant="caption"
+                            sx={{
+                                position: 'absolute',
+                                top: -10,        // 向上偏移一半
+                                left: 12,        // 左右边距
+                                bgcolor: '#1e1e1e', // 必须设置为与背景相同的颜色，用于遮挡后面的边框线
+                                px: 0.5,         // 文字左右的小垫片
+                                color: 'text.secondary',
+                                fontSize: '0.75rem'
+                            }}
+                        >
+                            Factors
+                        </Typography>
                         <FactorList strategyId={strategyId} />
                     </Box>
 
                     {/* signal */}
-                    <Box>
-                        <Typography variant="caption">Strategy Signal</Typography>
+                    <Box
+                        sx={{
+                            gap: 0,
+                            position: 'relative',
+                            border: '1px solid rgba(255, 255, 255, 0.23)', // 标准 MUI 边框色
+                            borderRadius: 1,
+                            p: 2,    // 内部间距
+                            pt: 2.5,  // 顶部留出空间给标题
+                            mt: 2    // 外部间距
+                        }}
+                    >
 
+                        <Typography
+                            variant="caption"
+                            sx={{
+                                position: 'absolute',
+                                top: -10,        // 向上偏移一半
+                                left: 12,        // 左右边距
+                                bgcolor: '#1e1e1e', // 必须设置为与背景相同的颜色，用于遮挡后面的边框线
+                                px: 0.5,         // 文字左右的小垫片
+                                color: 'text.secondary',
+                                fontSize: '0.75rem'
+                            }}
+                        >
+                            Strategy Signal
+                        </Typography>
+                        
                         <SignalEditor
                             value={signal?.expr || ""}
                             enabled={!!signalId}

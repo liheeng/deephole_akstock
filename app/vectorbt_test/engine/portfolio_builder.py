@@ -79,7 +79,7 @@ class PortfolioBuilder:
         return self
     
     def set_strategy_op(self, op: str):
-        self.strategy_op = StrategyOp(op.lower())
+        self.strategy_op = StrategyOp(op.lower() if op is not None else StrategyOp.OR)
         return self
     
     def set_strategy_weights(self, weights):
