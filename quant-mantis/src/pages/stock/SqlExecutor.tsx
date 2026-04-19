@@ -57,7 +57,7 @@ export const SqlExecutor = () => {
           startIcon={<PlayArrowIcon />}
           onClick={handleRun}
         >
-          执行查询
+          执行
         </Button>
       </MainCard>
 
