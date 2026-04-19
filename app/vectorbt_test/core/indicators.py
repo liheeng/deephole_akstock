@@ -13,7 +13,12 @@ class IndicatorResult:
     def to_series(self):
         if isinstance(self.data, pd.Series):
             return self.data
-        raise TypeError("Not a Series")
+
+        if isinstance(self.data, pd.DataFrame):
+            # 🔥 多股票：直接返回 DataFrame（关键）
+            return self.data
+
+        raise TypeError(f"Unsupported type: {type(self.data)}")
 
     def to_frame(self):
         if isinstance(self.data, pd.DataFrame):
@@ -47,16 +52,23 @@ class Indicator(FeatureNode):
         if return_result:
             return indicator_result   # 👈 保留类型
     
-        if indicator_result.type == NodeDType.NUMERIC:
-            return indicator_result.to_series()
+        # if indicator_result.type == NodeDType.NUMERIC:
+        #     return indicator_result.to_series()
 
-        elif indicator_result.type == NodeDType.FRAME:
-            return indicator_result.to_frame()
+        # elif indicator_result.type == NodeDType.FRAME:
+        #     return indicator_result.to_frame()
 
-        elif indicator_result.type == NodeDType.SIGNAL:
-            return indicator_result.to_signal()
-        else:
-            return raw
+        # elif indicator_result.type == NodeDType.SIGNAL:
+        #     return indicator_result.to_signal()
+        # else:
+        #     return raw
+        out = indicator_result.data
+
+        # 🔥 只做语义校验，不做结构转换
+        if indicator_result.type == NodeDType.SIGNAL:
+            return out.astype(bool)
+
+        return out
     
     def _wrap(self, raw):
         # 自动规范化

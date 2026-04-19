@@ -30,7 +30,7 @@ from sources.ifind.ifind_api import IFinDApi
 from sources.data_source import DataSourceApiName
 
 from vectorbt_test.core.registry import NodeRegistry
-from vectorbt_test.core.portfolio import PortfolioParameters
+from vectorbt_test.core.portfolio import PortfolioParameters, PortfolioWrapper
 from vectorbt_test.engine.data_provider import DataProvider
 from vectorbt_test.engine.portfolio_builder import PortfolioBuilder
 from vectorbt_test.engine.init import load_register_nodes
@@ -175,6 +175,7 @@ class ExportRequest(BaseModel):
     columns: List[str]
     where_sql: Optional[str] = None
     export_format: str = "csv"
+
 
 def validate_sql(sql: str):
     if not sql:
@@ -356,9 +357,10 @@ class PortfolioRequest(BaseModel):
 
 
 def load_data_somehow():
-    from db.stock_daily_util import get_symbol_data
+    from db.stock_daily_util import get_symbol_data, get_symbols_data
     db_controller = DuckDBController(db_path="../data/stock.duckdb")
-    df = get_symbol_data(db_controller, "603259.SH", "2025-01-01", "2026-03-31")
+    df = get_symbols_data(db_controller, "603259.SH, 600362.SH", "2025-01-01", "2026-03-31")
+    # df = get_symbol_data(db_controller, "603259.SH", "2025-01-01", "2026-03-31")
     return df
 
 
@@ -390,7 +392,7 @@ def run_backtest(req: PortfolioRequest):
         df = load_data_somehow()
 
         pf = portfolio.run(DataProvider(None), df)
-
+        pfwrapper = PortfolioWrapper(pf)
         # return {
         #     "stats": pf.stats().to_dict(),
         #     "trades": pf.trades.records_readable.to_dict(orient="records"),
@@ -406,7 +408,7 @@ def run_backtest(req: PortfolioRequest):
 
         # 回测结果（完全稳定版）
         return {
-            "stats": pf.stats()
+            "stats": pfwrapper.stats()
                 .replace([float("inf"), -float("inf")], 0)
                 .fillna(0)
                 .to_dict(),

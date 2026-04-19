@@ -11,6 +11,8 @@ def create_context(df: pd.DataFrame, data_provider: DataProvider, freq: str = "1
     context.data_adapter = DataAdapter(df)
 
     symbols = df['symbol'].unique().tolist()
+    # print(df)
+    # print(f"symbols: {symbols}, symbos group: {df.nunique()}")
     min_date = df['date'].min().strftime("%Y-%m-%d %H:%M:%S")
     max_date = df['date'].max().strftime("%Y-%m-%d %H:%M:%S")
     ds = DataScope(symbols=tuple(symbols), timeframe=freq, start=min_date, end=max_date, dataset="local")

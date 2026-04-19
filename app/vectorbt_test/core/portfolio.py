@@ -6,6 +6,7 @@ import pandas as pd
 from vectorbt_test.core.strategy import Strategy
 from vectorbt_test.core.signals import Signal, SignalGroup
 from vectorbt_test.core.node_builder import NodeBuilder
+import vectorbt as vbt
 
 
 class PortfolioType(enum.Enum):
@@ -38,3 +39,13 @@ class StrategyPortfolio(ABC):
         pass
 
 
+class PortfolioWrapper():
+    def __init__(self, portfolio: vbt.Portfolio):
+        self.portfolio = portfolio
+
+    def stats(self):
+        pf = self.portfolio
+        if pf.wrapper.shape[1] == 1:
+            return pf.stats(column=pf.wrapper.columns[0])
+        else:
+            return pf.stats()

@@ -60,16 +60,25 @@ export abstract class Indicator extends FeatureNode {
             return indicatorResult;
         }
 
-        switch (indicatorResult.type) {
-            case NodeDType.NUMERIC:
-                return indicatorResult.toSeries();
-            case NodeDType.FRAME:
-                return indicatorResult.toFrame();
-            case NodeDType.SIGNAL:
-                return indicatorResult.toSignal();
-            default:
-                return raw;
+        // switch (indicatorResult.type) {
+        //     case NodeDType.NUMERIC:
+        //         return indicatorResult.toSeries();
+        //     case NodeDType.FRAME:
+        //         return indicatorResult.toFrame();
+        //     case NodeDType.SIGNAL:
+        //         return indicatorResult.toSignal();
+        //     default:
+        //         return raw;
+        // }
+        const out = indicatorResult.data
+
+        // 🔥 只做语义校验，不做结构转换
+        if (indicatorResult.type == NodeDType.SIGNAL) {
+            return out.map((d: any) => Boolean(d)).astype(Boolean)
         }
+            
+
+        return out
     }
 
     private _wrap(raw: any): IndicatorResult {

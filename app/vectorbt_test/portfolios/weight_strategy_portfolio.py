@@ -26,8 +26,10 @@ class WeightStrategyPortfolio(StrategyPortfolio):
         
         adapter = context.data_adapter
 
-        data = adapter.data
-        close = adapter.to_vbt(df["close"])
+        # data = adapter.data
+        # close = adapter.to_vbt(df["close"])
+        data = adapter.data_view()
+        close = data['close']
 
         # 🔥 bind 一次
         for strat in self.strategies:

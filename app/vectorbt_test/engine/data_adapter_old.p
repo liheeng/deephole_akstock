@@ -8,15 +8,13 @@ class DataView:
     def __getitem__(self, key):
         key = key.lower()
         if hasattr(self.adapter, key):
-            df = getattr(self.adapter, key)
-            return self.adapter.squeeze_if_single(df)
+            return getattr(self.adapter, key)
         raise KeyError(f"{key} not found in data")
 
     # 可选：兼容 data.close
     def __getattr__(self, key):
         if hasattr(self.adapter, key):
-            df = getattr(self.adapter, key)
-            return self.adapter.squeeze_if_single(df)
+            return getattr(self.adapter, key)
         raise AttributeError(key)
     
     # def __array__(self):
@@ -34,54 +32,36 @@ class DataAdapter:
         self._init_data(df)
 
     def _init_data(self, df: pd.DataFrame):
-        df = df.copy()
         df['date'] = pd.to_datetime(df['date'])
-
-        # 🔥 单股票补 symbol（关键）
-        if 'symbol' not in df.columns:
-            df['symbol'] = 'asset'
 
         is_multi = df["symbol"].nunique() > 1
 
-        df = df.set_index(["date", "symbol"]).sort_index()
+        if is_multi:
+            df = df.set_index(["date", "symbol"]).sort_index()
 
-        # 🔥 每个字段独立 unstack
-        self.open   = df["open"].unstack("symbol")
-        self.high   = df["high"].unstack("symbol")
-        self.low    = df["low"].unstack("symbol")
-        self.close  = df["close"].unstack("symbol")
-        self.volume = df["volume"].unstack("symbol")
+            # 🔥 核心：每个字段单独拆
+            self.open   = df["open"].unstack("symbol")
+            self.high   = df["high"].unstack("symbol")
+            self.low    = df["low"].unstack("symbol")
+            self.close  = df["close"].unstack("symbol")
+            self.volume = df["volume"].unstack("symbol")
 
-        # 🔥 统一排序 & 对齐
-        self._align_all()
-        self._fillna()
+        else:
+            df = df.set_index("date").sort_index()
 
-        self.data = self.close
+            # 单股票也统一成 DataFrame（关键！）
+            self.open   = df[["open"]]
+            self.high   = df[["high"]]
+            self.low    = df[["low"]]
+            self.close  = df[["close"]]
+            self.volume = df[["volume"]]
+
+        self.data = df
+        # 🔥 默认 data = close（统一入口）
+        self.default_data = self.close
+
         self._is_cross = is_multi
 
-    def _align_all(self):
-        base = self.close
-
-        self.open   = self.open.reindex_like(base)
-        self.high   = self.high.reindex_like(base)
-        self.low    = self.low.reindex_like(base)
-        self.volume = self.volume.reindex_like(base)
-
-    def _fillna(self):
-        self.open   = self.open.ffill()
-        self.high   = self.high.ffill()
-        self.low    = self.low.ffill()
-        self.close  = self.close.ffill()
-        self.volume = self.volume.fillna(0)
-
-    def is_single(self):
-        return self.close.shape[1] == 1
-
-    def squeeze_if_single(self, df):
-        if self.is_single():
-            return df.iloc[:, 0]
-        return df
-    
     def data_view(self) -> DataView:
         return DataView(self)
     

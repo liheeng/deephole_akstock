@@ -33,8 +33,9 @@ class SignalStrategyPortfolio(StrategyPortfolio):
         context = create_context(df, data_provider, freq or self.freq)
         
         adapter = context.data_adapter
-        data = adapter.data
-        close = adapter.to_vbt(df["close"])
+        data = adapter.data_view()
+        # close = adapter.to_vbt(df["close"])
+        close = data['close']
         
         # 🔥 bind 一次
         for strat in self.strategies:
@@ -109,6 +110,14 @@ class SignalStrategyPortfolio(StrategyPortfolio):
         entries = adapter.to_vbt(entries)
         exits = adapter.to_vbt(exits)
 
+        # def debug_shape(name, x):
+        #     print(f"{name}: {type(x)}, shape={getattr(x, 'shape', None)}")
+
+        # debug_shape("price", close)
+        # debug_shape("entries", entries)
+        # debug_shape("exits", exits)
+        # debug_shape("size", size)
+
         pf = vbt.Portfolio.from_signals(
             close=close,
             entries=entries,
@@ -116,5 +125,5 @@ class SignalStrategyPortfolio(StrategyPortfolio):
             init_cash=init_cash or self.init_cash,
             freq=freq or self.freq,
         )
-
+        
         return pf
