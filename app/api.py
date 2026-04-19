@@ -400,20 +400,27 @@ def run_backtest(req: PortfolioRequest):
         # }
         equity_curve = pf.value()
 
-        # 兼容处理净值曲线
+        # ✅ 统一成组合净值
         if isinstance(equity_curve, pd.DataFrame):
-            equity_series = equity_curve.iloc[:, 0]
+            equity_series = equity_curve.sum(axis=1)
         else:
             equity_series = equity_curve
 
-        # 回测结果（完全稳定版）
+        # ✅ 返回带时间
+        equity_data = [
+            {"time": str(t), "value": float(v)}
+            for t, v in equity_series.items()
+        ]
+
         return {
             "stats": pfwrapper.stats()
                 .replace([float("inf"), -float("inf")], 0)
                 .fillna(0)
                 .to_dict(),
+
             "trades": pf.trades.records_readable.to_dict(orient="records"),
-            "equity": equity_series.tolist()
+
+            "equity": equity_data
         }
     except Exception as e:
         logger.exception(f"failed to run backtest\n{e}")

@@ -67,14 +67,15 @@ export default function BacktestResult({ runBacktest }: any) {
     // ==================
     const chartOption = useMemo(() => ({
         tooltip: { trigger: "axis" },
-        xAxis: { type: "category", data: equity.map((_, i) => i) },
+        // xAxis: { type: "category", data: equity.map((_, i) => i) },
+        xAxis: { type: "time", scale: true },
         yAxis: { type: "value", scale: true },
         series: [{
             name: "Equity",
             type: "line",
             smooth: true,
-            showSymbol: false,
-            data: equity
+            showSymbol: true,
+            data: equity.map(d => [d.time, d.value])
         }]
     }), [equity])
 

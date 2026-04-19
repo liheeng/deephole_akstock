@@ -37,6 +37,9 @@ class SignalStrategyPortfolio(StrategyPortfolio):
         # close = adapter.to_vbt(df["close"])
         close = data['close']
         
+        # print(type(adapter.close.index))
+        # print(adapter.close.index[:5])
+
         # 🔥 bind 一次
         for strat in self.strategies:
             strat.bind_data_adapter(adapter)
@@ -125,5 +128,5 @@ class SignalStrategyPortfolio(StrategyPortfolio):
             init_cash=init_cash or self.init_cash,
             freq=freq or self.freq,
         )
-        
+
         return pf
