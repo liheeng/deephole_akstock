@@ -18,7 +18,7 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useQuery } from '@tanstack/react-query';
-import { apiClient } from "../../api/Client_s";
+import { apiClient } from "../../api/Client_u";
 
 
 const jobTypeMap = {

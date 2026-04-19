@@ -11,7 +11,7 @@ import BacktestResult from "../components/backtest/BacktestResult"
 import StrategyGraph from "../components/backtest/StrategyGraph"
 import { useBacktestStore, useBacktestResultStore } from "../store/backtest.store"
 import GlobalDialogs from "../components/dsl/GlobalEditorDialog"
-import { callBacktest } from "../api/Client";
+import { callBacktest } from "../api/Client_u";
 
 
 

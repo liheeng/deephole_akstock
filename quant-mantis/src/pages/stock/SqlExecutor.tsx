@@ -5,7 +5,7 @@ import { GridToolbar } from '@mui/x-data-grid';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import MainCard from '../../components/visual/MainCard';
 import { Stack } from "@mui/material"
-import { apiClient } from "../../api/Client_s"
+import { apiClient } from "../../api/Client_u"
 
 export const SqlExecutor = () => {
   const [sql, setSql] = useState('SELECT * FROM stock_daily LIMIT 100;');
