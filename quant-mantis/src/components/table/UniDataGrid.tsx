@@ -54,7 +54,7 @@ export default function UniDataGrid({
           border: 'none',
         },
         // 外部 sx 优先级更高
-        ...(Array.isArray(sx) ? sx : []),
+        ...(Array.isArray(sx) ? sx : [sx]),
       ]}
     />
   );

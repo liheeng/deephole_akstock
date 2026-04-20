@@ -8,7 +8,9 @@ import {
     Select,
     MenuItem,
     TextField,
-    Switch
+    Switch,
+    ToggleButtonGroup, 
+    ToggleButton
 } from "@mui/material"
 
 import { useSignalStore } from "../../store/backtest/signal.store"
@@ -76,45 +78,107 @@ export default function PortfolioPanel() {
                 </Typography>
 
                 {/* mode */}
-                <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
-                    <Select
-                        size="small"
-                        value={portfolioMode}
-                        onChange={(e) => setPortfolioMode(e.target.value as any)}
-                    >
-                        <MenuItem value="signal_strategy">Signal Strategy</MenuItem>
-                        <MenuItem value="weight_strategy">Weight Strategy</MenuItem>
-                    </Select>
+                <Box
+                sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    mt: 1,
+                    p: 0.5,           // 保持较小的内边距
+                    pl: 2,            // 左侧文字留白
+                    borderRadius: 10,
+                    backgroundColor: "#4d4c4c",
+                    border: "1px solid rgba(161, 156, 156, 0.15)",
+                    width: "fit-content",
+                }}
+                >
+                <Typography 
+                    variant="body2" 
+                    sx={{ 
+                    fontWeight: 600, 
+                    color: "rgba(255,255,255,0.8)", 
+                    mr: 2,
+                    fontSize: "0.75rem",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.5px"
+                    }}
+                >
+                    Portfolio Mode
+                </Typography>
+
+                <ToggleButtonGroup
+                    value={portfolioMode}
+                    exclusive
+                    // ⭐ 注意：onChange 的第二个参数是点击的值
+                    onChange={(_, next) => next && setPortfolioMode(next)}
+                    size="small"
+                    sx={{
+                    backgroundColor: "rgba(0, 0, 0, 0.2)", // 内部背景色，增加层次感
+                    borderRadius: 10,
+                    p: 0.5,
+                    '& .MuiToggleButton-root': {
+                        color: "rgba(255,255,255,0.5)",
+                        border: "none",
+                        px: 2,
+                        py: 0.2,
+                        borderRadius: 10, // 按钮本身也是圆角
+                        fontSize: "0.9rem",
+                        fontWeight: 500,
+                        textTransform: "none", // 禁用全大写
+                        transition: "all 0.2s ease-in-out",
+                        '&.Mui-selected': {
+                        backgroundColor: "#1890ff", // 选中时的品牌蓝
+                        color: "#fff",
+                        boxShadow: "0px 2px 4px rgba(0,0,0,0.3)", // 选中项轻微浮起
+                        '&:hover': {
+                            backgroundColor: "#40a9ff",
+                        },
+                        },
+                        '&:hover': {
+                        backgroundColor: "rgba(255,255,255,0.1)",
+                        color: "#fff",
+                        },
+                    },
+                    }}
+                >
+                    <ToggleButton value="signal_strategy">
+                    Signal Strategy
+                    </ToggleButton>
+                    <ToggleButton value="weight_strategy">
+                    Weight Strategy
+                    </ToggleButton>
+                </ToggleButtonGroup>
                 </Box>
 
                 {/* ===== Summary ===== */}
                 <Box sx={{ display: "flex", gap: 1, mt: 1, flexWrap: "wrap" }}>
 
-                    <Chip size="small" label={`📦 ${strategyCount}`} />
+                    <Chip size="small" label={`🧠 ${strategyCount}`} /> 
+                    {/* {/* 📦 *} */}
 
-                    <Chip size="small" label={`⚙ ${portfolioMode}`} />
+                    {/* <Chip size="small" label={`⚙ ${portfolioMode}`} /> */}
 
                     <Chip
                         size="small"
                         color={scheduleEnabled ? (scheduleValue ? "success" : "warning") : "default"}
                         label={
                             scheduleEnabled
-                                ? (scheduleValue ? `⚡ ${scheduleValue}` : "⚡ Schedule")
+                                ? (scheduleValue ? `📶 ${scheduleValue}` : "🔗 Schedule") 
                                 : "❌ Schedule"
                         }
+                        // ⚡
                     />
 
                     {portfolioMode === "signal_strategy" && (
                         <>
                             <Chip
                                 size="small"
-                                label={`🔗 ${strategyOp.value}`}
+                                label={`⚙️ ${strategyOp.value}`}
                                 color={strategyOp.enabled ? "success" : "default"}
                             />
 
                             <Chip
                                 size="small"
-                                label={`🔗 [${voteWeights.value}]`}
+                                label={`⚖️ [${voteWeights.value}]`}
                                 color={voteWeights.enabled ? "success" : "default"}
                             />
                         </>
@@ -123,7 +187,7 @@ export default function PortfolioPanel() {
                     {portfolioMode === "weight_strategy" && (
                         <Chip
                             size="small"
-                            label={`🔗 [${strategyWeights.value}]`}
+                            label={`⚖️ [${strategyWeights.value}]`}
                             color={strategyWeights.enabled ? "success" : "default"}
                         />
                     )}
@@ -199,111 +263,111 @@ export default function PortfolioPanel() {
                     />
                 </Box>
 
-{/* ================= Portfolio Config ================= */}
-{portfolioMode === "signal_strategy" && (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                {/* ================= Portfolio Config ================= */}
+                {portfolioMode === "signal_strategy" && (
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
 
-        {/* ================= Strategy OP ================= */}
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        {/* ================= Strategy OP ================= */}
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
 
-            <Switch
-                checked={strategyOp.enabled}
-                onChange={() =>
-                    setStrategyOp({
-                        enabled: !strategyOp.enabled
-                    })
-                }
-            />
+                            <Switch
+                                checked={strategyOp.enabled}
+                                onChange={() =>
+                                    setStrategyOp({
+                                        enabled: !strategyOp.enabled
+                                    })
+                                }
+                            />
 
-            <Typography sx={{ width: 180 }}>
-                Strategy OP
-            </Typography>
+                            <Typography sx={{ width: 180 }}>
+                                Strategy OP
+                            </Typography>
 
-            <Select
-                size="small"
-                value={strategyOp.value}
-                disabled={!strategyOp.enabled}
-                sx={{ width: 120 }}
-                onChange={(e) =>
-                    setStrategyOp({
-                        value: e.target.value as any
-                    })
-                }
-            >
-                <MenuItem value="AND">AND</MenuItem>
-                <MenuItem value="OR">OR</MenuItem>
-            </Select>
+                            <Select
+                                size="small"
+                                value={strategyOp.value}
+                                disabled={!strategyOp.enabled}
+                                sx={{ width: 120 }}
+                                onChange={(e) =>
+                                    setStrategyOp({
+                                        value: e.target.value as any
+                                    })
+                                }
+                            >
+                                <MenuItem value="AND">AND</MenuItem>
+                                <MenuItem value="OR">OR</MenuItem>
+                            </Select>
 
-        </Box>
+                        </Box>
 
-        {/* ================= Vote Weights ================= */}
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        {/* ================= Vote Weights ================= */}
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
 
-            <Switch
-                checked={voteWeights.enabled}
-                onChange={() =>
-                    setVoteWeights({
-                        enabled: !voteWeights.enabled
-                    })
-                }
-            />
+                            <Switch
+                                checked={voteWeights.enabled}
+                                onChange={() =>
+                                    setVoteWeights({
+                                        enabled: !voteWeights.enabled
+                                    })
+                                }
+                            />
 
-            <Typography sx={{ width: 180 }}>
-                Vote Weights
-            </Typography>
+                            <Typography sx={{ width: 180 }}>
+                                Vote Weights
+                            </Typography>
 
-            <TextField
-                size="small"
-                value={voteWeights.value.join(",")}
-                disabled={!voteWeights.enabled}
-                sx={{ flex: 1, maxWidth: 200 }}
-                onChange={(e) =>
-                    setVoteWeights({
-                        value: e.target.value
-                            .split(",")
-                            .map(x => Number(x.trim()))
-                            .filter(x => !isNaN(x))
-                    })
-                }
-            />
+                            <TextField
+                                size="small"
+                                value={voteWeights.value.join(",")}
+                                disabled={!voteWeights.enabled}
+                                sx={{ flex: 1, maxWidth: 200 }}
+                                onChange={(e) =>
+                                    setVoteWeights({
+                                        value: e.target.value
+                                            .split(",")
+                                            .map(x => Number(x.trim()))
+                                            .filter(x => !isNaN(x))
+                                    })
+                                }
+                            />
 
-        </Box>
-    </Box>
-)}
+                        </Box>
+                    </Box>
+                )}
 
-{portfolioMode === "weight_strategy" && (
-    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                {portfolioMode === "weight_strategy" && (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
 
-        <Switch
-            checked={strategyWeights.enabled}
-            onChange={() =>
-                setStrategyWeights({
-                    enabled: !strategyWeights.enabled
-                })
-            }
-        />
+                        <Switch
+                            checked={strategyWeights.enabled}
+                            onChange={() =>
+                                setStrategyWeights({
+                                    enabled: !strategyWeights.enabled
+                                })
+                            }
+                        />
 
-        <Typography sx={{ width: 180 }}>
-            Strategy Weights
-        </Typography>
+                        <Typography sx={{ width: 180 }}>
+                            Strategy Weights
+                        </Typography>
 
-        <TextField
-            size="small"
-            value={strategyWeights.value.join(",")}
-            disabled={!strategyWeights.enabled}
-            sx={{ flex: 1 }}
-            onChange={(e) =>
-                setStrategyWeights({
-                    value: e.target.value
-                        .split(",")
-                        .map(x => Number(x.trim()))
-                        .filter(x => !isNaN(x))
-                })
-            }
-        />
+                        <TextField
+                            size="small"
+                            value={strategyWeights.value.join(",")}
+                            disabled={!strategyWeights.enabled}
+                            sx={{ flex: 1 }}
+                            onChange={(e) =>
+                                setStrategyWeights({
+                                    value: e.target.value
+                                        .split(",")
+                                        .map(x => Number(x.trim()))
+                                        .filter(x => !isNaN(x))
+                                })
+                            }
+                        />
 
-    </Box>
-)}
+                    </Box>
+                )}
 
                 {/* ================= Params ================= */}
                 <Stack direction="row" spacing={1}>

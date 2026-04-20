@@ -1,15 +1,37 @@
 import { create } from "zustand"
 
+interface StatsData {
+    average: Record<string, any>
+    details: Record<string, Record<string, any>>
+}
+
+interface EquityData {
+    times: string[]
+    average: number[]
+    details: Record<string, number[]>
+    best_sharpe?: number[]
+    best_return?: number[]
+    meta?: {
+        best_sharpe_column?: string
+        best_return_column?: string
+        freq?: string
+        count?: string
+    }
+}
+
 interface BacktestResultState {
 
-    equity: any[]          // 时间序列
-    stats: Record<string, any>
+    equity: EquityData | null
+    stats: StatsData | null   // 🔥 改这里
     trades: any[]
 
     loading: boolean
     error: string | null
 
-    // ===== actions =====
+    selectedSymbol: string | null   // ⭐ 新增
+
+    setSelectedSymbol: (s: string | null) => void
+
     setBacktestResult: (result: any) => void
     setLoading: (loading: boolean) => void
     setError: (error: string | null) => void
@@ -22,15 +44,22 @@ interface BacktestResultState {
 // =========================
 export const useBacktestResultStore = create<BacktestResultState>((set) => ({
 
-    equity: [],
-    stats: {},
+    equity: null,
+    stats: {
+        average: {},
+        details: {}
+    },
     trades: [],
 
     loading: false,
     error: null,
 
-    setEquity: (equity: any[]) => set({ equity }),
-    setStats: (stats: Record<string, any>) => set({ stats }),
+    selectedSymbol: null,
+
+    setSelectedSymbol: (s) => set({ selectedSymbol: s }),
+
+    setEquity: (equity: EquityData | null) => set({ equity }),
+    setStats: (stats: StatsData) => set({ stats }),
     setTrades: (trades: any[]) => set({ trades }),
 
 
@@ -51,8 +80,11 @@ export const useBacktestResultStore = create<BacktestResultState>((set) => ({
 
     reset: () =>
         set({
-            equity: [],
-            stats: {},
+            equity: null,
+            stats: {
+                average: {},
+                details: {}
+            },
             trades: [],
             loading: false,
             error: null
