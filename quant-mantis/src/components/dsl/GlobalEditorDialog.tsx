@@ -54,7 +54,7 @@ export default function GlobalDialogs({ nodes }: any) {
 
                     // 没有 signal 就创建一个
                     if (!sid) {
-                        sid = createSignal()
+                        sid = createSignal("")
                         setStrategySignal(strategyId, sid)
                     }
 
@@ -71,7 +71,7 @@ export default function GlobalDialogs({ nodes }: any) {
                     let sid = signalId
 
                     if (!sid) {
-                        sid = createSignal()
+                        sid = createSignal("")
                     }
 
                     updateSignal(sid, expr)
