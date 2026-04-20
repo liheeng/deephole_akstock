@@ -1,10 +1,10 @@
 
 from db.duckdb import DuckDBController
-from db.stock_daily_util import get_symbol_data
+from db.stock_daily_util import get_symbol_data, get_symbols_data
 
 from vectorbt_test.engine.portfolio_builder import PortfolioBuilder
 from vectorbt_test.portfolios.signal_strategy_portfolio import StrategyOp
-from vectorbt_test.core.portfolio import PortfolioParameters
+from vectorbt_test.core.portfolio import PortfolioParameters, PortfolioResultWrapper
 from vectorbt_test.engine.data_provider import DataProvider
 from vectorbt_test.engine.init import load_register_nodes
 
@@ -28,7 +28,8 @@ if __name__ == "__main__":
     # dd = NodeRegistry.to_dict()
     
     db_controller = DuckDBController(db_path="../data/stock.duckdb")
-    df = get_symbol_data(db_controller, "603259.SH", "2025-01-01", "2026-03-31")
+    # df = get_symbol_data(db_controller, "603259.SH", "2025-01-01", "2026-03-31")
+    df = get_symbols_data(db_controller, "603259.SH, 600362.SH", "2025-01-01", "2026-03-31")
 
     data_provider = DataProvider(None)
     
@@ -47,7 +48,13 @@ if __name__ == "__main__":
 
     pf = portfolio.run(data_provider, df)
 
+    pfwrapper = PortfolioResultWrapper(pf)
+    stats = pfwrapper.get_pf_stats()
+    equity = pfwrapper.get_pf_value_dict()
 
-    print(pf.stats())
-    print("==================================================")
+    print("== stats ================================================")
+    print(stats)
+    print("== equity ================================================")
+    print(equity)
+    print("== trades ================================================")
     print_trades(pf)

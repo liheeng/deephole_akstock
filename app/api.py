@@ -30,7 +30,7 @@ from sources.ifind.ifind_api import IFinDApi
 from sources.data_source import DataSourceApiName
 
 from vectorbt_test.core.registry import NodeRegistry
-from vectorbt_test.core.portfolio import PortfolioParameters, PortfolioWrapper
+from vectorbt_test.core.portfolio import PortfolioParameters, PortfolioResultWrapper
 from vectorbt_test.engine.data_provider import DataProvider
 from vectorbt_test.engine.portfolio_builder import PortfolioBuilder
 from vectorbt_test.engine.init import load_register_nodes
@@ -392,35 +392,38 @@ def run_backtest(req: PortfolioRequest):
         df = load_data_somehow()
 
         pf = portfolio.run(DataProvider(None), df)
-        pfwrapper = PortfolioWrapper(pf)
+        pfwrapper = PortfolioResultWrapper(pf)
         # return {
         #     "stats": pf.stats().to_dict(),
         #     "trades": pf.trades.records_readable.to_dict(orient="records"),
         #     "equity": pf.value().squeeze().tolist()
         # }
-        equity_curve = pf.value()
+        # detailed_stats = pfwrapper.get_pf_stats(agg_func=None)
+        # print(detailed_stats.index.tolist()) # 看看具体的指标名到底叫什么
 
-        # ✅ 统一成组合净值
-        if isinstance(equity_curve, pd.DataFrame):
-            equity_series = equity_curve.sum(axis=1)
-        else:
-            equity_series = equity_curve
+        equity_curve = pfwrapper.get_pf_value_dict(as_json=False)
+        # print(equity_curve)
+        # # ✅ 统一成组合净值
+        # if isinstance(equity_curve, pd.DataFrame):
+        #     equity_series = equity_curve.sum(axis=1)
+        # else:
+        #     equity_series = equity_curve
 
         # ✅ 返回带时间
-        equity_data = [
-            {"time": str(t), "value": float(v)}
-            for t, v in equity_series.items()
-        ]
+        # equity_data = [
+        #     {"time": str(t), "value": float(v)}
+        #     for t, v in equity_series.items()
+        # ]
 
+        stats = pfwrapper.get_pf_stats(as_json=False)
+        # print(stats)
         return {
-            "stats": pfwrapper.stats()
-                .replace([float("inf"), -float("inf")], 0)
-                .fillna(0)
-                .to_dict(),
-
-            "trades": pf.trades.records_readable.to_dict(orient="records"),
-
-            "equity": equity_data
+            "stats": stats,
+            "equity": equity_curve,
+            "trades": pf.trades.records_readable.to_dict(orient="records")
+                # .replace([float("inf"), -float("inf")], 0)
+                # .fillna(0)
+                # .to_dict(),
         }
     except Exception as e:
         logger.exception(f"failed to run backtest\n{e}")
