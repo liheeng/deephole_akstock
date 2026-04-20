@@ -5,7 +5,8 @@ import {
     Drawer, AppBar, Toolbar, List, Typography,
     Divider, ListItem, ListItemButton, ListItemIcon, ListItemText
 } from "@mui/material";
-
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider"
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs"
 import {
     DashboardOutlined,
     AnalyticsOutlined,
@@ -134,21 +135,23 @@ export default function App() {
     }
 
     return (
-        <ThemeProvider theme={theme}>
-            <QueryClientProvider client={queryClient}>
-                <BrowserRouter>
-                    <MainLayout>
-                        <Routes>
-                            <Route path="/" element={<Typography variant="h4">欢迎来到DeepHole股票回测系统</Typography>} />
-                            <Route path="/backtest" element={<BacktestPage />} />
-                            <Route path="/sync_daily" element={<SyncStockDailyPage />} />
-                            <Route path="/sql_executor" element={<SqlExecutor />} />
-                            <Route path="/tasks_monitor" element={<TasksMonitorPage />} />
-                            <Route path="/export_data" element={<ExportDataPage />} />
-                        </Routes>
-                    </MainLayout>
-                </BrowserRouter>
-            </QueryClientProvider>
-        </ThemeProvider>
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <ThemeProvider theme={theme}>
+                <QueryClientProvider client={queryClient}>
+                    <BrowserRouter>
+                        <MainLayout>
+                            <Routes>
+                                <Route path="/" element={<Typography variant="h4">欢迎来到DeepHole股票回测系统</Typography>} />
+                                <Route path="/backtest" element={<BacktestPage />} />
+                                <Route path="/sync_daily" element={<SyncStockDailyPage />} />
+                                <Route path="/sql_executor" element={<SqlExecutor />} />
+                                <Route path="/tasks_monitor" element={<TasksMonitorPage />} />
+                                <Route path="/export_data" element={<ExportDataPage />} />
+                            </Routes>
+                        </MainLayout>
+                    </BrowserRouter>
+                </QueryClientProvider>
+            </ThemeProvider>
+        </LocalizationProvider>
     );
 }

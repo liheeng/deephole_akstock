@@ -12,7 +12,9 @@ import {
     Stack,
     MenuItem,
     Select,
-    Typography
+    Typography,
+    Checkbox,
+    ListItemText
 } from "@mui/material"
 
 import UniDataGrid from "../table/UniDataGrid"
@@ -21,10 +23,11 @@ import PlayArrowIcon from "@mui/icons-material/PlayArrow"
 
 import { apiClient } from "../../api/Client"
 import { type BacktestDataSource } from "../../store/dataset.store"
-import { buildBacktestSQL } from "../../utils/buildBacktestSQL"
+import { DatePicker } from "@mui/x-date-pickers/DatePicker"
+import dayjs from "dayjs"
 
 //
-// ✅ FormRow（内联，避免多文件）
+// ✅ FormRow
 //
 function FormRow({
     label,
@@ -35,26 +38,12 @@ function FormRow({
 }) {
     return (
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Typography
-                sx={{
-                    width: 100,
-                    fontSize: 16,
-                    color: "text.secondary"
-                }}
-            >
+            <Typography sx={{ width: 140, fontSize: 16, color: "text.secondary" }}>
                 {label}
             </Typography>
-
             <Box sx={{ flex: 1 }}>{children}</Box>
         </Box>
     )
-}
-
-interface Props {
-    open: boolean
-    initialValue?: BacktestDataSource
-    onClose: () => void
-    onConfirm: (ds: any) => void
 }
 
 export default function BacktestDataDialog({
@@ -62,15 +51,18 @@ export default function BacktestDataDialog({
     initialValue,
     onClose,
     onConfirm
-}: Props) {
+}: {
+    open: boolean
+    initialValue?: BacktestDataSource
+    onClose: () => void
+    onConfirm: (ds: any) => void
+}) {
 
     const isSql = initialValue?.type === "sql"
 
     const [tab, setTab] = useState(isSql ? 1 : 0)
 
-    // =========================
-    // Preset
-    // =========================
+    // ===== preset state =====
     const [markets, setMarkets] = useState<string[]>([])
     const [symbols, setSymbols] = useState("")
     const [sectors, setSectors] = useState<string[]>([])
@@ -78,9 +70,7 @@ export default function BacktestDataDialog({
     const [start, setStart] = useState("2020-01-01")
     const [end, setEnd] = useState("2024-01-01")
 
-    // =========================
-    // SQL
-    // =========================
+    // ===== sql =====
     const [sql, setSql] = useState("SELECT * FROM stock_daily LIMIT 100;")
     const [data, setData] = useState<any>({ rows: [], columns: [] })
     const [valid, setValid] = useState(false)
@@ -88,7 +78,7 @@ export default function BacktestDataDialog({
     const inputRef = useRef<HTMLTextAreaElement | null>(null)
 
     // =========================
-    // 🔥 同步 initialValue（关键）
+    // 同步 initialValue
     // =========================
     useEffect(() => {
         if (!initialValue) return
@@ -112,7 +102,7 @@ export default function BacktestDataDialog({
     }, [initialValue, open])
 
     // =========================
-    // SQL 执行
+    // SQL validate
     // =========================
     const runSql = async () => {
 
@@ -139,8 +129,7 @@ export default function BacktestDataDialog({
                     headerName: key.toUpperCase(),
                     width: 150
                 }))
-
-                setData({ columns, rows })
+                setData({ rows, columns })
             } else {
                 setData({ rows: [], columns: [] })
             }
@@ -152,7 +141,7 @@ export default function BacktestDataDialog({
     }
 
     // =========================
-    // Confirm
+    // confirm
     // =========================
     const handleConfirm = () => {
 
@@ -166,19 +155,6 @@ export default function BacktestDataDialog({
             })
 
         } else {
-            const preset = {
-                markets,
-                symbols: symbols
-                    ? symbols.split(",").map(s => s.trim()).filter(Boolean)
-                    : undefined,
-                sectors,
-                universe,
-                start,
-                end
-            }
-
-            const sql = buildBacktestSQL(preset)
-
             onConfirm({
                 type: "preset",
                 markets: markets.length ? markets : undefined,
@@ -188,15 +164,18 @@ export default function BacktestDataDialog({
                 sectors: sectors.length ? sectors : undefined,
                 universe: universe || undefined,
                 start,
-                end,
-                sql
+                end
             })
         }
     }
 
     return (
-        <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
-
+        <Dialog
+            open={open}
+            onClose={onClose}
+            fullWidth
+            maxWidth={tab === 0 ? "md" : "md"}
+        >
             <DialogTitle>Backtest Data</DialogTitle>
 
             <DialogContent>
@@ -208,88 +187,131 @@ export default function BacktestDataDialog({
 
                 {/* ================= Preset ================= */}
                 {tab === 0 && (
-                    <Stack spacing={2} sx={{ mt: 2 }}>
+                    <Box sx={{ maxWidth: 600, mx: "auto", mt: 2 }}>
+                        <Stack spacing={2}>
 
-                        <FormRow label="Markets">
-                            <Select
-                                multiple
-                                fullWidth
-                                value={markets}
-                                onChange={(e) => setMarkets(e.target.value as string[])}
-                                renderValue={(v) => (v as string[]).join(", ")}
-                                size="small"
-                            >
-                                <MenuItem value="cn">CN</MenuItem>
-                                <MenuItem value="hk">HK</MenuItem>
-                                <MenuItem value="us">US</MenuItem>
-                            </Select>
-                        </FormRow>
+                            {/* 🥇 Universe */}
+                            <Box sx={{ border: "1px solid rgba(255,255,255,0.1)", p: 2 }}>
+                                <Typography variant="caption" color="text.secondary">
+                                    🌐 Base Universe
+                                </Typography>
 
-                        <FormRow label="Symbols">
-                            <TextField
-                                fullWidth
-                                size="small"
-                                value={symbols}
-                                onChange={(e) => setSymbols(e.target.value)}
-                                placeholder="AAPL.US, TSLA.US"
-                            />
-                        </FormRow>
+                                <FormRow label="Universe">
+                                    <Select
+                                        fullWidth
+                                        size="small"
+                                        value={universe}
+                                        onChange={(e) => setUniverse(e.target.value)}
+                                        sx={{
+                                            mt: 1,
+                                            bgcolor: universe ? "rgba(24,144,255,0.15)" : undefined
+                                        }}
+                                    >
+                                        <MenuItem value="">None</MenuItem>
+                                        <MenuItem value="SP500">SP500</MenuItem>
+                                        <MenuItem value="HS300">HS300</MenuItem>
+                                    </Select>
+                                </FormRow>
 
-                        <FormRow label="Sectors">
-                            <Select
-                                multiple
-                                fullWidth
-                                value={sectors}
-                                onChange={(e) => setSectors(e.target.value as string[])}
-                                renderValue={(v) => (v as string[]).join(", ")}
-                                size="small"
-                            >
-                                <MenuItem value="SEC_TECH">Tech</MenuItem>
-                                <MenuItem value="SEC_FINANCE">Finance</MenuItem>
-                                <MenuItem value="SEC_ENERGY">Energy</MenuItem>
-                            </Select>
-                        </FormRow>
+                                {!universe && (
+                                    <Typography variant="caption" color="warning.main">
+                                        No base universe (full market scan)
+                                    </Typography>
+                                )}
+                            </Box>
 
-                        <FormRow label="Universe">
-                            <Select
-                                fullWidth
-                                value={universe}
-                                onChange={(e) => setUniverse(e.target.value)}
-                                size="small"
-                            >
-                                <MenuItem value="">None</MenuItem>
-                                <MenuItem value="SP500">SP500</MenuItem>
-                                <MenuItem value="HS300">HS300</MenuItem>
-                            </Select>
-                        </FormRow>
+                            {/* 🥈 Filters */}
+                            <Box sx={{ border: "1px solid rgba(255,255,255,0.1)", p: 2 }}>
+                                <Typography variant="caption" color="text.secondary">
+                                    ⚙ Filters (AND)
+                                </Typography>
 
-                        <FormRow label="Date Range">
-                            <Stack direction="row" spacing={2} sx={{ width: "100%" }}>
-                                <TextField
-                                    type="date"
-                                    size="small"
-                                    value={start}
-                                    onChange={(e) => setStart(e.target.value)}
-                                    fullWidth
-                                />
-                                <TextField
-                                    type="date"
-                                    size="small"
-                                    value={end}
-                                    onChange={(e) => setEnd(e.target.value)}
-                                    fullWidth
-                                />
-                            </Stack>
-                        </FormRow>
+                                <FormRow label="Markets">
+                                    <Select
+                                        multiple
+                                        fullWidth
+                                        size="small"
+                                        value={markets}
+                                        onChange={(e) => setMarkets(e.target.value as string[])}
+                                        renderValue={(v) => (v as string[]).join(", ")}
+                                    >
+                                        {["cn", "hk", "us"].map((m) => (
+                                            <MenuItem key={m} value={m}>
+                                                <Checkbox checked={markets.includes(m)} />
+                                                <ListItemText primary={m.toUpperCase()} />
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormRow>
 
-                        <Typography
-                            variant="caption"
-                            sx={{ color: "text.secondary", ml: "140px" }}
-                        >
-                            Filters are combined with AND
-                        </Typography>
+                                <FormRow label="Sectors">
+                                    <Select
+                                        multiple
+                                        fullWidth
+                                        size="small"
+                                        value={sectors}
+                                        onChange={(e) => setSectors(e.target.value as string[])}
+                                        renderValue={(v) => (v as string[]).join(", ")}
+                                    >
+                                        {["SEC_TECH", "SEC_FINANCE", "SEC_AUTO"].map((s) => (
+                                            <MenuItem key={s} value={s}>
+                                                <Checkbox checked={sectors.includes(s)} />
+                                                <ListItemText primary={s.replace("SEC_", "")} />
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormRow>
 
-                    </Stack>
+                                <FormRow label="Symbols">
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        value={symbols}
+                                        onChange={(e) => setSymbols(e.target.value)}
+                                        placeholder="AAPL.US, TSLA.US"
+                                    />
+                                </FormRow>
+
+                                {!markets.length && !sectors.length && !symbols && (
+                                    <Typography variant="caption" color="text.secondary">
+                                        No filters applied
+                                    </Typography>
+                                )}
+                            </Box>
+
+                            {/* 🥉 Time */}
+                            <Box sx={{ border: "1px solid rgba(255,255,255,0.1)", p: 2 }}>
+                                <Typography variant="caption" color="text.secondary">
+                                    🕒 Time Range
+                                </Typography>
+
+                                <FormRow label="Date">
+                                    <Stack direction="row" spacing={2} sx={{ width: "100%" }}>
+
+                                        <DatePicker
+                                            label="Start"
+                                            value={dayjs(start)}
+                                            onChange={(v) => v && setStart(v.format("YYYY-MM-DD"))}
+                                            slotProps={{
+                                                textField: { size: "medium", fullWidth: true }
+                                            }}
+                                        />
+
+                                        <DatePicker
+                                            label="End"
+                                            value={dayjs(end)}
+                                            onChange={(v) => v && setEnd(v.format("YYYY-MM-DD"))}
+                                            slotProps={{
+                                                textField: { size: "medium", fullWidth: true }
+                                            }}
+                                        />
+
+                                    </Stack>
+                                </FormRow>
+                            </Box>
+
+                        </Stack>
+                    </Box>
                 )}
 
                 {/* ================= SQL ================= */}
@@ -303,12 +325,7 @@ export default function BacktestDataDialog({
                             value={sql}
                             inputRef={inputRef}
                             onChange={(e) => setSql(e.target.value)}
-                            sx={{
-                                mb: 2,
-                                '& .MuiInputBase-input': {
-                                    fontFamily: 'Monaco, monospace'
-                                }
-                            }}
+                            sx={{ mb: 2 }}
                         />
 
                         <Button
@@ -330,7 +347,6 @@ export default function BacktestDataDialog({
                                 />
                             </Box>
                         )}
-
                     </Box>
                 )}
 
@@ -346,7 +362,6 @@ export default function BacktestDataDialog({
                     Confirm
                 </Button>
             </DialogActions>
-
         </Dialog>
     )
 }

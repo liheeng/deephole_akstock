@@ -100,9 +100,10 @@ interface DatasetState {
 
     createDataset: (ds: BacktestDataSource, schema?: string[]) => string
     setCurrentDataset: (id: string) => void
+    buildCurrentDatasourcePayload: () => any
 }
 
-export const useDatasetStore = create<DatasetState>((set) => ({
+export const useDatasetStore = create<DatasetState>((set, get) => ({
 
     datasets: [],
 
@@ -126,6 +127,44 @@ export const useDatasetStore = create<DatasetState>((set) => ({
         return id
     },
 
-    setCurrentDataset: (id) => set({ currentDatasetId: id })
+    setCurrentDataset: (id) => set({ currentDatasetId: id }),
 
+    // =========================
+    // Payload
+    // =========================
+    buildCurrentDatasourcePayload: () => {
+
+        const s = get()
+        if (!s.currentDatasetId) return null
+
+        const dataset = s.datasets.find(d => d.id === s.currentDatasetId)
+        if (!dataset) return null
+
+        return {
+            id: dataset.id,
+            name: dataset.name,
+            source: dataset.source,
+            schema: dataset.schema
+        }
+    },
+
+    buildDatasourcePayload: (id: string) => {
+        const datasets = get().datasets;
+
+        // 👇 id 为空 → 只返回所有 source 组成的数组
+        if (!id || id.trim() === "") {
+            return datasets.map(item => item.source);
+        }
+
+        // 有 id → 返回单条数据
+        const dataset = datasets.find(d => d.id === id);
+        if (!dataset) return null;
+
+        return {
+            id: dataset.id,
+            name: dataset.name,
+            source: dataset.source,
+            schema: dataset.schema
+        };
+    }
 }))
