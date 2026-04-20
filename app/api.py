@@ -454,12 +454,18 @@ def build_dataset_sql(ds):
     sql = "SELECT * FROM stock_daily WHERE 1=1"
 
     if ds.get("markets"):
-        markets = ",".join([f"'{m}'" for m in ds["markets"]])
-        sql += f" AND market IN ({markets})"
+        sql += f" AND market IN ({...})"
 
     if ds.get("symbols"):
         symbols = ",".join([f"'{s}'" for s in ds["symbols"]])
         sql += f" AND symbol IN ({symbols})"
+
+    if ds.get("sectors"):
+        sectors = ",".join([f"'{s}'" for s in ds["sectors"]])
+        sql += f" AND sector IN ({sectors})"
+
+    if ds.get("universe"):
+        sql += f" AND symbol IN (SELECT symbol FROM universe_map WHERE name = '{ds['universe']}')"
 
     sql += f" AND date BETWEEN '{ds['start']}' AND '{ds['end']}'"
 

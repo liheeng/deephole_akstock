@@ -48,6 +48,15 @@ export default function BacktestDataPanel() {
                         value={dataset?.source.markets?.join(", ") || "None"}
                     />
                     <KeyValueRow label="Symbols" value={dataset?.source.symbols?.join(", ") || "None"} />
+                    <KeyValueRow
+                        label="Sectors"
+                        value={dataset?.source.sectors?.join(", ") || "None"}
+                    />
+
+                    <KeyValueRow
+                        label="Universe"
+                        value={dataset?.source.universe || "None"}
+                    />
                     <KeyValueRow label="Range" value={`${dataset?.source.start} ~ ${dataset?.source.end}`} />
 
                 </Box>

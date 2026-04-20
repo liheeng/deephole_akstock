@@ -1,6 +1,13 @@
 import { create } from "zustand"
 import { nanoid } from "nanoid"
 
+export type Filter =
+    | { field: "market"; op: "in"; value: string[] }
+    | { field: "symbol"; op: "in"; value: string[] }
+    | { field: "sector"; op: "in"; value: string[] }     // 👈 新增
+    | { field: "universe"; op: "in"; value: string }     // 👈 新增
+    | { field: "date"; op: "between"; value: [string, string] }
+
 export type BacktestDataSource =
     | {
         type: "sql"
@@ -9,11 +16,68 @@ export type BacktestDataSource =
     }
     | {
         type: "preset"
-        markets?: ("cn" | "hk" | "us")[]
+        markets?: string[]
         symbols?: string[]
+
+        sectors?: string[]      // 👈 新增
+        universe?: string       // 👈 新增
+
         start: string
         end: string
+        sql: string
     }
+    | {
+        type: "filters"
+        filters: Filter[]
+    }
+
+export function presetToFilters(ds: BacktestDataSource): Filter[] {
+    if (ds.type !== "preset") return []
+
+    const filters: Filter[] = []
+
+    if (ds.markets?.length) {
+        filters.push({
+            field: "market",
+            op: "in",
+            value: ds.markets
+        })
+    }
+
+    if (ds.symbols?.length) {
+        filters.push({
+            field: "symbol",
+            op: "in",
+            value: ds.symbols
+        })
+    }
+
+    if (ds.sectors?.length) {
+        filters.push({
+            field: "sector",
+            op: "in",
+            value: ds.sectors
+        })
+    }
+
+    if (ds.universe) {
+        filters.push({
+            field: "universe",
+            op: "in",
+            value: ds.universe
+        })
+    }
+
+    if (ds.start && ds.end) {
+        filters.push({
+            field: "date",
+            op: "between",
+            value: [ds.start, ds.end]
+        })
+    }
+
+    return filters
+}
 
 export interface Dataset {
     id: string

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import {
     Dialog,
     DialogTitle,
@@ -14,14 +14,41 @@ import {
     Select,
     Typography
 } from "@mui/material"
-import { useEffect } from "react"
+
 import UniDataGrid from "../table/UniDataGrid"
 import { GridToolbar } from "@mui/x-data-grid"
-
 import PlayArrowIcon from "@mui/icons-material/PlayArrow"
 
 import { apiClient } from "../../api/Client"
 import { type BacktestDataSource } from "../../store/dataset.store"
+import { buildBacktestSQL } from "../../utils/buildBacktestSQL"
+
+//
+// ✅ FormRow（内联，避免多文件）
+//
+function FormRow({
+    label,
+    children
+}: {
+    label: string
+    children: React.ReactNode
+}) {
+    return (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Typography
+                sx={{
+                    width: 100,
+                    fontSize: 16,
+                    color: "text.secondary"
+                }}
+            >
+                {label}
+            </Typography>
+
+            <Box sx={{ flex: 1 }}>{children}</Box>
+        </Box>
+    )
+}
 
 interface Props {
     open: boolean
@@ -37,26 +64,6 @@ export default function BacktestDataDialog({
     onConfirm
 }: Props) {
 
-    useEffect(() => {
-    if (!initialValue) return
-
-    if (initialValue.type === "sql") {
-        setSql(initialValue.sql)
-        setTab(1)
-    } else {
-        setMarkets(initialValue.markets || [])
-        setSymbols(initialValue.symbols?.join(",") || "")
-        setStart(initialValue.start)
-        setEnd(initialValue.end)
-        setTab(0)
-    }
-
-    // reset validate 状态
-    setValid(false)
-    setData({ rows: [], columns: [] })
-
-    }, [initialValue, open])
-
     const isSql = initialValue?.type === "sql"
 
     const [tab, setTab] = useState(isSql ? 1 : 0)
@@ -65,34 +72,47 @@ export default function BacktestDataDialog({
     // Preset
     // =========================
     const [markets, setMarkets] = useState<string[]>([])
-    const [symbols, setSymbols] = useState(
-        initialValue?.type === "preset" && initialValue.symbols
-            ? initialValue.symbols.join(",")
-            : ""
-    )
-    const [start, setStart] = useState(
-        initialValue?.type === "preset" ? initialValue.start : "2020-01-01"
-    )
-    const [end, setEnd] = useState(
-        initialValue?.type === "preset" ? initialValue.end : "2024-01-01"
-    )
+    const [symbols, setSymbols] = useState("")
+    const [sectors, setSectors] = useState<string[]>([])
+    const [universe, setUniverse] = useState("")
+    const [start, setStart] = useState("2020-01-01")
+    const [end, setEnd] = useState("2024-01-01")
 
     // =========================
     // SQL
     // =========================
-    const [sql, setSql] = useState(
-        initialValue?.type === "sql"
-            ? initialValue.sql
-            : "SELECT * FROM stock_daily LIMIT 100;"
-    )
-
+    const [sql, setSql] = useState("SELECT * FROM stock_daily LIMIT 100;")
     const [data, setData] = useState<any>({ rows: [], columns: [] })
     const [valid, setValid] = useState(false)
 
     const inputRef = useRef<HTMLTextAreaElement | null>(null)
 
     // =========================
-    // 执行 SQL（验证）
+    // 🔥 同步 initialValue（关键）
+    // =========================
+    useEffect(() => {
+        if (!initialValue) return
+
+        if (initialValue.type === "sql") {
+            setSql(initialValue.sql)
+            setTab(1)
+        } else {
+            setMarkets(initialValue.markets || [])
+            setSymbols(initialValue.symbols?.join(",") || "")
+            setSectors(initialValue.sectors || [])
+            setUniverse(initialValue.universe || "")
+            setStart(initialValue.start)
+            setEnd(initialValue.end)
+            setTab(0)
+        }
+
+        setValid(false)
+        setData({ rows: [], columns: [] })
+
+    }, [initialValue, open])
+
+    // =========================
+    // SQL 执行
     // =========================
     const runSql = async () => {
 
@@ -111,7 +131,6 @@ export default function BacktestDataDialog({
         const res = await apiClient.post("/execute_sql", { sql: finalSql })
 
         if (res.data.status === "success") {
-
             const rows = res.data.data
 
             if (rows.length > 0) {
@@ -121,16 +140,12 @@ export default function BacktestDataDialog({
                     width: 150
                 }))
 
-                setData({
-                    columns,
-                    rows
-                })
-
-                setValid(true)
+                setData({ columns, rows })
             } else {
                 setData({ rows: [], columns: [] })
-                setValid(true)
             }
+
+            setValid(true)
         } else {
             setValid(false)
         }
@@ -151,20 +166,36 @@ export default function BacktestDataDialog({
             })
 
         } else {
+            const preset = {
+                markets,
+                symbols: symbols
+                    ? symbols.split(",").map(s => s.trim()).filter(Boolean)
+                    : undefined,
+                sectors,
+                universe,
+                start,
+                end
+            }
+
+            const sql = buildBacktestSQL(preset)
+
             onConfirm({
                 type: "preset",
                 markets: markets.length ? markets : undefined,
                 symbols: symbols
                     ? symbols.split(",").map(s => s.trim()).filter(Boolean)
                     : undefined,
+                sectors: sectors.length ? sectors : undefined,
+                universe: universe || undefined,
                 start,
-                end
+                end,
+                sql
             })
         }
     }
 
     return (
-        <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
+        <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
 
             <DialogTitle>Backtest Data</DialogTitle>
 
@@ -179,44 +210,84 @@ export default function BacktestDataDialog({
                 {tab === 0 && (
                     <Stack spacing={2} sx={{ mt: 2 }}>
 
-                        <Select
-                            multiple
-                            value={markets || []}   // 🔥 兜底（关键）
-                            onChange={(e) => setMarkets(e.target.value as ("cn" | "hk" | "us")[])}
-                            renderValue={(selected) => (selected as string[]).join(", ")}
+                        <FormRow label="Markets">
+                            <Select
+                                multiple
+                                fullWidth
+                                value={markets}
+                                onChange={(e) => setMarkets(e.target.value as string[])}
+                                renderValue={(v) => (v as string[]).join(", ")}
+                                size="small"
                             >
-                            <MenuItem value="cn">CN</MenuItem>
-                            <MenuItem value="hk">HK</MenuItem>
-                            <MenuItem value="us">US</MenuItem>
-                        </Select>
+                                <MenuItem value="cn">CN</MenuItem>
+                                <MenuItem value="hk">HK</MenuItem>
+                                <MenuItem value="us">US</MenuItem>
+                            </Select>
+                        </FormRow>
 
-                        <TextField
-                            label="Symbols (comma separated, e.g. AAPL.US, TSLA.US)"
-                            value={symbols}
-                            onChange={(e) => setSymbols(e.target.value)}
-                        />
-                        
-                        {/* 👇 放这里 */}
-                        <Typography variant="caption" sx={{ mt: 1, color: "#746d6d" }}>
-                        note: Filters are combined with AND
+                        <FormRow label="Symbols">
+                            <TextField
+                                fullWidth
+                                size="small"
+                                value={symbols}
+                                onChange={(e) => setSymbols(e.target.value)}
+                                placeholder="AAPL.US, TSLA.US"
+                            />
+                        </FormRow>
+
+                        <FormRow label="Sectors">
+                            <Select
+                                multiple
+                                fullWidth
+                                value={sectors}
+                                onChange={(e) => setSectors(e.target.value as string[])}
+                                renderValue={(v) => (v as string[]).join(", ")}
+                                size="small"
+                            >
+                                <MenuItem value="SEC_TECH">Tech</MenuItem>
+                                <MenuItem value="SEC_FINANCE">Finance</MenuItem>
+                                <MenuItem value="SEC_ENERGY">Energy</MenuItem>
+                            </Select>
+                        </FormRow>
+
+                        <FormRow label="Universe">
+                            <Select
+                                fullWidth
+                                value={universe}
+                                onChange={(e) => setUniverse(e.target.value)}
+                                size="small"
+                            >
+                                <MenuItem value="">None</MenuItem>
+                                <MenuItem value="SP500">SP500</MenuItem>
+                                <MenuItem value="HS300">HS300</MenuItem>
+                            </Select>
+                        </FormRow>
+
+                        <FormRow label="Date Range">
+                            <Stack direction="row" spacing={2} sx={{ width: "100%" }}>
+                                <TextField
+                                    type="date"
+                                    size="small"
+                                    value={start}
+                                    onChange={(e) => setStart(e.target.value)}
+                                    fullWidth
+                                />
+                                <TextField
+                                    type="date"
+                                    size="small"
+                                    value={end}
+                                    onChange={(e) => setEnd(e.target.value)}
+                                    fullWidth
+                                />
+                            </Stack>
+                        </FormRow>
+
+                        <Typography
+                            variant="caption"
+                            sx={{ color: "text.secondary", ml: "140px" }}
+                        >
+                            Filters are combined with AND
                         </Typography>
-
-                        <Stack direction="row" spacing={2}>
-                            <TextField
-                                type="date"
-                                label="Start"
-                                value={start}
-                                onChange={(e) => setStart(e.target.value)}
-                                InputLabelProps={{ shrink: true }}
-                            />
-                            <TextField
-                                type="date"
-                                label="End"
-                                value={end}
-                                onChange={(e) => setEnd(e.target.value)}
-                                InputLabelProps={{ shrink: true }}
-                            />
-                        </Stack>
 
                     </Stack>
                 )}
