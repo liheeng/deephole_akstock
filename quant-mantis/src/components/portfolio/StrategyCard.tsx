@@ -98,10 +98,11 @@ export default function StrategyCard({ strategyId }: any) {
             "signal",
             {
                 strategyId,
-                signalId
+                signalId,
+                expr: signal?.expr || ""
             }
         )
-    }, [strategyId, signalId, openDialog])
+    }, [strategyId, signalId, signal, openDialog])
 
     const factorCount = factorIds.length
 

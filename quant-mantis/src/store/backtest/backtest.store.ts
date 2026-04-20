@@ -25,6 +25,10 @@ interface BacktestState {
         enabled: boolean
         signalId?: string
     }
+    
+    datasetId?: string
+
+    setDatasetId: (id: string) => void
 
     setPortfolioMode: (mode: PortfolioMode) => void
 
@@ -62,6 +66,10 @@ export const useBacktestStore = create<BacktestState>((set, get) => ({
         enabled: false,
         signalId: undefined
     },
+
+    datasetId: "",
+
+    setDatasetId: (id: string) => set({ datasetId: id }),
 
     setPortfolioMode: (mode: PortfolioMode) => set({ portfolio_mode: mode }),
 

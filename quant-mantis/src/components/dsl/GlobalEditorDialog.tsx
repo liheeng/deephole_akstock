@@ -7,6 +7,10 @@ import { useSignalStore } from "../../store/backtest/signal.store"
 import { useStrategyStore } from "../../store/backtest/strategy.store"
 import { useBacktestStore } from "../../store/backtest/backtest.store"
 
+import BacktestDataDialog from "../backtest/BacktestDataDialog"
+import { useDatasetStore } from "../../store/dataset.store"
+
+
 export default function GlobalDialogs({ nodes }: any) {
 
     const dialog = useDialogStore(state => state.dialog)
@@ -21,69 +25,80 @@ export default function GlobalDialogs({ nodes }: any) {
 
     const setScheduleSignal = useBacktestStore(state => state.setScheduleSignal)
 
+    const createDataset = useDatasetStore(s => s.createDataset)
+    const setDatasetId = useBacktestStore(s => s.setDatasetId)
+    
+    const { expr } = dialog.payload || {}
+
     return (
-        <VisualEditorDialog
-            open={dialog.open}
-            nodes={nodes}
-            onClose={closeDialog}
+        <>
+        
+            {/* ========================= */}
+            {/* Visual Editor */}
+            {/* ========================= */}
+            
+            {["factor", "signal", "schedule_signal"].includes(dialog.type) && (
+                <VisualEditorDialog
+                    open={dialog.open}
+                    value={expr}
+                    nodes={nodes}
+                    onClose={closeDialog}
+                    onConfirm={(expr: string) => {
+                        const payload = dialog.payload || {}
 
-            onConfirm={(expr: string) => {
+                        if (dialog.type === "factor") {
+                            const { factorId } = payload
+                            if (!factorId) return
+                            updateFactor(factorId, expr)
+                        }
 
-                const payload = dialog.payload || {}
+                        if (dialog.type === "signal") {
+                            const { strategyId, signalId } = payload
+                            if (!strategyId) return
 
-                // =========================
-                // Factor
-                // =========================
-                if (dialog.type === "factor") {
+                            let sid = signalId
+                            if (!sid) {
+                                sid = createSignal("")
+                                setStrategySignal(strategyId, sid)
+                            }
 
-                    const { factorId } = payload
-                    if (!factorId) return
+                            updateSignal(sid, expr)
+                        }
 
-                    updateFactor(factorId, expr)
-                }
+                        if (dialog.type === "schedule_signal") {
+                            const { scheduleSignalId } = payload
+                            let sid = scheduleSignalId
 
-                // =========================
-                // Strategy Signal
-                // =========================
-                if (dialog.type === "signal") {
+                            if (!sid) sid = createSignal("")
+                            updateSignal(sid, expr)
 
-                    const { strategyId, signalId } = payload
-                    if (!strategyId) return
+                            setScheduleSignal({
+                                enabled: true,
+                                signalId: sid
+                            })
+                        }
 
-                    let sid = signalId
+                        closeDialog()
+                    }}
+                />
+            )}
 
-                    // 没有 signal 就创建一个
-                    if (!sid) {
-                        sid = createSignal("")
-                        setStrategySignal(strategyId, sid)
-                    }
+            {/* ========================= */}
+            {/* Backtest Data Dialog */}
+            {/* ========================= */}
+            {dialog.type === "backtest_data" && (
+                <BacktestDataDialog
+                    open={dialog.open}
+                    initialValue={dialog.payload?.dataSource}
+                    onClose={closeDialog}
+                    onConfirm={(ds) => {
+                        const datasetId = createDataset(ds)
+                        setDatasetId(datasetId)
 
-                    updateSignal(sid, expr)
-                }
-
-                // =========================
-                // Schedule Signal（Portfolio）
-                // =========================
-                if (dialog.type === "schedule_signal") {
-
-                    const { signalId } = payload
-
-                    let sid = signalId
-
-                    if (!sid) {
-                        sid = createSignal("")
-                    }
-
-                    updateSignal(sid, expr)
-
-                    setScheduleSignal({
-                        enabled: true,
-                        signalId: sid
-                    })
-                }
-
-                closeDialog()
-            }}
-        />
+                        closeDialog()
+                    }}
+                />
+            )}
+        </>
     )
 }

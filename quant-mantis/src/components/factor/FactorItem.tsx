@@ -54,9 +54,10 @@ const FactorItem = React.memo(({
     const handleOpenSettings = useCallback(() => {
         openDialog("factor",{
             strategyId,
-            factorId
+            factorId,
+            expr: factor.expr,
         })
-    }, [strategyId, factorId, openDialog])
+    }, [strategyId, factorId, factor, openDialog])
 
     // =========================
     // guard

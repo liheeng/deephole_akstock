@@ -9,7 +9,7 @@ import {
     MenuItem,
     TextField,
     Switch,
-    ToggleButtonGroup, 
+    ToggleButtonGroup,
     ToggleButton
 } from "@mui/material"
 
@@ -20,6 +20,7 @@ import { useBacktestStore } from "../../store/backtest/backtest.store"
 import StrategyList from "./StrategyList"
 import SignalEditor from "../signal/SignalEditor"
 import { NodeRegistry } from "../../model/dsl_node/node_registry"
+import BacktestDataPanel from "../backtestdata/BacktestDataPanel"
 
 export default function PortfolioPanel() {
 
@@ -31,19 +32,19 @@ export default function PortfolioPanel() {
 
     const portfolioMode = useBacktestStore(s => s.portfolio_mode)
     const setPortfolioMode = useBacktestStore(s => s.setPortfolioMode)
-    
+
     const freq = useBacktestStore(s => s.params.freq)
     const initCash = useBacktestStore(s => s.params.init_cash)
 
     const strategyCount = useStrategyStore(s => s.strategyIds.length)
-    
+
     const scheduleEnabled = useBacktestStore(s => s.schedule_signal.enabled)
     const scheduleSignalId = useBacktestStore(s => s.schedule_signal.signalId)
     const setScheduleSignal = useBacktestStore(s => s.setScheduleSignal)
 
     const strategyOp = useBacktestStore(s => s.strategy_op)
     const setStrategyOp = useBacktestStore(s => s.setStrategyOp)
-    
+
     const voteWeights = useBacktestStore(s => s.vote_weights)
     const setVoteWeights = useBacktestStore(s => s.setVoteWeights)
 
@@ -51,7 +52,7 @@ export default function PortfolioPanel() {
     const setStrategyWeights = useBacktestStore(s => s.setStrategyWeights)
 
     const portfolioParams = useBacktestStore(s => s.params)
-    const updatePortfolioParams = useBacktestStore(s => s.updatePortfolioParams)    
+    const updatePortfolioParams = useBacktestStore(s => s.updatePortfolioParams)
 
     // 👉 从 signal store 取 expr
     const scheduleValue = useSignalStore(s =>
@@ -71,88 +72,97 @@ export default function PortfolioPanel() {
     return (
         <Box>
 
+            {/*================= Data Source ================= */}
+            <Box sx={{ mb: 2 }}>
+                <BacktestDataPanel />
+            </Box>
+
+            <Divider sx={{ mb: 1 }} />
+
             {/* ================= Header ================= */}
             <Box sx={{ mb: 1 }}>
-                <Typography variant="subtitle1">
-                    Portfolio
+                {/* <BacktestDataPanel />
+                <Divider sx={{ mb: 1 }} /> */}
+                <Typography variant="subtitle1" sx={{ textAlign: "left", width: "100%", mb: 1 }}>
+                    📂 Portfolio
                 </Typography>
 
                 {/* mode */}
                 <Box
-                sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    mt: 1,
-                    p: 0.5,           // 保持较小的内边距
-                    pl: 2,            // 左侧文字留白
-                    borderRadius: 10,
-                    backgroundColor: "#4d4c4c",
-                    border: "1px solid rgba(161, 156, 156, 0.15)",
-                    width: "fit-content",
-                }}
-                >
-                <Typography 
-                    variant="body2" 
-                    sx={{ 
-                    fontWeight: 600, 
-                    color: "rgba(255,255,255,0.8)", 
-                    mr: 2,
-                    fontSize: "0.75rem",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px"
-                    }}
-                >
-                    Portfolio Mode
-                </Typography>
-
-                <ToggleButtonGroup
-                    value={portfolioMode}
-                    exclusive
-                    // ⭐ 注意：onChange 的第二个参数是点击的值
-                    onChange={(_, next) => next && setPortfolioMode(next)}
-                    size="small"
                     sx={{
-                    backgroundColor: "rgba(0, 0, 0, 0.2)", // 内部背景色，增加层次感
-                    borderRadius: 10,
-                    p: 0.5,
-                    '& .MuiToggleButton-root': {
-                        color: "rgba(255,255,255,0.5)",
-                        border: "none",
-                        px: 2,
-                        py: 0.2,
-                        borderRadius: 10, // 按钮本身也是圆角
-                        fontSize: "0.9rem",
-                        fontWeight: 500,
-                        textTransform: "none", // 禁用全大写
-                        transition: "all 0.2s ease-in-out",
-                        '&.Mui-selected': {
-                        backgroundColor: "#1890ff", // 选中时的品牌蓝
-                        color: "#fff",
-                        boxShadow: "0px 2px 4px rgba(0,0,0,0.3)", // 选中项轻微浮起
-                        '&:hover': {
-                            backgroundColor: "#40a9ff",
-                        },
-                        },
-                        '&:hover': {
-                        backgroundColor: "rgba(255,255,255,0.1)",
-                        color: "#fff",
-                        },
-                    },
+                        display: "flex",
+                        alignItems: "center",
+                        mt: 1,
+                        p: 0.5,           // 保持较小的内边距
+                        pl: 2,            // 左侧文字留白
+                        borderRadius: 10,
+                        backgroundColor: "#4d4c4c",
+                        border: "1px solid rgba(161, 156, 156, 0.15)",
+                        width: "fit-content",
                     }}
                 >
-                    <ToggleButton value="signal_strategy">
-                    Signal Strategy
-                    </ToggleButton>
-                    <ToggleButton value="weight_strategy">
-                    Weight Strategy
-                    </ToggleButton>
-                </ToggleButtonGroup>
+                    <Typography
+                        variant="body2"
+                        sx={{
+                            fontWeight: 600,
+                            color: "rgba(255,255,255,0.8)",
+                            mr: 2,
+                            fontSize: "0.75rem",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.5px"
+                        }}
+                    >
+                        Portfolio Mode
+                    </Typography>
+
+                    <ToggleButtonGroup
+                        value={portfolioMode}
+                        exclusive
+                        // ⭐ 注意：onChange 的第二个参数是点击的值
+                        onChange={(_, next) => next && setPortfolioMode(next)}
+                        size="small"
+                        sx={{
+                            backgroundColor: "rgba(0, 0, 0, 0.2)", // 内部背景色，增加层次感
+                            borderRadius: 10,
+                            p: 0.5,
+                            '& .MuiToggleButton-root': {
+                                color: "rgba(255,255,255,0.5)",
+                                border: "none",
+                                px: 2,
+                                py: 0.2,
+                                borderRadius: 10, // 按钮本身也是圆角
+                                fontSize: "0.9rem",
+                                fontWeight: 500,
+                                textTransform: "none", // 禁用全大写
+                                transition: "all 0.2s ease-in-out",
+                                '&.Mui-selected': {
+                                    backgroundColor: "#1890ff", // 选中时的品牌蓝
+                                    color: "#fff",
+                                    boxShadow: "0px 2px 4px rgba(0,0,0,0.3)", // 选中项轻微浮起
+                                    '&:hover': {
+                                        backgroundColor: "#40a9ff",
+                                    },
+                                },
+                                '&:hover': {
+                                    backgroundColor: "rgba(255,255,255,0.1)",
+                                    color: "#fff",
+                                },
+                            },
+                        }}
+                    >
+                        <ToggleButton value="signal_strategy">
+                            Signal Strategy
+                        </ToggleButton>
+                        <ToggleButton value="weight_strategy">
+                            Weight Strategy
+                        </ToggleButton>
+                    </ToggleButtonGroup>
                 </Box>
 
                 {/* ===== Summary ===== */}
                 <Box sx={{ display: "flex", gap: 1, mt: 1, flexWrap: "wrap" }}>
 
-                    <Chip size="small" label={`🧠 ${strategyCount}`} /> 
+                    <Chip size="small" label={`🧠 ${strategyCount}`} />
                     {/* {/* 📦 *} */}
 
                     {/* <Chip size="small" label={`⚙ ${portfolioMode}`} /> */}
@@ -162,10 +172,10 @@ export default function PortfolioPanel() {
                         color={scheduleEnabled ? (scheduleValue ? "success" : "warning") : "default"}
                         label={
                             scheduleEnabled
-                                ? (scheduleValue ? `📶 ${scheduleValue}` : "🔗 Schedule") 
+                                ? (scheduleValue ? `📶 ${scheduleValue}` : "🔗 Schedule")
                                 : "❌ Schedule"
                         }
-                        // ⚡
+                    // ⚡
                     />
 
                     {portfolioMode === "signal_strategy" && (
@@ -208,31 +218,31 @@ export default function PortfolioPanel() {
 
                 {/* ================= Schedule Signal ================= */}
                 <Box
+                    sx={{
+                        gap: 0,
+                        position: 'relative',
+                        border: '1px solid rgba(255, 255, 255, 0.23)', // 标准 MUI 边框色
+                        borderRadius: 1,
+                        p: 2,    // 内部间距
+                        pt: 2.5,  // 顶部留出空间给标题
+                        mt: 2    // 外部间距
+                    }}
+                >
+
+                    <Typography
+                        variant="caption"
                         sx={{
-                            gap: 0,
-                            position: 'relative',
-                            border: '1px solid rgba(255, 255, 255, 0.23)', // 标准 MUI 边框色
-                            borderRadius: 1,
-                            p: 2,    // 内部间距
-                            pt: 2.5,  // 顶部留出空间给标题
-                            mt: 2    // 外部间距
+                            position: 'absolute',
+                            top: -10,        // 向上偏移一半
+                            left: 12,        // 左右边距
+                            bgcolor: '#1e1e1e', // 必须设置为与背景相同的颜色，用于遮挡后面的边框线
+                            px: 0.5,         // 文字左右的小垫片
+                            color: 'text.secondary',
+                            fontSize: '0.75rem'
                         }}
                     >
-
-                        <Typography
-                            variant="caption"
-                            sx={{
-                                position: 'absolute',
-                                top: -10,        // 向上偏移一半
-                                left: 12,        // 左右边距
-                                bgcolor: '#1e1e1e', // 必须设置为与背景相同的颜色，用于遮挡后面的边框线
-                                px: 0.5,         // 文字左右的小垫片
-                                color: 'text.secondary',
-                                fontSize: '0.75rem'
-                            }}
-                        >
-                            Schedule Signal
-                        </Typography>
+                        Schedule Signal
+                    </Typography>
                     <SignalEditor
                         value={scheduleValue}
                         enabled={scheduleEnabled}
@@ -256,7 +266,7 @@ export default function PortfolioPanel() {
                         }
 
                         onVisual={() =>
-                            openDialog("schedule_signal", scheduleSignalId)
+                            openDialog("schedule_signal", {scheduleSignalId, expr: scheduleValue})
                         }
 
                         nodes={nodes}
@@ -386,7 +396,7 @@ export default function PortfolioPanel() {
                         type="number"
                         value={initCash}
                         onChange={(e) =>
-                            updatePortfolioParams( { init_cash: Number(e.target.value) })
+                            updatePortfolioParams({ init_cash: Number(e.target.value) })
                         }
                     />
                 </Stack>

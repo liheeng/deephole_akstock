@@ -1,4 +1,5 @@
 import { create } from "zustand"
+import type { BacktestDataSource } from "./dataset.store"
 
 // =========================
 // Types
@@ -9,11 +10,14 @@ export type DialogType =
     | "schedule_signal"
     | "strategy_graph"   // 🚀 预留
     | "node_editor"      // 🚀 预留
+    | 'backtest_data'
 
 interface DialogState {
     open: boolean
     type: DialogType | null
-    payload?: any
+    payload?: {
+        dataSource?: BacktestDataSource
+    } | any
     strategyId?: string
     factorId?: string
 }

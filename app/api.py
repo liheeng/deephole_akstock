@@ -430,6 +430,55 @@ def run_backtest(req: PortfolioRequest):
         raise HTTPException(status_code=500, detail=f"错误: {str(e)}\n{traceback.format_exc()}")
 
 
+def materialize_dataset(dataset_id, source):
+
+    sql = build_dataset_sql(source)
+
+    table_name = f"dataset_{dataset_id}"
+
+    db_controller.execute(f"""
+        CREATE OR REPLACE TABLE {table_name} AS
+        {sql}
+    """)
+
+    return {
+        "table": table_name,
+        "row_count": db_controller.read(f"SELECT COUNT(*) FROM {table_name}").fetchone()[0]
+    }
+
+
+def build_dataset_sql(ds):
+    if ds["type"] == "sql":
+        return ds["sql"]
+
+    sql = "SELECT * FROM stock_daily WHERE 1=1"
+
+    if ds.get("markets"):
+        markets = ",".join([f"'{m}'" for m in ds["markets"]])
+        sql += f" AND market IN ({markets})"
+
+    if ds.get("symbols"):
+        symbols = ",".join([f"'{s}'" for s in ds["symbols"]])
+        sql += f" AND symbol IN ({symbols})"
+
+    sql += f" AND date BETWEEN '{ds['start']}' AND '{ds['end']}'"
+
+    return sql
+
+
+@app.post("/backtest/dataset")
+def backtest_dataset(req: dict):
+    # POST /api/dataset/materialize
+    # {
+    # "dataset_id": "ds_xxx",
+    # "source": {...}
+    # }
+    dataset_id = req.get("dataset_id")
+    source = req.get("source")
+    materialize_dataset(dataset_id, source)
+    pass
+
+
 @app.websocket("/ws/terminal/{container}")
 async def terminal_ws(websocket: WebSocket, container: str):
 
