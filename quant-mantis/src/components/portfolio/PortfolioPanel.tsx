@@ -21,6 +21,7 @@ import StrategyList from "./StrategyList"
 import SignalEditor from "../signal/SignalEditor"
 import { NodeRegistry } from "../../model/dsl_node/node_registry"
 import BacktestDataPanel from "../backtestdata/BacktestDataPanel"
+import NestedChip from "../misc/NestedChip"
 
 export default function PortfolioPanel() {
 
@@ -161,49 +162,70 @@ export default function PortfolioPanel() {
 
                 {/* ===== Summary ===== */}
                 <Box sx={{ display: "flex", gap: 1, mt: 1, flexWrap: "wrap" }}>
-
-                    <Chip size="small" label={`🧠 ${strategyCount}`} />
+                    <Tooltip title="Strategies">
+                        {/* <CustomNestedChip size="small" label={`🧠 ${strategyCount}`} /> */}
+                        <NestedChip size="small" label={
+                            <>
+                            {`🧠 ${strategyCount}`}
+                            {/* <NestedChip size="small" label={`🧠 ${strategyCount}`} /> */}
+                            </>
+                        } />
+                    </Tooltip>
                     {/* {/* 📦 *} */}
-
-                    {/* <Chip size="small" label={`⚙ ${portfolioMode}`} /> */}
-
-                    <Chip
-                        size="small"
-                        color={scheduleEnabled ? (scheduleValue ? "success" : "warning") : "default"}
-                        label={
-                            scheduleEnabled
-                                ? (scheduleValue ? `📶 ${scheduleValue}` : "🔗 Schedule")
-                                : "❌ Schedule"
-                        }
-                    // ⚡
-                    />
+                    
+                    <Tooltip title="Schedule Signal">
+                        <Chip
+                            size="small"
+                            style={{ minWidth: '56px' }}
+                            color={scheduleEnabled ? (scheduleValue ? "success" : "warning") : "default"}
+                            label={
+                                scheduleEnabled
+                                    ? (scheduleValue ? `🎯 ${scheduleValue}` : "🎯 Schedule")
+                                    : "🎯 None"
+                                    // ❌ 🔗 
+                            }
+                        // ⚡
+                        />
+                    </Tooltip>
 
                     {portfolioMode === "signal_strategy" && (
                         <>
-                            <Chip
-                                size="small"
-                                label={`⚙️ ${strategyOp.value}`}
-                                color={strategyOp.enabled ? "success" : "default"}
-                            />
-
-                            <Chip
-                                size="small"
-                                label={`⚖️ [${voteWeights.value}]`}
-                                color={voteWeights.enabled ? "success" : "default"}
-                            />
+                            <Tooltip title="Strategy Op">
+                                <Chip
+                                    size="small"
+                                    style={{ minWidth: '56px' }}
+                                    label={`🛠️ ${strategyOp.value}`}
+                                    color={strategyOp.enabled ? "success" : "default"}
+                                />
+                            </Tooltip>
+                            <Tooltip title="Vote Weights">
+                                <Chip
+                                    size="small"
+                                    style={{ minWidth: '56px' }}
+                                    label={voteWeights.value && voteWeights.value.length > 0 ? `⚖️ [${voteWeights.value}]` : "⚖️ None"}
+                                    color={voteWeights.enabled ? "success" : "default"}
+                                />
+                            </Tooltip>
                         </>
                     )}
 
                     {portfolioMode === "weight_strategy" && (
-                        <Chip
-                            size="small"
-                            label={`⚖️ [${strategyWeights.value}]`}
-                            color={strategyWeights.enabled ? "success" : "default"}
-                        />
+                        <Tooltip title="Strategy Weights">
+                            <Chip
+                                size="small"
+                                // style={{ minWidth: '80px' }}
+                                label={strategyWeights.value && strategyWeights.value.length > 0 ? `⚖️ [${strategyWeights.value}]` : `⚖️ None`}
+                                color={strategyWeights.enabled ? "success" : "default"}
+                            />
+                        </Tooltip>
                     )}
 
-                    <Chip size="small" label={`🕒 ${freq}`} />
-                    <Chip size="small" label={`💰 ${initCash}`} />
+                    <Tooltip title="Frequency">
+                        <Chip size="small" style={{ minWidth: '56px' }} label={`🕒 ${freq}`} />
+                    </Tooltip>
+                    <Tooltip title="Initial Cash">
+                        <Chip size="small" label={`💰 ${initCash}`} />
+                    </Tooltip>
 
                 </Box>
             </Box>
@@ -266,7 +288,7 @@ export default function PortfolioPanel() {
                         }
 
                         onVisual={() =>
-                            openDialog("schedule_signal", {scheduleSignalId, expr: scheduleValue})
+                            openDialog("schedule_signal", { scheduleSignalId, expr: scheduleValue })
                         }
 
                         nodes={nodes}
