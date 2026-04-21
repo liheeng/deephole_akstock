@@ -7,7 +7,7 @@ import { useSignalStore } from "../../store/backtest/signal.store"
 import { useStrategyStore } from "../../store/backtest/strategy.store"
 import { useBacktestStore } from "../../store/backtest/backtest.store"
 
-import BacktestDataDialog from "../backtest/BacktestDataDialog"
+import BacktestDataDialog from "../backtestdata/BacktestDataDialog"
 import { useDatasetStore } from "../../store/dataset.store"
 
 

@@ -26,6 +26,52 @@ import { type BacktestDataSource } from "../../store/dataset.store"
 import { DatePicker } from "@mui/x-date-pickers/DatePicker"
 import dayjs from "dayjs"
 
+import { Light as SyntaxHighlighter } from "react-syntax-highlighter"
+import sql from "react-syntax-highlighter/dist/esm/languages/hljs/sql"
+import { atomOneDark } from "react-syntax-highlighter/dist/esm/styles/hljs"
+import { format } from "sql-formatter"
+SyntaxHighlighter.registerLanguage("sql", sql)
+
+function buildSQL(ds: any) {
+    if (!ds) return ""
+
+    const {
+        markets,
+        symbols,
+        sectors,
+        universe,
+        start,
+        end
+    } = ds
+
+    let where: string[] = []
+
+    if (universe) {
+        where.push(`symbol IN (SELECT symbol FROM universe_${universe.toLowerCase()})`)
+    }
+
+    if (markets?.length) {
+        where.push(`market IN (${markets.map(m => `'${m}'`).join(",")})`)
+    }
+
+    if (symbols?.length) {
+        where.push(`symbol IN (${symbols.map(s => `'${s}'`).join(",")})`)
+    }
+
+    if (sectors?.length) {
+        where.push(`symbol IN (
+            SELECT symbol FROM universe_map
+            WHERE universe IN (${sectors.map(s => `'${s}'`).join(",")})
+        )`)
+    }
+
+    if (start && end) {
+        where.push(`date BETWEEN '${start}' AND '${end}'`)
+    }
+
+    return `SELECT * FROM stock_daily ${where.length ? "WHERE " + where.join("\n  AND ") : ""}`
+}
+
 //
 // ✅ FormRow
 //
@@ -41,7 +87,8 @@ function FormRow({
             <Typography sx={{ width: 140, fontSize: 16, color: "text.secondary" }}>
                 {label}
             </Typography>
-            <Box sx={{ flex: 1 }}>{children}</Box>
+            {/* <Box sx={{ flex: 1 }}>{children}</Box> */}
+            <Box sx={{ flex: 1, minWidth: 0 }}>{children}</Box>
         </Box>
     )
 }
@@ -77,6 +124,10 @@ export default function BacktestDataDialog({
 
     const inputRef = useRef<HTMLTextAreaElement | null>(null)
 
+    const [previewSql, setPreviewSql] = useState("")
+    const [rowCount, setRowCount] = useState<number | null>(null)
+    const [explain, setExplain] = useState<string>("")
+
     // =========================
     // 同步 initialValue
     // =========================
@@ -100,6 +151,48 @@ export default function BacktestDataDialog({
         setData({ rows: [], columns: [] })
 
     }, [initialValue, open])
+
+    useEffect(() => {
+        if (tab !== 0) return
+
+        const ds = {
+            markets,
+            symbols: symbols.split(",").map(s => s.trim()).filter(Boolean),
+            sectors,
+            universe,
+            start,
+            end
+        }
+
+        const sql = buildSQL(ds)
+        setPreviewSql(sql)
+
+    }, [markets, symbols, sectors, universe, start, end, tab])
+
+    const prettySql = format(previewSql)
+
+    const runExplain = async () => {
+
+        if (!previewSql.trim()) return
+
+        // 1️⃣ explain
+        const res1 = await apiClient.post("/execute_sql", {
+            sql: `EXPLAIN ${previewSql}`
+        })
+
+        if (res1.data.status === "success") {
+            setExplain(JSON.stringify(res1.data.data, null, 2))
+        }
+
+        // 2️⃣ count
+        const res2 = await apiClient.post("/execute_sql", {
+            sql: `SELECT COUNT(*) as cnt FROM (${previewSql}) t`
+        })
+
+        if (res2.data.status === "success") {
+            setRowCount(res2.data.data[0]?.cnt ?? null)
+        }
+    }
 
     // =========================
     // SQL validate
@@ -174,7 +267,7 @@ export default function BacktestDataDialog({
             open={open}
             onClose={onClose}
             fullWidth
-            maxWidth={tab === 0 ? "md" : "md"}
+            maxWidth={tab === 0 ? "lg" : "md"}
         >
             <DialogTitle>Backtest Data</DialogTitle>
 
@@ -187,130 +280,263 @@ export default function BacktestDataDialog({
 
                 {/* ================= Preset ================= */}
                 {tab === 0 && (
-                    <Box sx={{ maxWidth: 600, mx: "auto", mt: 2 }}>
-                        <Stack spacing={2}>
+                    <Box
+                        sx={{
+                            display: "grid",
+                            gridTemplateColumns: "1fr 1fr",   // 🔥 左右等分
+                            gap: 2,
+                            mt: 2
+                        }}
+                    >
 
-                            {/* 🥇 Universe */}
-                            <Box sx={{ border: "1px solid rgba(255,255,255,0.1)", p: 2 }}>
-                                <Typography variant="caption" color="text.secondary">
-                                    🌐 Base Universe
-                                </Typography>
+                        {/* ===== 左：配置 ===== */}
+                        <Box sx={{ minWidth: 450 }}>
+                            <Stack spacing={2}>
 
-                                <FormRow label="Universe">
-                                    <Select
-                                        fullWidth
-                                        size="small"
-                                        value={universe}
-                                        onChange={(e) => setUniverse(e.target.value)}
-                                        sx={{
-                                            mt: 1,
-                                            bgcolor: universe ? "rgba(24,144,255,0.15)" : undefined
-                                        }}
-                                    >
-                                        <MenuItem value="">None</MenuItem>
-                                        <MenuItem value="SP500">SP500</MenuItem>
-                                        <MenuItem value="HS300">HS300</MenuItem>
-                                    </Select>
-                                </FormRow>
-
-                                {!universe && (
-                                    <Typography variant="caption" color="warning.main">
-                                        No base universe (full market scan)
-                                    </Typography>
-                                )}
-                            </Box>
-
-                            {/* 🥈 Filters */}
-                            <Box sx={{ border: "1px solid rgba(255,255,255,0.1)", p: 2 }}>
-                                <Typography variant="caption" color="text.secondary">
-                                    ⚙ Filters (AND)
-                                </Typography>
-
-                                <FormRow label="Markets">
-                                    <Select
-                                        multiple
-                                        fullWidth
-                                        size="small"
-                                        value={markets}
-                                        onChange={(e) => setMarkets(e.target.value as string[])}
-                                        renderValue={(v) => (v as string[]).join(", ")}
-                                    >
-                                        {["cn", "hk", "us"].map((m) => (
-                                            <MenuItem key={m} value={m}>
-                                                <Checkbox checked={markets.includes(m)} />
-                                                <ListItemText primary={m.toUpperCase()} />
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormRow>
-
-                                <FormRow label="Sectors">
-                                    <Select
-                                        multiple
-                                        fullWidth
-                                        size="small"
-                                        value={sectors}
-                                        onChange={(e) => setSectors(e.target.value as string[])}
-                                        renderValue={(v) => (v as string[]).join(", ")}
-                                    >
-                                        {["SEC_TECH", "SEC_FINANCE", "SEC_AUTO"].map((s) => (
-                                            <MenuItem key={s} value={s}>
-                                                <Checkbox checked={sectors.includes(s)} />
-                                                <ListItemText primary={s.replace("SEC_", "")} />
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormRow>
-
-                                <FormRow label="Symbols">
-                                    <TextField
-                                        fullWidth
-                                        size="small"
-                                        value={symbols}
-                                        onChange={(e) => setSymbols(e.target.value)}
-                                        placeholder="AAPL.US, TSLA.US"
-                                    />
-                                </FormRow>
-
-                                {!markets.length && !sectors.length && !symbols && (
+                                {/* 🥇 Universe */}
+                                <Box sx={{ border: "1px solid rgba(255,255,255,0.1)", p: 2 }}>
                                     <Typography variant="caption" color="text.secondary">
-                                        No filters applied
+                                        🌐 Base Universe
                                     </Typography>
-                                )}
+
+                                    <FormRow label="Universe">
+                                        <Select
+                                            fullWidth
+                                            size="small"
+                                            value={universe}
+                                            onChange={(e) => setUniverse(e.target.value)}
+                                            sx={{
+                                                mt: 1,
+                                                bgcolor: universe ? "rgba(24,144,255,0.15)" : undefined
+                                            }}
+                                        >
+                                            <MenuItem value="">None</MenuItem>
+                                            <MenuItem value="SP500">SP500</MenuItem>
+                                            <MenuItem value="HS300">HS300</MenuItem>
+                                        </Select>
+                                    </FormRow>
+
+                                    {!universe && (
+                                        <Typography variant="caption" color="warning.main">
+                                            No base universe (full market scan)
+                                        </Typography>
+                                    )}
+                                </Box>
+
+                                {/* 🥈 Filters */}
+                                <Box sx={{ border: "1px solid rgba(255,255,255,0.1)", p: 2 }}>
+                                    <Typography variant="caption" color="text.secondary">
+                                        ⚙ Filters (AND)
+                                    </Typography>
+
+                                    <FormRow label="Markets">
+                                        <Select
+                                            multiple
+                                            fullWidth
+                                            size="small"
+                                            value={markets}
+                                            onChange={(e) => setMarkets(e.target.value as string[])}
+                                            renderValue={(v) => (v as string[]).join(", ")}
+                                        >
+                                            {["CN", "HK", "US"].map((m) => (
+                                                <MenuItem key={m} value={m}>
+                                                    <Checkbox checked={markets.includes(m)} />
+                                                    <ListItemText primary={m.toUpperCase()} />
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormRow>
+
+                                    <FormRow label="Sectors">
+                                        <Select
+                                            multiple
+                                            fullWidth
+                                            size="small"
+                                            value={sectors}
+                                            onChange={(e) => setSectors(e.target.value as string[])}
+                                            renderValue={(v) => (v as string[]).join(", ")}
+                                        >
+                                            {["SEC_TECH", "SEC_FINANCE", "SEC_AUTO"].map((s) => (
+                                                <MenuItem key={s} value={s}>
+                                                    <Checkbox checked={sectors.includes(s)} />
+                                                    <ListItemText primary={s.replace("SEC_", "")} />
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormRow>
+
+                                    <FormRow label="Symbols">
+                                        <TextField
+                                            fullWidth
+                                            size="small"
+                                            value={symbols}
+                                            onChange={(e) => setSymbols(e.target.value)}
+                                            placeholder="AAPL.US, TSLA.US"
+                                        />
+                                    </FormRow>
+
+                                    {!markets.length && !sectors.length && !symbols && (
+                                        <Typography variant="caption" color="text.secondary">
+                                            No filters applied
+                                        </Typography>
+                                    )}
+                                </Box>
+
+                                {/* 🥉 Time */}
+                                <Box sx={{ border: "1px solid rgba(255,255,255,0.1)", p: 2 }}>
+                                    <Typography variant="caption" color="text.secondary">
+                                        🕒 Time Range
+                                    </Typography>
+
+                                    <FormRow label="Date">
+                                        <Stack
+                                            direction="row"
+                                            spacing={2}
+                                            sx={{
+                                                width: "100%",
+                                                '& > *': {
+                                                    flex: 1,
+                                                    minWidth: 0   // 🔥 必须
+                                                }
+                                            }}
+                                        >
+
+                                            <DatePicker
+                                                label="Start"
+                                                value={dayjs(start)}
+                                                onChange={(v) => v && setStart(v.format("YYYY-MM-DD"))}
+                                                slotProps={{
+                                                    textField: {
+                                                        size: "small",
+                                                        fullWidth: true,
+                                                        sx: {
+                                                            minWidth: 0   // 🔥 关键：允许 shrink
+                                                        }
+                                                    }
+                                                }}
+                                            />
+
+                                            <DatePicker
+                                                label="End"
+                                                value={dayjs(end)}
+                                                onChange={(v) => v && setEnd(v.format("YYYY-MM-DD"))}
+                                                slotProps={{
+                                                    textField: {
+                                                        size: "small",
+                                                        fullWidth: true,
+                                                        sx: {
+                                                            minWidth: 0   // 🔥 关键：允许 shrink
+                                                        }
+                                                    }
+                                                }}
+                                            />
+
+                                        </Stack>
+                                    </FormRow>
+                                </Box>
+
+                            </Stack>
+                        </Box>
+                        {/* ===== 右：SQL Preview ===== */}
+                        {/* <Box sx={{ flex: 1 }}> */}
+                        <Box
+                            sx={{
+                                flex: 1,
+                                minWidth: 0,
+
+                                display: "flex",              // 🔥 关键
+                                flexDirection: "column",
+                                alignItems: "stretch",        // 🔥 强制子元素贴满（不是居中）
+                            }}
+                        >
+                            <Typography variant="caption" color="text.secondary">
+                                SQL Preview
+                            </Typography>
+
+                            <Box
+                                sx={{
+                                    bgcolor: "#111",
+                                    borderRadius: 1,
+                                    p: 2,
+                                    minHeight: 200,
+                                    overflow: "auto"
+                                }}
+                            >
+                                <SyntaxHighlighter
+                                    language="sql"
+                                    style={atomOneDark}
+                                    wrapLongLines
+                                    customStyle={{
+                                        margin: 0,
+                                        padding: 12,
+                                        fontSize: 12
+                                    }}
+                                >
+                                    {
+                                        format(previewSql, {
+                                            language: "sql",
+                                            indentStyle: "standard",
+                                            tabWidth: 2
+                                        })
+                                    }
+                                </SyntaxHighlighter>
+                                <pre
+                                // style={{
+                                //   margin: 0,
+                                //   textAlign: "left",
+                                //   fontFamily: "Monaco, monospace",
+                                //   fontSize: 12,
+                                //   whiteSpace: "pre-wrap"
+                                // }}
+                                >
+                                    {/* {previewSql} */}
+                                </pre>
                             </Box>
 
-                            {/* 🥉 Time */}
-                            <Box sx={{ border: "1px solid rgba(255,255,255,0.1)", p: 2 }}>
-                                <Typography variant="caption" color="text.secondary">
-                                    🕒 Time Range
+                            {/* ===== actions ===== */}
+                            <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+
+                                <Button
+                                    size="small"
+                                    onClick={() => navigator.clipboard.writeText(previewSql)}
+                                >
+                                    Copy
+                                </Button>
+
+                                <Button
+                                    size="small"
+                                    onClick={runExplain}
+                                >
+                                    Explain
+                                </Button>
+
+                            </Stack>
+
+                            {/* ===== explain ===== */}
+                            {rowCount !== null && (
+                                <Typography variant="caption" sx={{ mt: 1, display: "block" }}>
+                                    Rows: {rowCount}
                                 </Typography>
+                            )}
 
-                                <FormRow label="Date">
-                                    <Stack direction="row" spacing={2} sx={{ width: "100%" }}>
+                            {explain && (
+                                <Box
+                                    sx={{
+                                        mt: 1,
+                                        bgcolor: "#0a0a0a",
+                                        p: 1,
+                                        borderRadius: 1,
+                                        fontSize: 14,
+                                        maxHeight: 200,
+                                        overflow: "auto"
+                                    }}
+                                >
+                                    {explain}
+                                </Box>
+                            )}
 
-                                        <DatePicker
-                                            label="Start"
-                                            value={dayjs(start)}
-                                            onChange={(v) => v && setStart(v.format("YYYY-MM-DD"))}
-                                            slotProps={{
-                                                textField: { size: "medium", fullWidth: true }
-                                            }}
-                                        />
+                        </Box>
 
-                                        <DatePicker
-                                            label="End"
-                                            value={dayjs(end)}
-                                            onChange={(v) => v && setEnd(v.format("YYYY-MM-DD"))}
-                                            slotProps={{
-                                                textField: { size: "medium", fullWidth: true }
-                                            }}
-                                        />
-
-                                    </Stack>
-                                </FormRow>
-                            </Box>
-
-                        </Stack>
                     </Box>
                 )}
 
