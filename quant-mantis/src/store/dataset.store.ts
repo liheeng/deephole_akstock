@@ -8,7 +8,7 @@ export type Filter =
     | { field: "universe"; op: "in"; value: string }     // 👈 新增
     | { field: "date"; op: "between"; value: [string, string] }
 
-export type BacktestDataSource =
+export type BacktestDataSourceDef =
     | {
         type: "sql"
         sql: string
@@ -31,7 +31,7 @@ export type BacktestDataSource =
         filters: Filter[]
     }
 
-export function presetToFilters(ds: BacktestDataSource): Filter[] {
+export function presetToFilters(ds: BacktestDataSourceDef): Filter[] {
     if (ds.type !== "preset") return []
 
     const filters: Filter[] = []
@@ -83,7 +83,7 @@ export interface Dataset {
     id: string
     name: string
     createdAt: string
-    source: BacktestDataSource
+    sourceDef: BacktestDataSourceDef
 
     schema?: string[]
     rowCount?: number
@@ -98,16 +98,16 @@ interface DatasetState {
     datasets: Dataset[]
     currentDatasetId?: string
 
-    createDataset: (ds: BacktestDataSource, schema?: string[]) => string
+    createDataset: (ds: BacktestDataSourceDef, schema?: string[]) => string
     setCurrentDataset: (id: string) => void
-    buildCurrentDatasourcePayload: () => any
+    buildCurrentDatasetPayload: () => any
 }
 
 export const useDatasetStore = create<DatasetState>((set, get) => ({
 
     datasets: [],
 
-    createDataset: (source, schema) => {
+    createDataset: (sourceDef, schema) => {
 
         const id = "ds_" + nanoid(6)
 
@@ -115,7 +115,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
             id,
             name: id,
             createdAt: new Date().toISOString(),
-            source,
+            sourceDef: sourceDef,
             schema
         }
 
@@ -132,7 +132,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
     // =========================
     // Payload
     // =========================
-    buildCurrentDatasourcePayload: () => {
+    buildCurrentDatasetPayload: () => {
 
         const s = get()
         if (!s.currentDatasetId) return null
@@ -140,31 +140,21 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
         const dataset = s.datasets.find(d => d.id === s.currentDatasetId)
         if (!dataset) return null
 
-        return {
-            id: dataset.id,
-            name: dataset.name,
-            source: dataset.source,
-            schema: dataset.schema
-        }
+        return dataset
     },
 
-    buildDatasourcePayload: (id: string) => {
+    buildDatasetPayload: (id: string) => {
         const datasets = get().datasets;
 
         // 👇 id 为空 → 只返回所有 source 组成的数组
         if (!id || id.trim() === "") {
-            return datasets.map(item => item.source);
+            return datasets.map(item => item.sourceDef);
         }
 
         // 有 id → 返回单条数据
         const dataset = datasets.find(d => d.id === id);
         if (!dataset) return null;
 
-        return {
-            id: dataset.id,
-            name: dataset.name,
-            source: dataset.source,
-            schema: dataset.schema
-        };
+        return dataset
     }
 }))

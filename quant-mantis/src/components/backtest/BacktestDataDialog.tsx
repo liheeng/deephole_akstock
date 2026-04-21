@@ -22,7 +22,7 @@ import { GridToolbar } from "@mui/x-data-grid"
 import PlayArrowIcon from "@mui/icons-material/PlayArrow"
 
 import { apiClient } from "../../api/Client"
-import { type BacktestDataSource } from "../../store/dataset.store"
+import { type BacktestDataSourceDef } from "../../store/dataset.store"
 import { DatePicker } from "@mui/x-date-pickers/DatePicker"
 import dayjs from "dayjs"
 
@@ -32,7 +32,8 @@ import { atomOneDark } from "react-syntax-highlighter/dist/esm/styles/hljs"
 import { format } from "sql-formatter"
 SyntaxHighlighter.registerLanguage("sql", sql)
 import { buildBacktestSQL_v2, buildCountSQL_v2, buildExplainSQL_v2 } from "../../datasource/sql/buildBacktestSQL"
-
+import ExplainDetailDialog from "./ExplainDetailDialog"
+import ExplainPanel from "../explain/ExplainPanel"
 
 //
 // ✅ FormRow
@@ -62,12 +63,12 @@ export default function BacktestDataDialog({
     onConfirm
 }: {
     open: boolean
-    initialValue?: BacktestDataSource
+    initialValue: {sourceDef: BacktestDataSourceDef}
     onClose: () => void
-    onConfirm: (ds: any) => void
+    onConfirm: (sourceDef: any) => void
 }) {
-
-    const isSql = initialValue?.type === "sql"
+    const datasetSourceDef: BacktestDataSourceDef = initialValue?.sourceDef
+    const isSql = (datasetSourceDef?.type === "sql")
 
     const [tab, setTab] = useState(isSql ? 1 : 0)
 
@@ -90,22 +91,24 @@ export default function BacktestDataDialog({
     const [rowCount, setRowCount] = useState<number | null>(null)
     const [explain, setExplain] = useState<string>("")
 
+    const [explainDetailOpen, setExplainDetailOpen] = useState(false)
+    
     // =========================
     // 同步 initialValue
     // =========================
     useEffect(() => {
-        if (!initialValue) return
+        if (!datasetSourceDef) return
 
-        if (initialValue.type === "sql") {
-            setSql(initialValue.sql)
+        if (datasetSourceDef.type === "sql") {
+            setSql(datasetSourceDef.sql)
             setTab(1)
         } else {
-            setMarkets(initialValue.markets || [])
-            setSymbols(initialValue.symbols?.join(",") || "")
-            setSectors(initialValue.sectors || [])
-            setUniverse(initialValue.universe || "")
-            setStart(initialValue.start)
-            setEnd(initialValue.end)
+            setMarkets(datasetSourceDef.markets || [])
+            setSymbols(datasetSourceDef.symbols?.join(",") || "")
+            setSectors(datasetSourceDef.sectors || [])
+            setUniverse(datasetSourceDef.universe || "")
+            setStart(datasetSourceDef.start)
+            setEnd(datasetSourceDef.end)
             setTab(0)
         }
 
@@ -151,6 +154,19 @@ export default function BacktestDataDialog({
 
         if (res2.data.status === "success") {
             setRowCount(res2.data.data[0]?.cnt ?? null)
+        }
+    }
+
+    const runCount = async () => {
+
+        if (!previewSql.trim()) return
+
+        const res = await apiClient.post("/execute_sql", {
+            sql: buildCountSQL_v2(previewSql)
+        })
+
+        if (res.data.status === "success") {
+            setRowCount(res.data.data[0]?.cnt ?? null)
         }
     }
 
@@ -469,7 +485,18 @@ export default function BacktestDataDialog({
                                 >
                                     Explain
                                 </Button>
+                                
+                                <Button variant="outlined" onClick={runCount}>
+                                    Estimate Rows
+                                </Button>
 
+                                <Button
+                                    variant="outlined"
+                                    disabled={!explain.length}
+                                    onClick={() => setExplainDetailOpen(true)}
+                                >
+                                    🔍 View Detail
+                                </Button>
                             </Stack>
 
                             {/* ===== explain ===== */}
@@ -491,7 +518,7 @@ export default function BacktestDataDialog({
                                         overflow: "auto"
                                     }}
                                 >
-                                    {explain}
+                                    <ExplainPanel text={explain} />
                                 </Box>
                             )}
 
@@ -548,6 +575,12 @@ export default function BacktestDataDialog({
                     Confirm
                 </Button>
             </DialogActions>
+            
+            <ExplainDetailDialog
+                open={explainDetailOpen}
+                onClose={() => setExplainDetailOpen(false)}
+                data={[explain]}  // 简单处理成表格数据
+            />
         </Dialog>
     )
 }

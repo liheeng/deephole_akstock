@@ -13,23 +13,45 @@ import { useBacktestStore} from "../store/backtest/backtest.store"
 import { useBacktestResultStore } from "../store/backtest/backtestresult.store"
 import GlobalDialogs from "../components/dsl/GlobalEditorDialog"
 import { callBacktest } from "../api/Client";
-
+import { useDialogStore } from "../store/dialog.store"
+import { useDatasetStore } from "../store/dataset.store";
 
 
 export default function BacktestPage() {
-    const buildPayload = useBacktestStore((state) => state.buildPayload)
+    const buildPortfolioPayload = useBacktestStore((state) => state.buildPayload)
+    const buildBacktestPayload = useDatasetStore((state) => state.buildCurrentDatasetPayload)
     const setBacktestResult = useBacktestResultStore((state) => state.setBacktestResult)
     // const nodes = useNodes()
     const nodes = NodeRegistry.toDict()
 
+    const datasetId = useBacktestStore(s => s.datasetId)
+    const datasets = useDatasetStore(s => s.datasets)
+    const dataset = datasets.find(d => d.id === datasetId)
+        
+    const openWizard = useDialogStore((s: any) => s.openDialog)
+    
     // ❗防止未加载
 
     const runBacktest = async () => {
-        const payload = buildPayload()
-        const data = await callBacktest(payload)
+        const portfolioConfig = buildPortfolioPayload()
+        const datasetConfig = buildBacktestPayload()
+        const backtestConfig = {
+            portfolio_config: portfolioConfig,
+            dataset_config: datasetConfig,
+        }
+        const data = await callBacktest(backtestConfig)
         if (data) {
             setBacktestResult(data)
         }
+    }
+
+    const launchWizard = async () => {
+        // const payload = buildPayload()
+        // const data = await callBacktest(payload)
+        // if (data) {
+        //     setBacktestResult(data)
+        // }
+        openWizard("backtest_wizard", {sourceDef: dataset?.sourceDef, runBacktest: runBacktest})
     }
 
     if (!nodes || Object.keys(nodes).length === 0) {
@@ -40,7 +62,7 @@ export default function BacktestPage() {
         <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
 
             {/* Toolbar */}
-            <TopToolbar runBacktest={runBacktest} />
+            <TopToolbar runBacktest={launchWizard} />
 
             {/* 垂直 Split（上下） */}
             <Split
@@ -79,7 +101,7 @@ export default function BacktestPage() {
                             overflow: "hidden"
                         }}
                     >
-                        <BacktestResult runBacktest={runBacktest} />
+                        <BacktestResult runBacktest={launchWizard} />
                     </Box>
 
                 </Split>

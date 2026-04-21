@@ -20,7 +20,7 @@ import { useBacktestStore } from "../../store/backtest/backtest.store"
 import StrategyList from "./StrategyList"
 import SignalEditor from "../signal/SignalEditor"
 import { NodeRegistry } from "../../model/dsl_node/node_registry"
-import BacktestDataPanel from "../backtestdata/BacktestDataPanel"
+import BacktestDataPanel from "../backtest/BacktestDataPanel"
 import NestedChip from "../misc/NestedChip"
 
 export default function PortfolioPanel() {

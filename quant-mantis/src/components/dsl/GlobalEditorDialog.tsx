@@ -1,5 +1,5 @@
 import VisualEditorDialog from "../visual/VisualEditorDialog"
-
+import BacktestWizardDialog from "../backtest/BacktestWizardDialog"
 import { useDialogStore } from "../../store/dialog.store"
 
 import { useFactorStore } from "../../store/backtest/factor.store"
@@ -7,8 +7,9 @@ import { useSignalStore } from "../../store/backtest/signal.store"
 import { useStrategyStore } from "../../store/backtest/strategy.store"
 import { useBacktestStore } from "../../store/backtest/backtest.store"
 
-import BacktestDataDialog from "../backtestdata/BacktestDataDialog"
+import BacktestDataDialog from "../backtest/BacktestDataDialog"
 import { useDatasetStore } from "../../store/dataset.store"
+import { type BacktestDataSourceDef } from "../../store/dataset.store"
 
 
 export default function GlobalDialogs({ nodes }: any) {
@@ -89,7 +90,7 @@ export default function GlobalDialogs({ nodes }: any) {
             {dialog.type === "backtest_data" && (
                 <BacktestDataDialog
                     open={dialog.open}
-                    initialValue={dialog.payload?.dataSource}
+                    initialValue={ { sourceDef: dialog.payload?.sourceDef  } }
                     onClose={closeDialog}
                     onConfirm={(ds) => {
                         const datasetId = createDataset(ds)
@@ -99,6 +100,22 @@ export default function GlobalDialogs({ nodes }: any) {
                     }}
                 />
             )}
+
+            {dialog.type === "backtest_wizard" && (
+                    <BacktestWizardDialog
+                        open={dialog.open}
+                        ds={dialog.payload?.dataset}
+                        onClose={closeDialog}
+                        onConfirm={(sourceDef: BacktestDataSourceDef) => {  
+                            const { runBacktest } = dialog.payload
+                            const datasetId = createDataset(sourceDef)
+                            setDatasetId(datasetId)  
+                            runBacktest(sourceDef)
+                            closeDialog()
+                        }}
+                    />
+                )
+            }
         </>
     )
 }

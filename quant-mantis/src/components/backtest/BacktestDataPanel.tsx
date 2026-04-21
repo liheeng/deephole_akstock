@@ -26,7 +26,7 @@ export default function BacktestDataPanel() {
                 <Button
                     size="small"
                     onClick={() =>
-                        openDialog("backtest_data", { dataSource: dataset?.source })
+                        openDialog("backtest_data", { sourceDef: dataset?.sourceDef })
                     }
                 >
                     Edit
@@ -34,30 +34,30 @@ export default function BacktestDataPanel() {
             }
         >
 
-            {dataset?.source.type === "sql" ? (
+            {dataset?.sourceDef.type === "sql" ? (
                 <Typography
                     sx={{ fontFamily: "Monaco, monospace", fontSize: 12 }}
                 >
-                    {dataset?.source.sql.slice(0, 120)}...
+                    {dataset?.sourceDef.sql.slice(0, 120)}...
                 </Typography>
             ) : (
                 <Box>
 
                     <KeyValueRow
                         label="Markets"
-                        value={dataset?.source.markets?.join(", ") || "None"}
+                        value={dataset?.sourceDef.markets?.join(", ") || "None"}
                     />
-                    <KeyValueRow label="Symbols" value={dataset?.source.symbols?.join(", ") || "None"} />
+                    <KeyValueRow label="Symbols" value={dataset?.sourceDef.symbols?.join(", ") || "None"} />
                     <KeyValueRow
                         label="Sectors"
-                        value={dataset?.source.sectors?.join(", ") || "None"}
+                        value={dataset?.sourceDef.sectors?.join(", ") || "None"}
                     />
 
                     <KeyValueRow
                         label="Universe"
-                        value={dataset?.source.universe || "None"}
+                        value={dataset?.sourceDef.universe || "None"}
                     />
-                    <KeyValueRow label="Range" value={`${dataset?.source.start} ~ ${dataset?.source.end}`} />
+                    <KeyValueRow label="Range" value={`${dataset?.sourceDef.start} ~ ${dataset?.sourceDef.end}`} />
 
                 </Box>
             )}
