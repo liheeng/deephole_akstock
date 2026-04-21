@@ -2,11 +2,11 @@ import {
     Dialog, DialogTitle, DialogContent, DialogActions,
     Button, Tabs, Tab, Box
 } from "@mui/material"
-import { useState } from "react"
+import { useRef, useState } from "react"
 
 import StepPreview from "./StepPreview"
-import BacktestDataDialog from "./BacktestDataDialog"
-import { useDialogStore } from "../../store/dialog.store"
+import { BacktestDataEditPanel, type BacktestDataEditPanelRef } from "./BacktestDataDialog"
+// import { useDialogStore } from "../../store/dialog.store"
 
 export default function BacktestWizardDialog({
     open,
@@ -17,7 +17,20 @@ export default function BacktestWizardDialog({
 
     const [tab, setTab] = useState(0)
     const [localDSD, setLocalDSD] = useState(datasetSourceDef)
-    const closeDialog = useDialogStore(state => state.closeDialog)
+    const panelRef = useRef<BacktestDataEditPanelRef>(null)
+
+    const handleNext = () => {
+        const val = panelRef.current?.getValue()
+
+        if (!val) return  // 校验失败（比如 SQL 未 validate）
+
+        setLocalDSD(val)
+        setTab(1)
+    }
+
+    const handlePrev = () => {
+        setTab(0)
+    }
 
     return (
         <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
@@ -31,19 +44,12 @@ export default function BacktestWizardDialog({
                     <Tab label="Preview" />
                 </Tabs>
 
-                <Box sx={{ mt: 2 }}>
+                <Box sx={{mt:2, display: "flex", height: "100%" }}>
 
                     {tab === 0 && (
-                        <BacktestDataDialog
-                            open={true}
-                            initialValue={localDSD}
-                            onClose={() => {
-                                closeDialog()
-                            }}
-                            onConfirm={(sourceDef: any) => {
-                                setLocalDSD(sourceDef)
-                                closeDialog()
-                            }}
+                        <BacktestDataEditPanel
+                            ref={panelRef}
+                            initialValue={ { datasetSourceDef: localDSD } }
                         />
                     )}
 
@@ -57,12 +63,24 @@ export default function BacktestWizardDialog({
 
             <DialogActions>
                 <Button onClick={onClose}>Cancel</Button>
-                <Button
-                    variant="contained"
-                    onClick={() => onConfirm(localDSD)}
-                >
-                    Run
-                </Button>
+
+                {tab === 0 && (
+                    <Button variant="contained" onClick={handleNext}>
+                        Next
+                    </Button>
+                )}
+
+                {tab === 1 && (
+                    <>
+                        <Button onClick={handlePrev}>Back</Button>
+                        <Button
+                            variant="contained"
+                            onClick={() => onConfirm(localDSD)}
+                        >
+                            Run
+                        </Button>
+                    </>
+                )}
             </DialogActions>
 
         </Dialog>

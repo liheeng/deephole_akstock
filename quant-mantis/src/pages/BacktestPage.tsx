@@ -51,7 +51,7 @@ export default function BacktestPage() {
         // if (data) {
         //     setBacktestResult(data)
         // }
-        openWizard("backtest_wizard", {sourceDef: dataset?.sourceDef, runBacktest: runBacktest})
+        openWizard("backtest_wizard", {datasetSourceDef: dataset?.sourceDef, runBacktest: runBacktest})
     }
 
     if (!nodes || Object.keys(nodes).length === 0) {

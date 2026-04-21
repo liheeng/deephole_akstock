@@ -90,10 +90,12 @@ export default function GlobalDialogs({ nodes }: any) {
             {dialog.type === "backtest_data" && (
                 <BacktestDataDialog
                     open={dialog.open}
-                    initialValue={ { sourceDef: dialog.payload?.sourceDef  } }
+                    initialValue={
+                        { datasetSourceDef: dialog.payload?.datasetSourceDef }
+                    }
                     onClose={closeDialog}
-                    onConfirm={(ds) => {
-                        const datasetId = createDataset(ds)
+                    onConfirm={(datasetSourceDef: any) => {
+                        const datasetId = createDataset(datasetSourceDef)
                         setDatasetId(datasetId)
 
                         closeDialog()
@@ -104,13 +106,13 @@ export default function GlobalDialogs({ nodes }: any) {
             {dialog.type === "backtest_wizard" && (
                     <BacktestWizardDialog
                         open={dialog.open}
-                        ds={dialog.payload?.dataset}
+                        datasetSourceDef={dialog.payload?.datasetSourceDef}
                         onClose={closeDialog}
-                        onConfirm={(sourceDef: BacktestDataSourceDef) => {  
+                        onConfirm={(datasetSourceDef: BacktestDataSourceDef) => {  
                             const { runBacktest } = dialog.payload
-                            const datasetId = createDataset(sourceDef)
+                            const datasetId = createDataset(datasetSourceDef)
                             setDatasetId(datasetId)  
-                            runBacktest(sourceDef)
+                            runBacktest(datasetSourceDef)
                             closeDialog()
                         }}
                     />
