@@ -31,46 +31,8 @@ import sql from "react-syntax-highlighter/dist/esm/languages/hljs/sql"
 import { atomOneDark } from "react-syntax-highlighter/dist/esm/styles/hljs"
 import { format } from "sql-formatter"
 SyntaxHighlighter.registerLanguage("sql", sql)
+import { buildBacktestSQL_v2, buildCountSQL_v2, buildExplainSQL_v2 } from "../../datasource/sql/buildBacktestSQL"
 
-function buildSQL(ds: any) {
-    if (!ds) return ""
-
-    const {
-        markets,
-        symbols,
-        sectors,
-        universe,
-        start,
-        end
-    } = ds
-
-    let where: string[] = []
-
-    if (universe) {
-        where.push(`symbol IN (SELECT symbol FROM universe_${universe.toLowerCase()})`)
-    }
-
-    if (markets?.length) {
-        where.push(`market IN (${markets.map(m => `'${m}'`).join(",")})`)
-    }
-
-    if (symbols?.length) {
-        where.push(`symbol IN (${symbols.map(s => `'${s}'`).join(",")})`)
-    }
-
-    if (sectors?.length) {
-        where.push(`symbol IN (
-            SELECT symbol FROM universe_map
-            WHERE universe IN (${sectors.map(s => `'${s}'`).join(",")})
-        )`)
-    }
-
-    if (start && end) {
-        where.push(`date BETWEEN '${start}' AND '${end}'`)
-    }
-
-    return `SELECT * FROM stock_daily ${where.length ? "WHERE " + where.join("\n  AND ") : ""}`
-}
 
 //
 // ✅ FormRow
@@ -164,12 +126,10 @@ export default function BacktestDataDialog({
             end
         }
 
-        const sql = buildSQL(ds)
+        const sql = buildBacktestSQL_v2(ds)
         setPreviewSql(sql)
 
     }, [markets, symbols, sectors, universe, start, end, tab])
-
-    const prettySql = format(previewSql)
 
     const runExplain = async () => {
 
@@ -177,7 +137,7 @@ export default function BacktestDataDialog({
 
         // 1️⃣ explain
         const res1 = await apiClient.post("/execute_sql", {
-            sql: `EXPLAIN ${previewSql}`
+            sql: buildExplainSQL_v2(previewSql)
         })
 
         if (res1.data.status === "success") {
@@ -186,7 +146,7 @@ export default function BacktestDataDialog({
 
         // 2️⃣ count
         const res2 = await apiClient.post("/execute_sql", {
-            sql: `SELECT COUNT(*) as cnt FROM (${previewSql}) t`
+            sql: buildCountSQL_v2(previewSql)
         })
 
         if (res2.data.status === "success") {
