@@ -1,9 +1,5 @@
 import enum
-import os
-import io
-import csv
-import time
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 from pydantic import BaseModel
 
 
@@ -26,19 +22,17 @@ class DataSetSourceDefType(enum.Enum):
     PRESET = "preset"
     FILTER = "filter"
     SQL = "sql"
-    
+
 
 class DataSetSourceDef(BaseModel):
     type: str
-    markets: List[str] | None
-    symbols: List[str] | None
-
-    sectors: List[str] | None
-    universe: str | None
-
+    markets: Optional[List[str]] = None
+    symbols: Optional[List[str]] = None
+    sectors: Optional[List[str]] = None
+    universe: Optional[str] = None
     start: str
     end: str
-    sql: str
+    sql: Optional[str] = None  # 👈 加 = None
 
 
 class DataSetConfig(BaseModel):
@@ -47,14 +41,9 @@ class DataSetConfig(BaseModel):
     createdAt: str
     sourceDef: DataSetSourceDef
 
-    schema: List[str] | None
-    rowCount: int
-
-    cache: Optional[dict]
-    # : {
-    #     status: 'ready' | 'running' | 'error'
-    #     tableName?: string
-    # }
+    schema: Optional[List[str]] = None  # 👈 加 = None
+    rowCount: Optional[int] = None      # 👈 加 = None
+    cache: Optional[dict] = None        # 👈 加 = None
 
 
 class BacktestRequest(BaseModel):

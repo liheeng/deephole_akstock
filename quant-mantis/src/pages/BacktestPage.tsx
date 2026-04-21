@@ -45,7 +45,7 @@ export default function BacktestPage() {
         }
     }
 
-    const launchWizard = async () => {
+    const launchBacktestWizard = async () => {
         // const payload = buildPayload()
         // const data = await callBacktest(payload)
         // if (data) {
@@ -62,7 +62,7 @@ export default function BacktestPage() {
         <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
 
             {/* Toolbar */}
-            <TopToolbar runBacktest={launchWizard} />
+            <TopToolbar runBacktest={runBacktest} launchBacktestWizard={launchBacktestWizard} />
 
             {/* 垂直 Split（上下） */}
             <Split
@@ -101,7 +101,7 @@ export default function BacktestPage() {
                             overflow: "hidden"
                         }}
                     >
-                        <BacktestResult runBacktest={launchWizard} />
+                        <BacktestResult runBacktest={runBacktest} />
                     </Box>
 
                 </Split>

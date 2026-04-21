@@ -42,24 +42,54 @@ export async function initRegisteredNodes() {
     }
 }
 
+// export async function callBacktest(backtest_config: any) {
+//     try {
+//         // 1. 确保是 JSON 对象
+//         const jsonPayload = typeof backtest_config === 'string' ? JSON.parse(backtest_config) : backtest_config;
+
+//         // 2. 等待请求完成
+//         const res = await apiClient.post("/backtest", jsonPayload, {
+//             withCredentials: true,
+//             headers: {
+//                 "Content-Type": "application/json",
+//             },
+//         });
+
+//         // 3. 成功 → 返回数据
+//         return res.data;
+
+//     } catch (err) {
+//         // 4. 失败 → 返回 null
+//         console.error("回测失败", err);
+//         return null;
+//     }
+// }
+
 export async function callBacktest(backtest_config: any) {
     try {
         // 1. 确保是 JSON 对象
-        const jsonPayload = typeof backtest_config === 'string' ? JSON.parse(backtest_config) : backtest_config;
+        const jsonPayload = typeof backtest_config === 'string' 
+            ? JSON.parse(backtest_config) 
+            : backtest_config;
 
-        // 2. 等待请求完成
-        const res = await apiClient.post("/backtest", jsonPayload, {
+        // 2. 关键：把所有 undefined 转成 null，避免 422
+        const fixedPayload = JSON.parse(JSON.stringify(jsonPayload, (_, v) => 
+            v === undefined ? null : v
+        ));
+
+        // 3. 等待请求完成
+        const res = await apiClient.post("/backtest", fixedPayload, {
             withCredentials: true,
             headers: {
                 "Content-Type": "application/json",
             },
         });
 
-        // 3. 成功 → 返回数据
+        // 4. 成功 → 返回数据
         return res.data;
 
     } catch (err) {
-        // 4. 失败 → 返回 null
+        // 5. 失败 → 返回 null
         console.error("回测失败", err);
         return null;
     }

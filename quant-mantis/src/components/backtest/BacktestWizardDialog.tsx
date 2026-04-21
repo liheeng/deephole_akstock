@@ -6,6 +6,7 @@ import { useState } from "react"
 
 import StepPreview from "./StepPreview"
 import BacktestDataDialog from "./BacktestDataDialog"
+import { useDialogStore } from "../../store/dialog.store"
 
 export default function BacktestWizardDialog({
     open,
@@ -16,6 +17,7 @@ export default function BacktestWizardDialog({
 
     const [tab, setTab] = useState(0)
     const [localDSD, setLocalDSD] = useState(datasetSourceDef)
+    const closeDialog = useDialogStore(state => state.closeDialog)
 
     return (
         <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
@@ -35,8 +37,13 @@ export default function BacktestWizardDialog({
                         <BacktestDataDialog
                             open={true}
                             initialValue={localDSD}
-                            onClose={() => {}}
-                            onConfirm={(sourceDef: any) => setLocalDSD(sourceDef)}
+                            onClose={() => {
+                                closeDialog()
+                            }}
+                            onConfirm={(sourceDef: any) => {
+                                setLocalDSD(sourceDef)
+                                closeDialog()
+                            }}
                         />
                     )}
 
