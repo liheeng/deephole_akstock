@@ -6,7 +6,8 @@ import { useRef, useState, useMemo, useEffect } from "react"
 import UniDataGrid from "../table/UniDataGrid"
 import type { GridColDef } from '@mui/x-data-grid'
 import { Tabs, Tab } from "@mui/material"
-import { Opacity } from "@mui/icons-material"
+import WindowWrapper from "../misc/WindowWrapper"
+
 
 export default function BacktestResult({ runBacktest }: any) {
     // const [statTab, setStatTab] = useState("average")
@@ -34,7 +35,7 @@ export default function BacktestResult({ runBacktest }: any) {
     // }, [selectedSymbol])
 
     const filteredTrades = useMemo(() => {
-        if (!selectedSymbol || selectedSymbol === "average") 
+        if (!selectedSymbol || selectedSymbol === "average")
             return trades
         return trades.filter(t => t.Column === selectedSymbol)
     }, [trades, selectedSymbol])
@@ -65,8 +66,8 @@ export default function BacktestResult({ runBacktest }: any) {
             k.includes("fees")
         ) {
             return value.toLocaleString(undefined, {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 4
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 4
             })
         }
 
@@ -164,7 +165,7 @@ export default function BacktestResult({ runBacktest }: any) {
             cellClassName: (params) => {
                 if (params.row.name.includes("Return") || params.row.name.includes("Best Sharpe"))
                     return "highlight"
-                if (params.row.name.includes("Drawdown")) 
+                if (params.row.name.includes("Drawdown"))
                     return "danger"
                 return ""
             }
@@ -205,8 +206,8 @@ export default function BacktestResult({ runBacktest }: any) {
                 name: isBestSharpe
                     ? `⭐ ${symbol}`
                     : isBestReturn
-                    ? `🚀 ${symbol}`
-                    : symbol,
+                        ? `🚀 ${symbol}`
+                        : symbol,
 
                 type: "line",
                 smooth: true,
@@ -223,8 +224,8 @@ export default function BacktestResult({ runBacktest }: any) {
                     color: isBestSharpe
                         ? "#2e7d32"
                         : isBestReturn
-                        ? "#ed6c02"
-                        : undefined
+                            ? "#ed6c02"
+                            : undefined
                 },
 
                 data: zip(arr as number[])
@@ -393,39 +394,44 @@ export default function BacktestResult({ runBacktest }: any) {
             }}>
                 {/* 图表 */}
                 <Box sx={{
-                        flex: 2,
-                        minHeight: 0,
-                        height: "100%",
-                        overflow: "hidden"   // 🔥 防止撑开
-                    }}>
-                    <ReactECharts
-                        option={chartOption}
-                        style={{ height: "100%" }}
-                        opts={{ renderer: "canvas" }}
-                        notMerge={true}
-                        lazyUpdate={true}   // 🔥 防止频繁重算
-                        onEvents={{
-                            legendselectchanged: (params: any) => {
-                                const selected = Object.keys(params.selected)
-                                    .find(k => params.selected[k] === true)
-                                    
-                                if (selected && selected !== "Portfolio") {
-                                    setSelectedSymbol(replaceEmji(selected))
-                                } else {
-                                    setSelectedSymbol(null)
-                                }
-                            },
+                    flex: 2,
+                    minHeight: 0,
+                    minWidth: 0,
+                    height: "100%",
+                    overflow: "hidden"   // 🔥 防止撑开
+                }}>
+                    <WindowWrapper title="Equity Curve">
+                        <Box sx={{ flex: 1, minHeight: 0 }}>
+                            <ReactECharts
+                                option={chartOption}
+                                style={{ height: "100%" }}
+                                opts={{ renderer: "canvas" }}
+                                notMerge={true}
+                                lazyUpdate={true}   // 🔥 防止频繁重算
+                                onEvents={{
+                                    legendselectchanged: (params: any) => {
+                                        const selected = Object.keys(params.selected)
+                                            .find(k => params.selected[k] === true)
 
-                            click: (params: any) => {
-                                if (params.seriesName && params.seriesName !== "Portfolio") {
-                                    setSelectedSymbol(replaceEmji(params.seriesName))
-                                } else {
-                                    setSelectedSymbol(null) 
-                                }
-                            }
-                        }}
-                        
-                    />
+                                        if (selected && selected !== "Portfolio") {
+                                            setSelectedSymbol(replaceEmji(selected))
+                                        } else {
+                                            setSelectedSymbol(null)
+                                        }
+                                    },
+
+                                    click: (params: any) => {
+                                        if (params.seriesName && params.seriesName !== "Portfolio") {
+                                            setSelectedSymbol(replaceEmji(params.seriesName))
+                                        } else {
+                                            setSelectedSymbol(null)
+                                        }
+                                    }
+                                }}
+
+                            />
+                        </Box>
+                    </WindowWrapper>
                 </Box>
 
                 {/* stats */}
@@ -435,82 +441,88 @@ export default function BacktestResult({ runBacktest }: any) {
                         height: "100%",
                         display: "flex",
                         flexDirection: "column",
-                        minHeight: 0   // 🔥 核心！
+                        minHeight: 0,   // 🔥 核心！
+                        minWidth: 260,    // 🔥 防止过宽时撑开
+                        maxWidth: 500,   // 🔥 可选：限制最大宽度
                     }}
                 >
-                    {/* Tabs */}
-                    <Tabs
-                        value={statTab}
-                        onChange={(_, v) => {
-                            if (v === "average") {
-                                setSelectedSymbol(null)
-                            } else {
-                                setSelectedSymbol(replaceEmji(v))
-                            }
-                        }}
-                        variant="scrollable"
-                        scrollButtons="auto"
-                        sx={{ minHeight: 32 }}
-                    >
-                        {statTabs.map(tab => {
-                            const isSharpe = tab === bestSharpe
-                            const isReturn = tab === bestReturn
-
-                            return (
-                            <Tab
-                                key={tab}
-                                value={tab}
-                                label={
-                                    tab === "average"
-                                        ? "Portfolio"
-                                        : isSharpe
-                                        ? `⭐ ${tab}`
-                                        : isReturn
-                                        ? `🚀 ${tab}`
-                                        : tab
-                                }
-                                sx={{
-                                    minHeight: 32,
-
-                                    // 🔥 核心高亮
-                                    color: isSharpe
-                                        ? "#2e7d32"
-                                        : isReturn
-                                        ? "#ed6c02"
-                                        : undefined,
-
-                                    fontWeight: isSharpe || isReturn ? 600 : 400
+                    <WindowWrapper title="Statistics">
+                        <Box sx={{ flex: 1, minHeight: 0 }}>
+                            {/* Tabs */}
+                            <Tabs
+                                value={statTab}
+                                onChange={(_, v) => {
+                                    if (v === "average") {
+                                        setSelectedSymbol(null)
+                                    } else {
+                                        setSelectedSymbol(replaceEmji(v))
+                                    }
                                 }}
-                            />
-                            )
-                        })}
-                    </Tabs>
+                                variant="scrollable"
+                                scrollButtons="auto"
+                                sx={{ minHeight: 32 }}
+                            >
+                                {statTabs.map(tab => {
+                                    const isSharpe = tab === bestSharpe
+                                    const isReturn = tab === bestReturn
 
-                    {/* Table */}
-                    <Box sx={{ flex: 1, minHeight: 0 }}>
-                        <UniDataGrid
-                            rows={statRows}
-                            columns={statColumns}
-                            autoHeight={false}
-                            disableRowSelectionOnClick
-                            hideFooterPagination
-                            hideFooter
-                            sx={{
-                                height: "100%",
-                                fontSize: "16px",
+                                    return (
+                                        <Tab
+                                            key={tab}
+                                            value={tab}
+                                            label={
+                                                tab === "average"
+                                                    ? "Portfolio"
+                                                    : isSharpe
+                                                        ? `⭐ ${tab}`
+                                                        : isReturn
+                                                            ? `🚀 ${tab}`
+                                                            : tab
+                                            }
+                                            sx={{
+                                                minHeight: 32,
 
-                                "& .highlight": {
-                                    color: "#4cd753",
-                                    fontWeight: 600
-                                },
+                                                // 🔥 核心高亮
+                                                color: isSharpe
+                                                    ? "#2e7d32"
+                                                    : isReturn
+                                                        ? "#ed6c02"
+                                                        : undefined,
 
-                                "& .danger": {
-                                    color: "#f03535",
-                                    fontWeight: 600
-                                }
-                            }}
-                        />
-                    </Box>
+                                                fontWeight: isSharpe || isReturn ? 600 : 400
+                                            }}
+                                        />
+                                    )
+                                })}
+                            </Tabs>
+
+                            {/* Table */}
+                            <Box sx={{ flex: 1, minHeight: 0 }}>
+                                <UniDataGrid
+                                    rows={statRows}
+                                    columns={statColumns}
+                                    autoHeight={false}
+                                    disableRowSelectionOnClick
+                                    hideFooterPagination
+                                    hideFooter
+                                    sx={{
+                                        height: "100%",
+                                        fontSize: "16px",
+
+                                        "& .highlight": {
+                                            color: "#4cd753",
+                                            fontWeight: 600
+                                        },
+
+                                        "& .danger": {
+                                            color: "#f03535",
+                                            fontWeight: 600
+                                        }
+                                    }}
+                                />
+                            </Box>
+                        </Box>
+                    </WindowWrapper>
 
                 </Box>
             </Box>
@@ -530,7 +542,11 @@ export default function BacktestResult({ runBacktest }: any) {
 
             {/* trades */}
             <Box sx={{ flex: 1, overflow: "auto" }}>
-                <TradesTable trades={filteredTrades} />
+                <WindowWrapper title="Trades">
+                        <Box sx={{ flex: 1, minHeight: 0 }}>
+                            <TradesTable trades={filteredTrades} />
+                        </Box>
+                </WindowWrapper>
             </Box>
         </Card>
     )
