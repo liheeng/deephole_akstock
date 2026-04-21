@@ -74,7 +74,12 @@ export default function BacktestDataDialog(props: any) {
 
             <DialogTitle>Backtest Data</DialogTitle>
 
-            <DialogContent sx={{ height: "75vh" }}>
+            <DialogContent sx={{
+                minHeight: "40vh",     // 👈 加这一行！强制最小高度
+                display: "flex",
+                flexDirection: "column",
+                height: "100%", // 让子元素能100%高度
+            }}>
                 <BacktestDataEditPanel
                     ref={panelRef}
                     initialValue={datasetSourceDef}
@@ -104,7 +109,7 @@ export default function BacktestDataDialog(props: any) {
 export const BacktestDataEditPanel = forwardRef<BacktestDataEditPanelRef, Props>(
     ({ initialValue }, ref) => {
 
-        
+
         const datasetSourceDef: BacktestDataSourceDef = initialValue?.datasetSourceDef
         const isSql = (datasetSourceDef?.type === "sql")
 
@@ -308,7 +313,7 @@ export const BacktestDataEditPanel = forwardRef<BacktestDataEditPanelRef, Props>
         // }
 
         return (
-            <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+            <Box sx={{ height: "100%", width: "100%", display: "flex", flexDirection: "column" }}>
 
                 <Tabs value={tab} onChange={(_, v) => setTab(v)} >
 
@@ -592,7 +597,14 @@ export const BacktestDataEditPanel = forwardRef<BacktestDataEditPanelRef, Props>
 
                     {/* ================= SQL ================= */}
                     {tab === 1 && (
-                        <Box sx={{ flex: 1, minWidth: 0, mt: 2 }}>
+                        <Box sx={{
+                            flex: 1,
+                            minWidth: 0,
+                            mt: 2,
+                            display: "flex",
+                            flexDirection: "column",
+                            height: "100%", // 占满父级高度
+                        }}>
 
                             <TextField
                                 fullWidth
@@ -601,7 +613,26 @@ export const BacktestDataEditPanel = forwardRef<BacktestDataEditPanelRef, Props>
                                 value={sql}
                                 inputRef={inputRef}
                                 onChange={(e) => setSql(e.target.value)}
-                                sx={{ mb: 2 }}
+                                sx={{
+                                    flex: 1, // 🔥 核心：占剩余高度
+                                    overflow: "auto", // 内容超了滚动
+                                    "& .MuiInputBase-root": {
+                                        height: "100%", // 强制内部高度100%
+                                        display: "flex",
+                                    },
+                                    "& .MuiInputBase-input": {
+                                        height: "100% !important", // 覆盖 autosize
+                                        flex: 1,
+                                        overflow: "auto", // 输入框内滚动
+                                        whiteSpace: "pre-wrap", // 保留换行
+                                    },
+                                }}
+                                InputProps={{
+                                    disableUnderline: true,
+                                    // 用原生 textarea 而非 autosize
+                                    multiline: true,
+                                    rows: undefined,
+                                }}
                             />
 
                             <Button
@@ -613,16 +644,23 @@ export const BacktestDataEditPanel = forwardRef<BacktestDataEditPanelRef, Props>
                                 Validate
                             </Button>
 
-                            {data.rows.length > 0 && (
-                                <Box sx={{ height: 300 }}>
+                            {/* {data.rows.length > 0 && ( */}
+                                <Box sx={{ 
+                                    height: 300, 
+                                    mt: 2,
+                                    border: "1px solid rgba(186, 181, 181, 0.92)",  // 边框
+                                    borderRadius: "8px",                         // 圆角
+                                    overflow: "hidden"                           // 让表格圆角生效
+                                }}>
                                     <UniDataGrid
                                         rows={data.rows}
                                         columns={data.columns}
                                         slots={{ toolbar: GridToolbar }}
                                         density="compact"
+                                        sx={{ border: "none", backgroundColor: "#5c5a5a" }}
                                     />
                                 </Box>
-                            )}
+                            {/* )} */}
                         </Box>
                     )}
 

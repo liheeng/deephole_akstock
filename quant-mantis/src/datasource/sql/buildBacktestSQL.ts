@@ -86,13 +86,17 @@ export function buildExplainSQL(p: Preset | string) {
 }
 
 export function buildBacktestSQL_v2(p: Preset) {
+    if (p.type === "sql") {
+        return p.sql
+    }
+    
     const plan = buildPlan(p)
     const optimized = optimizePlan(plan)
     return compileSQL(optimized)
 }
 
 export function buildExplainSQL_v2(p: Preset | string) {
-    return `EXPLAIN ${typeof p === "string" ? p :   buildBacktestSQL_v2(p)}`
+    return `EXPLAIN ${typeof p === "string" ? p : buildBacktestSQL_v2(p)}`
 }
 
 export function buildCountSQL_v2(p: Preset | string) {

@@ -6,11 +6,12 @@ import { buildBacktestSQL_v2, buildExplainSQL_v2, buildCountSQL_v2 } from "../..
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { atomOneDark } from "react-syntax-highlighter/dist/esm/styles/hljs"
 import { format } from "sql-formatter"
+import ExplainViewer from "../explain/ExplainViewer"
 
-export default function StepPreview({ ds }: { ds: any }) {
+export default function StepPreview({ ds, ...props }: { ds: any }) {
 
     const [sql, setSql] = useState("")
-    const [explain, setExplain] = useState<any[]>([])
+    const [explain, setExplain] = useState("")
     const [count, setCount] = useState<number | null>(null)
     const [loading, setLoading] = useState(false)
 
@@ -28,23 +29,29 @@ export default function StepPreview({ ds }: { ds: any }) {
             sql: buildExplainSQL_v2(ds)
         })
 
-        setExplain(res.data.data || [])
+        if (res.data.status === "success") {
+            setExplain(JSON.stringify(res.data.data, null, 2))
+        }
+
+        // setExplain(res.data.data || [])
         setLoading(false)
     }
 
+    
     const runCount = async () => {
         setLoading(true)
 
         const res = await apiClient.post("/execute_sql", {
             sql: buildCountSQL_v2(ds)
         })
-
-        setCount(res.data.data?.[0]?.cnt ?? null)
+        if (res.data.status === "success") {
+            setCount(res.data.data?.[0]?.cnt ?? null)
+        }
         setLoading(false)
     }
 
     return (
-        <Stack spacing={2}>
+        <Stack spacing={2} {...props}>
 
             {/* SQL */}
             <Box>
@@ -76,23 +83,41 @@ export default function StepPreview({ ds }: { ds: any }) {
                     Estimate Rows
                 </Button>
             </Stack>
+            
+            {/* Count */}
+            {count !== null && (
+                <Typography variant="body2" sx={{ fontSize: 12 }}>
+                    Estimated Rows: <b>{count?.toLocaleString()}</b>
+                </Typography>
+            )}
 
             {/* Explain */}
             {explain.length > 0 && (
-                <Box>
-                    <Typography variant="caption">Execution Plan</Typography>
-                    <pre style={{ fontSize: 12 }}>
-                        {JSON.stringify(explain, null, 2)}
-                    </pre>
-                </Box>
-            )}
+  <Box sx={{ 
+    maxHeight: 320,      // 限制高度
+    overflow: "auto",    // 自动滚动
+    border: "1px solid #333",
+    borderRadius: "8px",
+    bgcolor: "#111",
+    p: 1.5,
+    mt: 1,
+    flex: 1,
+    height: "100%"
+  }}>
+    <Typography variant="caption" sx={{ mb: 1, display: "block" }}>
+      Execution Plan
+    </Typography>
 
-            {/* Count */}
-            {count !== null && (
-                <Typography variant="body2">
-                    Estimated Rows: <b>{count.toLocaleString()}</b>
-                </Typography>
-            )}
+    <ExplainViewer
+      text={explain}
+      fontSize={16}
+      nodeFontSize={15}
+      detailFontSize={14}
+    />
+  </Box>
+)}
+
+
         </Stack>
     )
 }

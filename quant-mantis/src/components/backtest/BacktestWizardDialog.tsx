@@ -37,24 +37,41 @@ export default function BacktestWizardDialog({
 
             <DialogTitle>Run Backtest</DialogTitle>
 
-            <DialogContent>
+            <DialogContent sx={{
+                minHeight: "50vh",     // 👈 加这一行！强制最小高度
+                maxHeight: "50vh",     // 👈 加这一行！限制最大高度
+                display: "flex",
+                flexDirection: "column",
+                height: "100%", // 让子元素能100%高度
+                flex: 1          // 让内容区占满剩余空间
+            }}>
 
                 <Tabs value={tab} onChange={(_, v) => setTab(v)}>
                     <Tab label="Data" />
                     <Tab label="Preview" />
                 </Tabs>
 
-                <Box sx={{mt:2, display: "flex", height: "100%" }}>
+                <Box sx={{
+                    flex: 1,          // 占满 DialogContent 剩余空间
+                    width: "100%",    // 强制 100% 宽度
+                    mt: 2, display: "flex", height: "100%", border: "1px solid rgba(186, 181, 181, 0.92)",  // 边框
+                    borderRadius: "8px",                         // 圆角
+                    overflow: "hidden", padding: 1
+                }}>
 
                     {tab === 0 && (
                         <BacktestDataEditPanel
                             ref={panelRef}
-                            initialValue={ { datasetSourceDef: localDSD } }
+                            initialValue={{ datasetSourceDef: localDSD }}
+                            sx={{ flex: 1, width: "100%" }}
                         />
                     )}
 
                     {tab === 1 && (
-                        <StepPreview ds={localDSD} />
+                        <StepPreview
+                            ds={localDSD} 
+                            sx={{ flex: 1, width: "100%" }}
+                        />
                     )}
 
                 </Box>

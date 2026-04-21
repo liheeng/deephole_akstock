@@ -27,7 +27,7 @@ export function buildPlan(p: Preset): QueryPlan {
     // =========================
     // 🥇 Universe（高优先级 JOIN）
     // =========================
-    if (p.universe) {
+    if (p?.universe) {
         plan.joins.push({
             key: `universe:${p.universe}`,
             priority: 1,
@@ -43,7 +43,7 @@ export function buildPlan(p: Preset): QueryPlan {
     // =========================
     // 🥈 Sector
     // =========================
-    if (p.sectors?.length) {
+    if (p?.sectors?.length) {
         plan.joins.push({
             key: "sector",
             priority: 2,
@@ -61,19 +61,19 @@ export function buildPlan(p: Preset): QueryPlan {
     // =========================
     // 🥉 Filters
     // =========================
-    if (p.markets?.length) {
+    if (p?.markets?.length) {
         plan.wheres.push(`s.market IN (${toSQLList(p.markets)})`)
     }
 
-    if (p.symbols?.length) {
+    if (p?.symbols?.length) {
         plan.wheres.push(`s.symbol IN (${toSQLList(p.symbols)})`)
     }
 
     // =========================
     // ⏱ Time（必须）
     // =========================
-    plan.wheres.push(`s.date >= '${p.start}'`)
-    plan.wheres.push(`s.date <= '${p.end}'`)
+    plan.wheres.push(`s.date >= '${p?.start}'`)
+    plan.wheres.push(`s.date <= '${p?.end}'`)
 
     return plan
 }

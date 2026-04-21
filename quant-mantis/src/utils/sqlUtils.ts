@@ -22,4 +22,6 @@ export type Preset = {
     universe?: string
     start: string
     end: string
+    sql?: string
+    type: "preset" | "sql"
 }
