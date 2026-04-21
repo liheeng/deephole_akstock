@@ -3,7 +3,11 @@ import { Box, Typography, Chip } from "@mui/material"
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore"
 import ChevronRightIcon from "@mui/icons-material/ChevronRight"
 import type { PlanNode } from "../../utils/parseDuckDBExplain"
+import { getNodeStyle } from "./Explain"
 
+//
+// 🔍 高亮
+//
 function highlight(text: string, keyword: string) {
     if (!keyword) return text
 
@@ -17,13 +21,16 @@ function highlight(text: string, keyword: string) {
     )
 }
 
+//
+// 🔍 匹配（⚠️ 修复 rows bug）
+//
 function matchNode(node: PlanNode, keyword: string): boolean {
     if (!keyword) return true
 
     const k = keyword.toLowerCase()
 
     if (node.name.toLowerCase().includes(k)) return true
-    if (node.rows?.includes(k)) return true
+    if (node.rows?.toString().includes(k)) return true   // ✅ 修复
     if (node.extra.some(e => e.toLowerCase().includes(k))) return true
 
     return node.children.some(c => matchNode(c, keyword))
@@ -43,10 +50,12 @@ export default function ExplainNode({
 
     const matched = useMemo(() => matchNode(node, keyword), [node, keyword])
 
-    // 🔥 自动展开命中路径
-    const [open, setOpen] = useState(keyword ? true : true)
+    const [open, setOpen] = useState(true)
 
     if (!matched) return null
+
+    // ✅ 核心：获取样式
+    const style = getNodeStyle(node.name, node.rows)
 
     return (
         <Box sx={{ ml: 1.5, pl: 2, borderLeft: "1px dashed rgba(255,255,255,0.2)" }}>
@@ -66,13 +75,26 @@ export default function ExplainNode({
                 <Chip
                     size="small"
                     label={node.name}
-                    sx={{ fontSize: nodeFontSize, height: 24 }}
-                    color={node.name.includes("SCAN") ? "error" : "default"}
+                    sx={{
+                        fontSize: nodeFontSize,
+                        height: 24,
+                        fontWeight: 500,
+
+                        // 🔥 应用你的颜色规则
+                        bgcolor: style.bgcolor,
+                        color: style.color,
+
+                        // 防止 hover 被 MUI 覆盖
+                        "&.MuiChip-root": {
+                            bgcolor: style.bgcolor,
+                            color: style.color,
+                        }
+                    }}
                 />
 
                 {node.rows && (
-                    <Typography sx={{ fontSize: nodeFontSize, opacity: 0.7 }}>
-                        {highlight(`~${node.rows} rows`, keyword)}
+                    <Typography sx={{ fontSize: nodeFontSize, opacity: 0.75 }}>
+                        {highlight(`~${node.rows.toLocaleString()} rows`, keyword)}
                     </Typography>
                 )}
             </Box>
@@ -88,7 +110,8 @@ export default function ExplainNode({
                             sx={{
                                 fontFamily: "monospace",
                                 fontSize: detailFontSize,
-                                opacity: 0.7
+                                opacity: 0.7,
+                                lineHeight: 1.4
                             }}
                         >
                             {highlight(e, keyword)}

@@ -1,16 +1,10 @@
 import { useMemo, useState } from "react"
 import {
     Box,
-    Typography,
-    TextField,
-    IconButton,
-    Chip
+    TextField
 } from "@mui/material"
 
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore"
-import ChevronRightIcon from "@mui/icons-material/ChevronRight"
-
-import { parseDuckDBExplain, type PlanNode } from "../../utils/parseDuckDBExplain"
+import { parseDuckDBExplain } from "../../utils/parseDuckDBExplain"
 import ExplainNode from "./ExplainNode"
 import { analyzeExplain } from "../../utils/explainAnalyzer"
 import ExplainHints from "./ExplainHints"

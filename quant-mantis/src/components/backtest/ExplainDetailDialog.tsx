@@ -19,7 +19,7 @@ export default function ExplainDetailDialog({
     onClose: () => void
     data: any[]
 }) {
-    const [fontSize, setFontSize] = useState(14)
+    const [fontSize, setFontSize] = useState(16)
 
     return (
         <Dialog
