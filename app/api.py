@@ -1,13 +1,10 @@
 # app/api.py
 
-import enum
 import os
-import io
-import csv
 import time
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 from contextlib import asynccontextmanager, closing
-from fastapi import FastAPI, HTTPException, WebSocket, Query, Request
+from fastapi import FastAPI, HTTPException, WebSocket, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse
 import subprocess
@@ -18,6 +15,7 @@ import traceback
 import re
 
 from fastapi.middleware.cors import CORSMiddleware
+from app.api_config import CORS_CONFIG
 
 from core.task_manager import task_manager
 from db.db_common import DB
@@ -30,6 +28,7 @@ from db.duckdb import DuckDBController
 from sources.ifind.ifind_api import IFinDApi
 from sources.data_source import DataSourceApiName
 
+from backtest.backtest_base import DataSetConfig, BacktestRequest
 from vectorbt_test.core.registry import NodeRegistry
 from vectorbt_test.core.portfolio import PortfolioParameters, PortfolioResultWrapper
 from vectorbt_test.engine.data_provider import DataProvider
@@ -72,13 +71,11 @@ async def lifespan(app: FastAPI):
     yield
     logger.error("API servide is shutting down")
 
+
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://192.168.50.11:5173"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    **CORS_CONFIG
 )
 
 if is_running_in_docker():
@@ -334,6 +331,7 @@ async def export_stream(req):
         # raise HTTPException(status_code=500, detail=str(e))
         return {"status": "error", "message": str(e)}
 
+
 @app.get("/nodes")
 def get_nodes():
     nodes = NodeRegistry.to_dict()
@@ -342,58 +340,25 @@ def get_nodes():
     return nodes
 
 
-class StrategyConfig(BaseModel):
-    name: str
-    factors: List[str]
-    signal: Optional[str] = None
-
-
-# class BacktestDataSourceType(enum.Enum):
-#     PRESET = "preset"
-#     FILTER = "filter"
-#     SQL = "sql"
-
-
-# class BacktestDataSource(BaseModel):
-#     type: BacktestDataSourceType = BacktestDataSourceType.PRESET
-#     markets: List[str] = []
-#     symbols: List[str] = [] 
-
-#     sectors: List[str] = []
-#     universe: str
-
-#     start: str
-#     end: str
-#     sql: str
-
-
-class PortfolioRequest(BaseModel):
-    # ds: BacktestDataSource
-    ds: Dict[str, Any]
-    name: str
-    mode: str
-    strategies: List[StrategyConfig]
-    strategy_op: Optional[str] = "AND"
-    schedule_signal: Optional[str] = None
-    params: dict
-
-
-def load_data_somehow(ds: Dict[str, Any]) -> pd.DataFrame:
-    build_datasource_sql()
-    from db.stock_daily_util import get_symbol_data, get_symbols_data
+def load_data_somehow(ds: DataSetConfig) -> pd.DataFrame:
+    sql = build_dataset_sql(ds.sourceDef.model_dump(exclude_none=False))
+    logger.info(f"built sql for backtest data source: {sql}")
+    # from db.stock_daily_util import get_symbol_data, get_symbols_data
     db_controller = DuckDBController(db_path="../data/stock.duckdb")
-    df = get_symbols_data(db_controller, "603259.SH, 600362.SH", "2025-01-01", "2026-03-31")
+    # df = get_symbols_data(db_controller, "603259.SH, 600362.SH", "2025-01-01", "2026-03-31")
     # df = get_symbol_data(db_controller, "603259.SH", "2025-01-01", "2026-03-31")
+    df = db_controller.read(sql, fetch_mode='df')
     return df
 
 
 @app.post("/backtest")
-def run_backtest(req: PortfolioRequest):
+def run_backtest(req: BacktestRequest):
     try:
         # 1. 构建 Portfolio
-        builder = PortfolioBuilder.new(req.name, req.mode)
+        portfolio_config = req.portfolio_config
+        builder = PortfolioBuilder.new(portfolio_config.name, portfolio_config.mode)
 
-        for s in req.strategies:
+        for s in portfolio_config.strategies:
             builder.add_strategy(s.name)
 
             for f in s.factors:
@@ -401,19 +366,19 @@ def run_backtest(req: PortfolioRequest):
 
             builder.end_strategy()
 
-        builder.set_strategy_op(req.strategy_op or StrategyOp.OR.value)
+        builder.set_strategy_op(portfolio_config.strategy_op or StrategyOp.OR.value)
 
-        if req.schedule_signal:
-            builder.set_schedule_signal(req.schedule_signal)
+        if portfolio_config.schedule_signal:
+            builder.set_schedule_signal(portfolio_config.schedule_signal)
 
         builder.set_portfolio_params(
-            PortfolioParameters(**req.params)
+            PortfolioParameters(**portfolio_config.params)
         )
 
         portfolio = builder.build()
 
         # 2. 加载数据
-        df = load_data_somehow(req.ds)
+        df = load_data_somehow(req.dataset_config)
 
         # 3. 运行回测
         pf = portfolio.run(DataProvider(None), df)
@@ -457,9 +422,9 @@ def run_backtest(req: PortfolioRequest):
         raise HTTPException(status_code=500, detail=f"错误: {str(e)}\n{traceback.format_exc()}")
 
 
-def materialize_dataset(dataset_id, source):
+def materialize_dataset(dataset_id, source_def):
 
-    sql = build_datasource_sql(source)
+    sql = build_dataset_sql(source_def)
 
     table_name = f"dataset_{dataset_id}"
 
@@ -474,28 +439,28 @@ def materialize_dataset(dataset_id, source):
     }
 
 
-def build_datasource_sql(ds):
-    if ds["type"] == "sql":
-        return ds["sql"]
+def build_dataset_sql(source_def: dict):
+    if source_def["type"] == "sql":
+        return source_def["sql"]
 
     sql = "SELECT * FROM stock_daily WHERE 1=1"
 
-    if ds.get("markets"):
-        markets = ",".join([f"'{s}'" for s in ds["markets"]])
+    if source_def.get("markets"):
+        markets = ",".join([f"'{s}'" for s in source_def["markets"]])
         sql += f" AND market IN ({markets})"
 
-    if ds.get("symbols"):
-        symbols = ",".join([f"'{s}'" for s in ds["symbols"]])
+    if source_def.get("symbols"):
+        symbols = ",".join([f"'{s}'" for s in source_def["symbols"]])
         sql += f" AND symbol IN ({symbols})"
 
-    if ds.get("sectors"):
-        sectors = ",".join([f"'{s}'" for s in ds["sectors"]])
+    if source_def.get("sectors"):
+        sectors = ",".join([f"'{s}'" for s in source_def["sectors"]])
         sql += f" AND sector IN ({sectors})"
 
-    if ds.get("universe"):
-        sql += f" AND symbol IN (SELECT symbol FROM universe_map WHERE name = '{ds['universe']}')"
+    if source_def.get("universe"):
+        sql += f" AND symbol IN (SELECT symbol FROM universe_map WHERE name = '{source_def['universe']}')"
 
-    sql += f" AND date BETWEEN '{ds['start']}' AND '{ds['end']}'"
+    sql += f" AND date BETWEEN '{source_def['start']}' AND '{source_def['end']}'"
 
     return sql
 
@@ -508,8 +473,8 @@ def backtest_dataset(req: dict):
     # "source": {...}
     # }
     dataset_id = req.get("dataset_id")
-    source = req.get("source")
-    materialize_dataset(dataset_id, source)
+    source_def = req.get("sourceDef")
+    materialize_dataset(dataset_id, source_def)
     pass
 
 
