@@ -1,10 +1,11 @@
 # app/api.py
 
+import enum
 import os
 import io
 import csv
 import time
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from contextlib import asynccontextmanager, closing
 from fastapi import FastAPI, HTTPException, WebSocket, Query, Request
 from fastapi.staticfiles import StaticFiles
@@ -34,7 +35,7 @@ from vectorbt_test.core.portfolio import PortfolioParameters, PortfolioResultWra
 from vectorbt_test.engine.data_provider import DataProvider
 from vectorbt_test.engine.portfolio_builder import PortfolioBuilder
 from vectorbt_test.engine.init import load_register_nodes
-
+from vectorbt_test.portfolios.signal_strategy_portfolio import StrategyOp
 # !!! Register executors, any new executor needs to be import here,
 # it is very important,otherwise the API won't know how to handle
 # the incoming jobs!!!
@@ -347,7 +348,28 @@ class StrategyConfig(BaseModel):
     signal: Optional[str] = None
 
 
+# class BacktestDataSourceType(enum.Enum):
+#     PRESET = "preset"
+#     FILTER = "filter"
+#     SQL = "sql"
+
+
+# class BacktestDataSource(BaseModel):
+#     type: BacktestDataSourceType = BacktestDataSourceType.PRESET
+#     markets: List[str] = []
+#     symbols: List[str] = [] 
+
+#     sectors: List[str] = []
+#     universe: str
+
+#     start: str
+#     end: str
+#     sql: str
+
+
 class PortfolioRequest(BaseModel):
+    # ds: BacktestDataSource
+    ds: Dict[str, Any]
     name: str
     mode: str
     strategies: List[StrategyConfig]
@@ -356,7 +378,8 @@ class PortfolioRequest(BaseModel):
     params: dict
 
 
-def load_data_somehow():
+def load_data_somehow(ds: Dict[str, Any]) -> pd.DataFrame:
+    build_datasource_sql()
     from db.stock_daily_util import get_symbol_data, get_symbols_data
     db_controller = DuckDBController(db_path="../data/stock.duckdb")
     df = get_symbols_data(db_controller, "603259.SH, 600362.SH", "2025-01-01", "2026-03-31")
@@ -367,6 +390,7 @@ def load_data_somehow():
 @app.post("/backtest")
 def run_backtest(req: PortfolioRequest):
     try:
+        # 1. 构建 Portfolio
         builder = PortfolioBuilder.new(req.name, req.mode)
 
         for s in req.strategies:
@@ -377,7 +401,7 @@ def run_backtest(req: PortfolioRequest):
 
             builder.end_strategy()
 
-        builder.set_strategy_op(req.strategy_op)
+        builder.set_strategy_op(req.strategy_op or StrategyOp.OR.value)
 
         if req.schedule_signal:
             builder.set_schedule_signal(req.schedule_signal)
@@ -388,11 +412,14 @@ def run_backtest(req: PortfolioRequest):
 
         portfolio = builder.build()
 
-        # === 数据 ===
-        df = load_data_somehow()
+        # 2. 加载数据
+        df = load_data_somehow(req.ds)
 
+        # 3. 运行回测
         pf = portfolio.run(DataProvider(None), df)
         pfwrapper = PortfolioResultWrapper(pf)
+
+        # 4. 返回结果
         # return {
         #     "stats": pf.stats().to_dict(),
         #     "trades": pf.trades.records_readable.to_dict(orient="records"),
@@ -432,7 +459,7 @@ def run_backtest(req: PortfolioRequest):
 
 def materialize_dataset(dataset_id, source):
 
-    sql = build_dataset_sql(source)
+    sql = build_datasource_sql(source)
 
     table_name = f"dataset_{dataset_id}"
 
@@ -447,14 +474,15 @@ def materialize_dataset(dataset_id, source):
     }
 
 
-def build_dataset_sql(ds):
+def build_datasource_sql(ds):
     if ds["type"] == "sql":
         return ds["sql"]
 
     sql = "SELECT * FROM stock_daily WHERE 1=1"
 
     if ds.get("markets"):
-        sql += f" AND market IN ({...})"
+        markets = ",".join([f"'{s}'" for s in ds["markets"]])
+        sql += f" AND market IN ({markets})"
 
     if ds.get("symbols"):
         symbols = ",".join([f"'{s}'" for s in ds["symbols"]])
