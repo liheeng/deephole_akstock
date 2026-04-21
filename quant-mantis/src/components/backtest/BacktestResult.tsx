@@ -370,6 +370,7 @@ export default function BacktestResult({ runBacktest }: any) {
             ref={containerRef}
             sx={{
                 p: 2,
+                minHeight: 0,   // 🔥 必须加
                 height: "100%",
                 display: "flex",
                 flexDirection: "column",
@@ -388,13 +389,21 @@ export default function BacktestResult({ runBacktest }: any) {
                 display: "flex",
                 gap: 2,
                 height: `${topHeight}%`,
-                minHeight: 200
+                minHeight: 0,   // 🔥 改这里
             }}>
                 {/* 图表 */}
-                <Box sx={{ flex: 2, height: "100%", minHeight: 0 }}>
+                <Box sx={{
+                        flex: 2,
+                        minHeight: 0,
+                        height: "100%",
+                        overflow: "hidden"   // 🔥 防止撑开
+                    }}>
                     <ReactECharts
                         option={chartOption}
                         style={{ height: "100%" }}
+                        opts={{ renderer: "canvas" }}
+                        notMerge={true}
+                        lazyUpdate={true}   // 🔥 防止频繁重算
                         onEvents={{
                             legendselectchanged: (params: any) => {
                                 const selected = Object.keys(params.selected)
@@ -415,6 +424,7 @@ export default function BacktestResult({ runBacktest }: any) {
                                 }
                             }
                         }}
+                        
                     />
                 </Box>
 

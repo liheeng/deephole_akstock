@@ -35,7 +35,8 @@ export default function ExplainDetailDialog({
                     height: "70vh",
                     display: "flex",
                     flexDirection: "column",
-                    p: 0
+                    p: 0,
+                    bgcolor: "#111"
                 }}
             >
                 <Slider

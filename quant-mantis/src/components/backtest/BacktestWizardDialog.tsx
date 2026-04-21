@@ -37,14 +37,15 @@ export default function BacktestWizardDialog({
 
             <DialogTitle>Run Backtest</DialogTitle>
 
-            <DialogContent sx={{
-                minHeight: "50vh",     // 👈 加这一行！强制最小高度
-                maxHeight: "50vh",     // 👈 加这一行！限制最大高度
-                display: "flex",
-                flexDirection: "column",
-                height: "100%", // 让子元素能100%高度
-                flex: 1          // 让内容区占满剩余空间
-            }}>
+            <DialogContent
+                sx={{
+                    height: "50vh",          // 👈 简化！不要 min/max 同时写
+                    display: "flex",
+                    flexDirection: "column",
+                    overflow: "hidden",      // 🔥 必须
+                    minHeight: 0             // 🔥 必须
+                }}
+            >
 
                 <Tabs value={tab} onChange={(_, v) => setTab(v)}>
                     <Tab label="Data" />
@@ -55,13 +56,13 @@ export default function BacktestWizardDialog({
                     sx={{
                         mt: 2,
                         display: "flex",
-                        flex: 1,          // 必须
-                        width: "100%",    // 必须
-                        height: "100%",
+                        flex: 1,
+                        minHeight: 0,        // 🔥 关键
+                        width: "100%",
                         border: "1px solid rgba(186, 181, 181, 0.92)",
                         borderRadius: "8px",
                         overflow: "hidden",
-                        padding: 1,
+                        p: 1,
                     }}
                 >
 

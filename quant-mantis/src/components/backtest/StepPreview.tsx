@@ -7,12 +7,14 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { atomOneDark } from "react-syntax-highlighter/dist/esm/styles/hljs"
 import { format } from "sql-formatter"
 import ExplainViewer from "../explain/ExplainViewer"
+import ExplainDetailDialog from "./ExplainDetailDialog"
 
 export default function StepPreview({ ds, ...props }: { ds: any }) {
     const [sql, setSql] = useState("")
     const [explain, setExplain] = useState("")
     const [count, setCount] = useState<number | null>(null)
     const [loading, setLoading] = useState(false)
+    const [explainDetailOpen, setExplainDetailOpen] = useState(false)
 
     useEffect(() => {
         if (!ds) return
@@ -43,19 +45,18 @@ export default function StepPreview({ ds, ...props }: { ds: any }) {
     }
 
     return (
-        // 👇 这里改成 垂直flex + 占满高度
         <Stack
             spacing={2}
             {...props}
             sx={{
-                height: "100%",       // 强制占满父级高度
-                flex: 1,              // 占剩余空间
-                display: "flex",
+                height: "100%",
+                flex: 1,
+                minHeight: 0,       // 🔥 必须
                 flexDirection: "column",
-                overflow: "hidden",   // 不撑破布局
+                overflow: "hidden",
             }}
         >
-            {/* SQL 区域（固定高度） */}
+            {/* SQL 预览区 */}
             <Box sx={{ flexShrink: 0 }}>
                 <Typography variant="subtitle2">SQL Preview</Typography>
                 <Box sx={{ border: "1px solid #333", borderRadius: 1 }}>
@@ -74,44 +75,72 @@ export default function StepPreview({ ds, ...props }: { ds: any }) {
                 </Box>
             </Box>
 
-            {/* 按钮（固定） */}
+            {/* 按钮 */}
             <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
                 <Button variant="outlined" onClick={runExplain}>Explain</Button>
                 <Button variant="outlined" onClick={runCount}>Estimate Rows</Button>
+                <Button
+                    variant="outlined"
+                    disabled={!explain.length}
+                    onClick={() => setExplainDetailOpen(true)}
+                >
+                    🔍 View Detail
+                </Button>
             </Stack>
 
-            {/* 行数提示（固定） */}
+            {/* 行数提示 */}
             {count !== null && (
                 <Typography variant="body2" sx={{ fontSize: 12, flexShrink: 0 }}>
                     Estimated Rows: <b>{count?.toLocaleString()}</b>
                 </Typography>
             )}
 
-            {/* ✅ 剩余高度全部给 Explain 区域 */}
-            {explain.length > 0 && (
-                <Box sx={{
-                    maxHeight: "100%",
-                    minHeight: 300,      // 限制高度
-                    overflow: "auto",    // 自动滚动
+            {/* ====================== 核心：正常显示 + 占满高度 + 可滚动 ====================== */}
+            <Box
+                sx={{
+                    flex: 1,
+                    minHeight: 0,
+                    overflow: "hidden",   // 🔥 关键：限制内部滚动区域
                     border: "1px solid #333",
                     borderRadius: "8px",
                     bgcolor: "#111",
                     p: 1.5,
-                    mt: 1,
-                    flex: 1
-                }}>
-                    <Typography variant="caption" sx={{ mb: 1, display: "block" }}>
-                        Execution Plan
-                    </Typography>
+                    display: "flex",
+                    flexDirection: "column",
+                }}
+            >
+                <Typography variant="caption" sx={{ mb: 1, display: "block" }}>
+                    Execution Plan
+                </Typography>
 
-                    <ExplainViewer
-                        text={explain}
-                        fontSize={16}
-                        nodeFontSize={15}
-                        detailFontSize={14}
-                    />
+                <Box
+                    sx={{
+                        flex: 1,
+                        overflow: "auto",
+                        minHeight: 0,
+                    }}
+                >
+                    {explain ? (
+                        <ExplainViewer
+                            text={explain}
+                            fontSize={16}
+                            nodeFontSize={15}
+                            detailFontSize={14}
+                        />
+                    ) : (
+                        <Typography variant="caption" color="text.secondary">
+                            点击 Explain 查看执行计划
+                        </Typography>
+                    )}
                 </Box>
-            )}
+
+            </Box>
+        
+            <ExplainDetailDialog
+                open={explainDetailOpen}
+                onClose={() => setExplainDetailOpen(false)}
+                data={[explain]}  // 简单处理成表格数据
+            />
         </Stack>
     )
 }

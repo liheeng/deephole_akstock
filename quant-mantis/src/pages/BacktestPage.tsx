@@ -59,7 +59,14 @@ export default function BacktestPage() {
     }
 
     return (
-        <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
+        <Box
+            sx={{
+                height: "100vh",
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden"   // 🔥 防止整体撑开
+            }}
+        >
 
             {/* Toolbar */}
             <TopToolbar runBacktest={runBacktest} launchBacktestWizard={launchBacktestWizard} />
@@ -67,19 +74,29 @@ export default function BacktestPage() {
             {/* 垂直 Split（上下） */}
             <Split
                 direction="vertical"
-                sizes={[70, 30]}         // 上70% 下30%
+                sizes={[70, 30]}
                 minSize={200}
                 gutterSize={6}
-                style={{ flex: 1, display: "flex", flexDirection: "column" }}
+                style={{
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    height: "100%",   // 🔥 补
+                    minHeight: 0      // 🔥 补
+                }}
             >
 
                 {/* ===== 上半部分（左右 split） ===== */}
                 <Split
                     direction="horizontal"
-                    sizes={[25, 75]}      // 左25% 右75%
+                    sizes={[25, 75]}
                     minSize={200}
                     gutterSize={6}
-                    style={{ display: "flex" }}
+                    style={{
+                        display: "flex",
+                        height: "100%",   // 🔥 必加
+                        minHeight: 0      // 🔥 必加
+                    }}
                 >
 
                     {/* LEFT */}
@@ -98,7 +115,8 @@ export default function BacktestPage() {
                         sx={{
                             display: "flex",
                             flexDirection: "column",
-                            overflow: "hidden"
+                            overflow: "hidden",
+                            minHeight: 0   // 🔥 必加（你之前没加）
                         }}
                     >
                         <BacktestResult runBacktest={runBacktest} />
