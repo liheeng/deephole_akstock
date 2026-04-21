@@ -23,7 +23,7 @@ import { apiClient } from "../../api/Client"
 
 export const SqlExecutor = () => {
 
-  const [sql, setSql] = useState('SELECT * FROM stock_daily LIMIT 100;');
+  const [sql, setSql] = useState('SELECT * FROM stock_daily LIMIT 100');
   const [data, setData] = useState({ rows: [], columns: [] });
 
   // ✅ textarea ref（用于选中执行）

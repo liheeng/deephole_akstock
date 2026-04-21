@@ -29,7 +29,7 @@ export default function ExplainViewer({
     const hints = analyzeExplain(tree)
 
     return (
-        <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        <Box sx={{ display: "flex", overflow: "auto", flex:1, maxHeight: "100%", flexDirection: "column", height: "100%" }}>
 
             {/* 🔍 Search */}
             <Box sx={{ p: 1 }}>
@@ -49,6 +49,7 @@ export default function ExplainViewer({
             <Box
                 sx={{
                     flex: 1,
+                    maxHeight: "100%",
                     overflow: "auto",
                     p: 2,
                     fontSize

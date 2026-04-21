@@ -124,7 +124,7 @@ export const BacktestDataEditPanel = forwardRef<BacktestDataEditPanelRef, Props>
         const [end, setEnd] = useState("2024-01-01")
 
         // ===== sql =====
-        const [sql, setSql] = useState("SELECT * FROM stock_daily LIMIT 100;")
+        const [sql, setSql] = useState("SELECT * FROM stock_daily LIMIT 100")
         const [data, setData] = useState<any>({ rows: [], columns: [] })
         const [valid, setValid] = useState(false)
 

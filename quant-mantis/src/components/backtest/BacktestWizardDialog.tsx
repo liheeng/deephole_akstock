@@ -51,13 +51,19 @@ export default function BacktestWizardDialog({
                     <Tab label="Preview" />
                 </Tabs>
 
-                <Box sx={{
-                    flex: 1,          // 占满 DialogContent 剩余空间
-                    width: "100%",    // 强制 100% 宽度
-                    mt: 2, display: "flex", height: "100%", border: "1px solid rgba(186, 181, 181, 0.92)",  // 边框
-                    borderRadius: "8px",                         // 圆角
-                    overflow: "hidden", padding: 1
-                }}>
+                <Box 
+                    sx={{
+                        mt: 2,
+                        display: "flex",
+                        flex: 1,          // 必须
+                        width: "100%",    // 必须
+                        height: "100%",
+                        border: "1px solid rgba(186, 181, 181, 0.92)",
+                        borderRadius: "8px",
+                        overflow: "hidden",
+                        padding: 1,
+                    }}
+                >
 
                     {tab === 0 && (
                         <BacktestDataEditPanel
