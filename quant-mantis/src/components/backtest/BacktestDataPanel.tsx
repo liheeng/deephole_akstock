@@ -2,7 +2,6 @@ import { Box, Typography, Button } from "@mui/material"
 import MainCard from "../visual/MainCard"
 import KeyValueRow from "../misc/KeyValueRow"
 
-import { useBacktestStore } from "../../store/backtest/backtest.store"
 import { useDialogStore } from "../../store/dialog.store"
 import { useDatasetStore } from "../../store/dataset.store"
 
@@ -10,7 +9,7 @@ export default function BacktestDataPanel() {
 
 
     const openDialog = useDialogStore(s => s.openDialog)
-    const datasetId = useBacktestStore(s => s.datasetId)
+    const datasetId = useDatasetStore(s => s.currentDatasetId)
     const datasets = useDatasetStore(s => s.datasets)
 
     const dataset = datasets.find(d => d.id === datasetId)

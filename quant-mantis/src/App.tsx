@@ -116,9 +116,19 @@ function MainLayout({ children }: { children: React.ReactNode }) {
                 </Box>
             </Drawer>
 
-            <Box component="main" sx={{ flexGrow: 1, p: 3, mt: 8 }}>
-                {children}
-            </Box>
+<Box
+  component="main"
+  sx={{
+    flexGrow: 1,
+    p: 3,
+    mt: 8,
+    height: "calc(100vh - 64px)",
+    overflow: "hidden", // ✅ 完全禁止滚动
+    overflowX: "hidden",
+  }}
+>
+  {children}
+</Box>
         </Box>
     );
 }

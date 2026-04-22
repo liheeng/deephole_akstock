@@ -89,7 +89,7 @@ export default function BacktestPage() {
             {/* 垂直 Split（上下） */}
             <Split
                 direction="vertical"
-                sizes={[70, 30]}
+                sizes={[85, 15]}
                 minSize={200}
                 gutterSize={6}
                 style={{
@@ -147,7 +147,7 @@ export default function BacktestPage() {
                         overflow: "hidden"
                     }}
                 >
-                    <WindowWrapper title="Strategy Graph" defaultMode="normal">
+                    <WindowWrapper title="Strategy Graph" defaultMode="normal" disableMinimize={true}>
                         <Box sx={{ flex: 1, minHeight: 0, minWidth: 0}}>
                             <StrategyGraph />
                         </Box>

@@ -6,28 +6,33 @@ import { useRef, useState, useMemo, useEffect } from "react"
 import UniDataGrid from "../table/UniDataGrid"
 import type { GridColDef } from '@mui/x-data-grid'
 import { Tabs, Tab } from "@mui/material"
-import WindowWrapper from "../misc/WindowWrapper"
-
 
 export default function BacktestResult({ runBacktest }: any) {
-    // const [statTab, setStatTab] = useState("average")
     const selectedSymbol = useBacktestResultStore(s => s.selectedSymbol)
     const setSelectedSymbol = useBacktestResultStore(s => s.setSelectedSymbol)
     const statTab = selectedSymbol ?? "average"
 
-    // ✅ 完全独立订阅（不会互相影响）
     const equity = useBacktestResultStore(s => s.equity)
     const stats = useBacktestResultStore(s => s.stats)
     const trades = useBacktestResultStore(s => s.trades)
     const bestSharpe = stats?.average?.["Best Sharpe Column"]
     const bestReturn = stats?.average?.["Best Return Column"]
 
+    // 状态：高度占比 (上下) 和 宽度占比 (左右)
     const [topHeight, setTopHeight] = useState(50)
+    const [leftWidth, setLeftWidth] = useState(66) // 初始占比约 2/3
+    
     const containerRef = useRef<HTMLDivElement>(null)
-    const dragType = useRef<null | "vertical" | "horizontal">(null)
-    const [ratio, setRatio] = useState(0.6);
+    const isDraggingVert = useRef(false) // 垂直拖拽标记
+    const isDraggingHoriz = useRef(false) // 水平拖拽标记
 
-    const filteredTrades = useMemo(() => {
+    const replaceEmji = (s: string) => s.replace(/⭐|🚀|/g, "").trim()
+    const formatDate = (ts: any) => {
+        const d = new Date(ts); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+    }
+    const formatNumber = (v: number) => (v == null || !Number.isFinite(v)) ? "-" : v.toFixed(2)
+    
+const filteredTrades = useMemo(() => {
         if (!selectedSymbol || selectedSymbol === "average")
             return trades
         return trades.filter(t => t.Column === selectedSymbol)
@@ -72,57 +77,44 @@ export default function BacktestResult({ runBacktest }: any) {
         // ===== 默认 =====
         return value.toFixed(2)
     }
-    const formatNumber = (v: number) => {
-        if (v == null || !Number.isFinite(v)) return "-"
-        return v.toFixed(2)
-    }
+    // const formatNumber = (v: number) => {
+    //     if (v == null || !Number.isFinite(v)) return "-"
+    //     return v.toFixed(2)
+    // }
 
-    const formatDate = (ts: any) => {
-        const d = new Date(ts)
-        const y = d.getFullYear()
-        const m = String(d.getMonth() + 1).padStart(2, "0")
-        const day = String(d.getDate()).padStart(2, "0")
-        return `${y}-${m}-${day}`
-    }
-
-    const replaceEmji = (s: string) => {
-        return s.replace(/⭐|🚀|/g, "").trim()
-    }
-
-    const handleMouseDown = () => {
-        dragType.current = "vertical"
+    // --- 拖拽逻辑 ---
+    const handleVertMouseDown = () => {
+        isDraggingVert.current = true
         document.body.style.cursor = "row-resize"
     }
-    const handleResizeMouseDown = () => {
-        dragType.current = "horizontal"
+
+    const handleHorizMouseDown = () => {
+        isDraggingHoriz.current = true
         document.body.style.cursor = "col-resize"
     }
-    const handleGlobalMouseMove = (e: React.MouseEvent) => {
-        if (!containerRef.current || !dragType.current) return
 
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (!containerRef.current) return
         const rect = containerRef.current.getBoundingClientRect()
 
-        // ===== 上下拖拽 =====
-        if (dragType.current === "vertical") {
+        if (isDraggingVert.current) {
             const newHeight = ((e.clientY - rect.top) / rect.height) * 100
             setTopHeight(Math.max(20, Math.min(80, newHeight)))
-            return
         }
 
-        // ===== 左右拖拽 =====
-        if (dragType.current === "horizontal") {
-            let newRatio = (e.clientX - rect.left) / rect.width;
-            newRatio = Math.max(0.1, Math.min(0.9, newRatio));
-            setRatio(newRatio);
-            return
+        if (isDraggingHoriz.current) {
+            const newWidth = ((e.clientX - rect.left) / rect.width) * 100
+            setLeftWidth(Math.max(30, Math.min(85, newWidth)))
         }
     }
-    const handleGlobalMouseUp = () => {
-        dragType.current = null
+
+    const handleMouseUp = () => {
+        isDraggingVert.current = false
+        isDraggingHoriz.current = false
         document.body.style.cursor = "default"
-        document.body.style.userSelect = "auto"
     }
 
+    
     const statTabs = useMemo(() => {
         if (!stats) return ["average"]
 
@@ -175,7 +167,7 @@ export default function BacktestResult({ runBacktest }: any) {
             cellClassName: (params) => {
                 if (params.row.name.includes("Return") || params.row.name.includes("Best Sharpe"))
                     return "highlight"
-                if (params.row.name.includes("Drawdown"))
+                if (params.row.name.includes("Drawdown")) 
                     return "danger"
                 return ""
             }
@@ -216,8 +208,8 @@ export default function BacktestResult({ runBacktest }: any) {
                 name: isBestSharpe
                     ? `⭐ ${symbol}`
                     : isBestReturn
-                        ? `🚀 ${symbol}`
-                        : symbol,
+                    ? `🚀 ${symbol}`
+                    : symbol,
 
                 type: "line",
                 smooth: true,
@@ -234,8 +226,8 @@ export default function BacktestResult({ runBacktest }: any) {
                     color: isBestSharpe
                         ? "#2e7d32"
                         : isBestReturn
-                            ? "#ed6c02"
-                            : undefined
+                        ? "#ed6c02"
+                        : undefined
                 },
 
                 data: zip(arr as number[])
@@ -385,198 +377,194 @@ export default function BacktestResult({ runBacktest }: any) {
                 height: "100%",
                 display: "flex",
                 flexDirection: "column",
-                boxSizing: "border-box",
-                overflow: "hidden",   // 👈🔥🔥🔥 必加
-                contain: "layout size paint"
+                boxSizing: "border-box"
             }}
-            onMouseMove={handleGlobalMouseMove}
-            onMouseUp={handleGlobalMouseUp}
-            onMouseLeave={handleGlobalMouseUp}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
         >
-            {/* <Button variant="contained" onClick={runBacktest} sx={{ mb: 2 }}>
+            <Button variant="contained" onClick={runBacktest} sx={{ mb: 2 }}>
                 Run Backtest
-            </Button> */}
+            </Button>
 
             {/* 上半 */}
-            <Box
-                sx={{
-                    display: "flex",
-                    gap: 2,
-                    height: `${topHeight}%`,
-                    minHeight: 0,
-                    overflow: "hidden",
-                }}
-            >
+            <Box sx={{
+                display: "flex",
+                height: `${topHeight}%`,
+                minHeight: 0,
+                position: 'relative'
+            }}>
                 {/* 图表 */}
-                <Box
-                    sx={{
-                        width: `${ratio * 100}%`,
-                        minWidth: 0,
-                        minHeight: 0,
-                        height: "100%",
-                        overflow: "hidden",
-                        flexShrink: 0,
-                    }}
-                >
-                    <WindowWrapper title="Equity Curve">
-                        <Box sx={{ flex: 1, minHeight: 0 }}>
-                            <ReactECharts
-                                option={chartOption}
-                                style={{ height: "100%" }}
-                                opts={{ renderer: "canvas" }}
-                                notMerge={true}
-                                lazyUpdate={true}   // 🔥 防止频繁重算
-                                onEvents={{
-                                    legendselectchanged: (params: any) => {
-                                        const selected = Object.keys(params.selected)
-                                            .find(k => params.selected[k] === true)
+                <Box sx={{
+                    width: `${leftWidth}%`,
+                    minHeight: 0,
+                    height: "100%",
+                    overflow: "hidden"
+                }}>
+                    <ReactECharts
+                        option={chartOption}
+                        style={{ height: "100%" }}
+                        notMerge={true}
+                        opts={{ renderer: "canvas" }}
+                        lazyUpdate={true}   // 🔥 防止频繁重算
+                        onEvents={{
+                            legendselectchanged: (params: any) => {
+                                const selected = Object.keys(params.selected)
+                                    .find(k => params.selected[k] === true)
+                                    
+                                if (selected && selected !== "Portfolio") {
+                                    setSelectedSymbol(replaceEmji(selected))
+                                } else {
+                                    setSelectedSymbol(null)
+                                }
+                            },
 
-                                        if (selected && selected !== "Portfolio") {
-                                            setSelectedSymbol(replaceEmji(selected))
-                                        } else {
-                                            setSelectedSymbol(null)
-                                        }
-                                    },
-
-                                    click: (params: any) => {
-                                        if (params.seriesName && params.seriesName !== "Portfolio") {
-                                            setSelectedSymbol(replaceEmji(params.seriesName))
-                                        } else {
-                                            setSelectedSymbol(null)
-                                        }
-                                    }
-                                }}
-
-                            />
-                        </Box>
-                    </WindowWrapper>
+                            click: (params: any) => {
+                                if (params.seriesName && params.seriesName !== "Portfolio") {
+                                    setSelectedSymbol(replaceEmji(params.seriesName))
+                                } else {
+                                    setSelectedSymbol(null) 
+                                }
+                            }
+                        }}
+                        
+                    />
                 </Box>
-
+                
+                {/* 2. 垂直分隔条 (Splitter) */}
                 <Box
-                    onMouseDown={handleResizeMouseDown}
+                    onMouseDown={handleHorizMouseDown}
                     sx={{
-                        width: 3,
+                        width: 8,
+                        mx: 0.5,
                         cursor: "col-resize",
-                        bgcolor: "divider",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                         borderRadius: 1,
-                        flexShrink: 0,
-                        "&:hover": { bgcolor: "primary.main" },
+                        transition: 'background 0.2s',
+                        "&:hover": { bgcolor: "primary.main", opacity: 0.5 },
+                        "&::after": { // 中间的装饰线
+                            content: '""',
+                            width: 2,
+                            height: 30,
+                            bgcolor: "divider",
+                            borderRadius: 1
+                        }
                     }}
                 />
 
-                {/* stats */}
-                <Box
-                    sx={{
-                        width: `${(1 - ratio) * 100}%`,
-                        minWidth: 0,
-                        maxWidth: "none",   // 🔥 删除 1000 限制
-                        display: "flex",
-                        flexDirection: "column",
-                        height: "100%",
-                        overflow: "hidden",
-                    }}
-                >
-                    <WindowWrapper title="Statistics">
-                        <Box sx={{ flex: 1, minHeight: 0, width: "100%", overflow: "hidden" }}>
-                            {/* Tabs */}
-                            <Tabs
-                                value={statTab}
-                                onChange={(_, v) => {
-                                    if (v === "average") {
-                                        setSelectedSymbol(null)
-                                    } else {
-                                        setSelectedSymbol(replaceEmji(v))
-                                    }
+                {/* 3. Stats 区 */}
+                <Box sx={{
+                    flex: 1, // 填充剩余宽度
+                    width: `${100 - leftWidth}%`, 
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    minWidth: 0,
+                    minHeight: 0
+                }}>
+                    {/* Tabs */}
+                    <Tabs
+                        value={statTab}
+                        onChange={(_, v) => {
+                            if (v === "average") {
+                                setSelectedSymbol(null)
+                            } else {
+                                setSelectedSymbol(replaceEmji(v))
+                            }
+                        }}
+                        variant="scrollable"
+                        scrollButtons="auto"
+                        sx={{ minHeight: 32 }}
+                    >
+                        {statTabs.map(tab => {
+                            const isSharpe = tab === bestSharpe
+                            const isReturn = tab === bestReturn
+
+                            return (
+                            <Tab
+                                key={tab}
+                                value={tab}
+                                label={
+                                    tab === "average"
+                                        ? "Portfolio"
+                                        : isSharpe
+                                        ? `⭐ ${tab}`
+                                        : isReturn
+                                        ? `🚀 ${tab}`
+                                        : tab
+                                }
+                                sx={{
+                                    minHeight: 32,
+
+                                    // 🔥 核心高亮
+                                    color: isSharpe
+                                        ? "#2e7d32"
+                                        : isReturn
+                                        ? "#ed6c02"
+                                        : undefined,
+
+                                    fontWeight: isSharpe || isReturn ? 600 : 400
                                 }}
-                                variant="scrollable"
-                                scrollButtons="auto"
-                                sx={{ minHeight: 32 }}
-                            >
-                                {statTabs.map(tab => {
-                                    const isSharpe = tab === bestSharpe
-                                    const isReturn = tab === bestReturn
+                            />
+                            )
+                        })}
+                    </Tabs>
 
-                                    return (
-                                        <Tab
-                                            key={tab}
-                                            value={tab}
-                                            label={
-                                                tab === "average"
-                                                    ? "Portfolio"
-                                                    : isSharpe
-                                                        ? `⭐ ${tab}`
-                                                        : isReturn
-                                                            ? `🚀 ${tab}`
-                                                            : tab
-                                            }
-                                            sx={{
-                                                minHeight: 32,
+                    {/* Table */}
+                    <Box sx={{ flex: 1, minHeight: 0 }}>
+                        <UniDataGrid
+                            rows={statRows}
+                            columns={statColumns}
+                            autoHeight={false}
+                            disableRowSelectionOnClick
+                            hideFooterPagination
+                            hideFooter
+                            sx={{
+                                height: "100%",
+                                fontSize: "16px",
 
-                                                // 🔥 核心高亮
-                                                color: isSharpe
-                                                    ? "#2e7d32"
-                                                    : isReturn
-                                                        ? "#ed6c02"
-                                                        : undefined,
+                                "& .highlight": {
+                                    color: "#4cd753",
+                                    fontWeight: 600
+                                },
 
-                                                fontWeight: isSharpe || isReturn ? 600 : 400
-                                            }}
-                                        />
-                                    )
-                                })}
-                            </Tabs>
-
-                            {/* Table */}
-                            <Box sx={{ flex: 1, minHeight: 0 }}>
-                                <UniDataGrid
-                                    rows={statRows}
-                                    columns={statColumns}
-                                    autoHeight={false}
-                                    disableRowSelectionOnClick
-                                    hideFooterPagination
-                                    hideFooter
-                                    sx={{
-                                        height: "100%",
-                                        fontSize: "16px",
-
-                                        "& .highlight": {
-                                            color: "#4cd753",
-                                            fontWeight: 600
-                                        },
-
-                                        "& .danger": {
-                                            color: "#f03535",
-                                            fontWeight: 600
-                                        }
-                                    }}
-                                />
-                            </Box>
-                        </Box>
-                    </WindowWrapper>
+                                "& .danger": {
+                                    color: "#f03535",
+                                    fontWeight: 600
+                                }
+                            }}
+                        />
+                    </Box>
 
                 </Box>
             </Box>
 
-            {/* 拖动条 */}
+            {/* 水平分隔条 (上下拖拽) */}
             <Box
-                onMouseDown={handleMouseDown}
+                onMouseDown={handleVertMouseDown}
                 sx={{
-                    height: 3,
-                    bgcolor: "divider",
+                    height: 8,
                     cursor: "row-resize",
                     my: 1,
-                    borderRadius: 1,
-                    "&:hover": { bgcolor: "primary.main" }
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    "&:hover": { bgcolor: "primary.main", opacity: 0.5 },
+                    "&::after": {
+                        content: '""',
+                        width: 40,
+                        height: 2,
+                        bgcolor: "divider",
+                        borderRadius: 1
+                    }
                 }}
             />
 
-            {/* trades */}
-            <Box sx={{ flex: 1, minHeight: 0, mingWidth: 0, overflow: "auto" }}>
-                <WindowWrapper title="Trades">
-                    <Box sx={{ flex: 1, minHeight: 0, minWidth: 0}}>
-                        <TradesTable trades={filteredTrades} />
-                    </Box>
-                </WindowWrapper>
+            {/* 下半部分：Trades */}
+            <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+                <TradesTable trades={filteredTrades} />
             </Box>
         </Card>
     )

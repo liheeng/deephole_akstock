@@ -10,12 +10,16 @@ type Props = {
     title: string;
     children: React.ReactNode;
     defaultMode?: "normal" | "min" | "max";
+    disableMinimize?: boolean;
+    disableMaximize?: boolean;
 };
 
 export default function WindowWrapper({
     title,
     children,
     defaultMode = "normal",
+    disableMinimize = false,
+    disableMaximize = false,
 }: Props) {
     const [mode, setMode] = useState(defaultMode);
 
@@ -55,7 +59,7 @@ export default function WindowWrapper({
 
                 <Box>
                     {/* minimize */}
-                    <IconButton
+                    {!disableMinimize && (<IconButton
                         size="small"
                         onClick={toggleMin}
                         sx={{
@@ -70,10 +74,10 @@ export default function WindowWrapper({
                         }}
                     >
                         <MinimizeIcon fontSize="small" />
-                    </IconButton>
+                    </IconButton>)}
 
                     {/* max */}
-                    <IconButton
+                    {!disableMaximize && (<IconButton
                         size="small"
                         onClick={toggleMax}
                         sx={{
@@ -92,7 +96,7 @@ export default function WindowWrapper({
                         ) : (
                             <FullscreenIcon fontSize="small" />
                         )}
-                    </IconButton>
+                    </IconButton>)}
                 </Box>
             </Box>
 

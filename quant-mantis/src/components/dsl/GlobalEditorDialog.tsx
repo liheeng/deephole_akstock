@@ -27,7 +27,7 @@ export default function GlobalDialogs({ nodes }: any) {
     const setScheduleSignal = useBacktestStore(state => state.setScheduleSignal)
 
     const createDataset = useDatasetStore(s => s.createDataset)
-    const setDatasetId = useBacktestStore(s => s.setDatasetId)
+    const setDatasetId = useDatasetStore(s => s.setCurrentDataset)
     
     const { expr } = dialog.payload || {}
 
