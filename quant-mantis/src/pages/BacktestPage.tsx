@@ -15,7 +15,7 @@ import GlobalDialogs from "../components/dsl/GlobalEditorDialog"
 import { callBacktest } from "../api/Client";
 import { useDialogStore } from "../store/dialog.store"
 import { useDatasetStore } from "../store/dataset.store";
-
+import WindowWrapper from "../components/misc/WindowWrapper"
 
 export default function BacktestPage() {
     const buildPortfolioPayload = useBacktestStore((state) => state.buildPayload)
@@ -132,7 +132,11 @@ export default function BacktestPage() {
                         overflow: "hidden"
                     }}
                 >
-                    <StrategyGraph />
+                    <WindowWrapper title="Strategy Graph" defaultMode="normal">
+                        <Box sx={{ flex: 1, minHeight: 0, minWidth: 0}}>
+                            <StrategyGraph />
+                        </Box>
+                    </WindowWrapper>
                 </Box>
 
             </Split>

@@ -24,15 +24,8 @@ export default function BacktestResult({ runBacktest }: any) {
 
     const [topHeight, setTopHeight] = useState(50)
     const containerRef = useRef<HTMLDivElement>(null)
-    const isDragging = useRef(false)
-
-    // useEffect(() => {
-    //     if (selectedSymbol) {
-    //         setStatTab(selectedSymbol)
-    //     } else {
-    //         setStatTab("average")
-    //     }
-    // }, [selectedSymbol])
+    const dragType = useRef<null | "vertical" | "horizontal">(null)
+    const [ratio, setRatio] = useState(0.6);
 
     const filteredTrades = useMemo(() => {
         if (!selectedSymbol || selectedSymbol === "average")
@@ -97,20 +90,37 @@ export default function BacktestResult({ runBacktest }: any) {
     }
 
     const handleMouseDown = () => {
-        isDragging.current = true
+        dragType.current = "vertical"
         document.body.style.cursor = "row-resize"
     }
-
-    const handleMouseMove = (e: React.MouseEvent) => {
-        if (!isDragging.current || !containerRef.current) return
-        const rect = containerRef.current.getBoundingClientRect()
-        const newHeight = ((e.clientY - rect.top) / rect.height) * 100
-        setTopHeight(Math.max(20, Math.min(80, newHeight)))
+    const handleResizeMouseDown = () => {
+        dragType.current = "horizontal"
+        document.body.style.cursor = "col-resize"
     }
+    const handleGlobalMouseMove = (e: React.MouseEvent) => {
+        if (!containerRef.current || !dragType.current) return
 
-    const handleMouseUp = () => {
-        isDragging.current = false
+        const rect = containerRef.current.getBoundingClientRect()
+
+        // ===== 上下拖拽 =====
+        if (dragType.current === "vertical") {
+            const newHeight = ((e.clientY - rect.top) / rect.height) * 100
+            setTopHeight(Math.max(20, Math.min(80, newHeight)))
+            return
+        }
+
+        // ===== 左右拖拽 =====
+        if (dragType.current === "horizontal") {
+            let newRatio = (e.clientX - rect.left) / rect.width;
+            newRatio = Math.max(0.1, Math.min(0.9, newRatio));
+            setRatio(newRatio);
+            return
+        }
+    }
+    const handleGlobalMouseUp = () => {
+        dragType.current = null
         document.body.style.cursor = "default"
+        document.body.style.userSelect = "auto"
     }
 
     const statTabs = useMemo(() => {
@@ -375,31 +385,39 @@ export default function BacktestResult({ runBacktest }: any) {
                 height: "100%",
                 display: "flex",
                 flexDirection: "column",
-                boxSizing: "border-box"
+                boxSizing: "border-box",
+                overflow: "hidden",   // 👈🔥🔥🔥 必加
+                contain: "layout size paint"
             }}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
+            onMouseMove={handleGlobalMouseMove}
+            onMouseUp={handleGlobalMouseUp}
+            onMouseLeave={handleGlobalMouseUp}
         >
-            <Button variant="contained" onClick={runBacktest} sx={{ mb: 2 }}>
+            {/* <Button variant="contained" onClick={runBacktest} sx={{ mb: 2 }}>
                 Run Backtest
-            </Button>
+            </Button> */}
 
             {/* 上半 */}
-            <Box sx={{
-                display: "flex",
-                gap: 2,
-                height: `${topHeight}%`,
-                minHeight: 0,   // 🔥 改这里
-            }}>
-                {/* 图表 */}
-                <Box sx={{
-                    flex: 2,
+            <Box
+                sx={{
+                    display: "flex",
+                    gap: 2,
+                    height: `${topHeight}%`,
                     minHeight: 0,
-                    minWidth: 0,
-                    height: "100%",
-                    overflow: "hidden"   // 🔥 防止撑开
-                }}>
+                    overflow: "hidden",
+                }}
+            >
+                {/* 图表 */}
+                <Box
+                    sx={{
+                        width: `${ratio * 100}%`,
+                        minWidth: 0,
+                        minHeight: 0,
+                        height: "100%",
+                        overflow: "hidden",
+                        flexShrink: 0,
+                    }}
+                >
                     <WindowWrapper title="Equity Curve">
                         <Box sx={{ flex: 1, minHeight: 0 }}>
                             <ReactECharts
@@ -434,20 +452,32 @@ export default function BacktestResult({ runBacktest }: any) {
                     </WindowWrapper>
                 </Box>
 
+                <Box
+                    onMouseDown={handleResizeMouseDown}
+                    sx={{
+                        width: 3,
+                        cursor: "col-resize",
+                        bgcolor: "divider",
+                        borderRadius: 1,
+                        flexShrink: 0,
+                        "&:hover": { bgcolor: "primary.main" },
+                    }}
+                />
+
                 {/* stats */}
                 <Box
                     sx={{
-                        flex: 1,
-                        height: "100%",
+                        width: `${(1 - ratio) * 100}%`,
+                        minWidth: 0,
+                        maxWidth: "none",   // 🔥 删除 1000 限制
                         display: "flex",
                         flexDirection: "column",
-                        minHeight: 0,   // 🔥 核心！
-                        minWidth: 260,    // 🔥 防止过宽时撑开
-                        maxWidth: 500,   // 🔥 可选：限制最大宽度
+                        height: "100%",
+                        overflow: "hidden",
                     }}
                 >
                     <WindowWrapper title="Statistics">
-                        <Box sx={{ flex: 1, minHeight: 0 }}>
+                        <Box sx={{ flex: 1, minHeight: 0, width: "100%", overflow: "hidden" }}>
                             {/* Tabs */}
                             <Tabs
                                 value={statTab}
@@ -531,7 +561,7 @@ export default function BacktestResult({ runBacktest }: any) {
             <Box
                 onMouseDown={handleMouseDown}
                 sx={{
-                    height: 6,
+                    height: 3,
                     bgcolor: "divider",
                     cursor: "row-resize",
                     my: 1,
@@ -541,11 +571,11 @@ export default function BacktestResult({ runBacktest }: any) {
             />
 
             {/* trades */}
-            <Box sx={{ flex: 1, overflow: "auto" }}>
+            <Box sx={{ flex: 1, minHeight: 0, mingWidth: 0, overflow: "auto" }}>
                 <WindowWrapper title="Trades">
-                        <Box sx={{ flex: 1, minHeight: 0 }}>
-                            <TradesTable trades={filteredTrades} />
-                        </Box>
+                    <Box sx={{ flex: 1, minHeight: 0, minWidth: 0}}>
+                        <TradesTable trades={filteredTrades} />
+                    </Box>
                 </WindowWrapper>
             </Box>
         </Card>

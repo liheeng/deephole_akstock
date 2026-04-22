@@ -1,83 +1,149 @@
-import { Box, IconButton } from "@mui/material"
-import { useState } from "react"
-import AspectRatioIcon from "@mui/icons-material/AspectRatio"
-import FullscreenExitIcon from "@mui/icons-material/FullscreenExit"
+import { Box, IconButton } from "@mui/material";
+import MinimizeIcon from "@mui/icons-material/Remove";
+import FullscreenIcon from "@mui/icons-material/Fullscreen";
+import FullscreenExitIcon from "@mui/icons-material/FullscreenExit";
+import CropSquareIcon from "@mui/icons-material/CropSquare";
+import { useState } from "react";
+import { createPortal } from "react-dom";
+
+type Props = {
+    title: string;
+    children: React.ReactNode;
+    defaultMode?: "normal" | "min" | "max";
+};
 
 export default function WindowWrapper({
     title,
     children,
-    defaultHeight,
-}: {
-    title: string
-    children: React.ReactNode
-    defaultHeight?: string | number
-}) {
-    const [maximized, setMaximized] = useState(false)
+    defaultMode = "normal",
+}: Props) {
+    const [mode, setMode] = useState(defaultMode);
 
-    return (
+    const toggleMin = () => {
+        setMode(m => (m === "min" ? "normal" : "min"));
+    };
+
+    const toggleMax = () => {
+        setMode(m => (m === "max" ? "normal" : "max"));
+    };
+
+    const content = (
         <Box
             sx={{
-                position: maximized ? "fixed" : "relative",
-                top: maximized ? 0 : undefined,
-                left: maximized ? 0 : undefined,
-                width: maximized ? "100vw" : "100%",
-                height: maximized ? "100vh" : defaultHeight ?? "100%",
-                zIndex: maximized ? 1300 : "auto",
-                bgcolor: "#0f0f0f",
-                border: "1px solid #333",
-                borderRadius: 1,
+                width: "100%",
+                height: "100%",
                 display: "flex",
                 flexDirection: "column",
+                bgcolor: "background.paper",
                 overflow: "hidden",
             }}
         >
-            {/* ===== Window Bar ===== */}
+            {/* HEADER */}
             <Box
                 sx={{
-                    height: 32,
+                    height: 36,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
                     px: 1,
-                    borderBottom: "1px solid #333",
-                    bgcolor: "#1a1a1a",
-                    flexShrink: 0
+                    borderBottom: "1px solid",
+                    borderColor: "divider",
+                    flexShrink: 0,
                 }}
             >
-                <Box sx={{ fontSize: 12 }}>{title}</Box>
+                <Box>{title}</Box>
 
-                <IconButton
-                    size="small"
-                    onClick={() => setMaximized(v => !v)}
-                    sx={{
-                        color: "#888",
-                        "& svg": {
-                            fontSize: 16   // 🔥 关键：图标变小
-                        },
-                        "&:hover": {
-                            color: "#fff",
-                            bgcolor: "rgba(255,255,255,0.08)"
-                        }
-                    }}
-                >
-                    {maximized ? (
-                        <FullscreenExitIcon fontSize="small" />
-                    ) : (
-                        <AspectRatioIcon fontSize="small" />
-                    )}
+                <Box>
+                    {/* minimize */}
+                    <IconButton
+                        size="small"
+                        onClick={toggleMin}
+                        sx={{
+                            color: "#888",
+                            "& svg": {
+                                fontSize: 16   // 🔥 关键：图标变小
+                            },
+                            "&:hover": {
+                                color: "#fff",
+                                bgcolor: "rgba(255,255,255,0.08)"
+                            }
+                        }}
+                    >
+                        <MinimizeIcon fontSize="small" />
+                    </IconButton>
+
+                    {/* max */}
+                    <IconButton
+                        size="small"
+                        onClick={toggleMax}
+                        sx={{
+                            color: "#888",
+                            "& svg": {
+                                fontSize: 16   // 🔥 关键：图标变小
+                            },
+                            "&:hover": {
+                                color: "#fff",
+                                bgcolor: "rgba(255,255,255,0.08)"
+                            }
+                        }}
+                    >
+                        {mode === "max" ? (
+                            <FullscreenExitIcon fontSize="small" />
+                        ) : (
+                            <FullscreenIcon fontSize="small" />
+                        )}
+                    </IconButton>
+                </Box>
+            </Box>
+
+            {/* BODY */}
+            {mode !== "min" && (
+                <Box sx={{ flex: 1, minHeight: 0 }}>
+                    {children}
+                </Box>
+            )}
+        </Box>
+    );
+
+    // ===== MAX MODE =====
+    if (mode === "max") {
+        return createPortal(
+            <Box
+                sx={{
+                    position: "fixed",
+                    inset: 0,
+                    zIndex: 9999,
+                    bgcolor: "background.paper",
+                }}
+            >
+                {content}
+            </Box>,
+            document.body
+        );
+    }
+
+    // ===== MIN MODE =====
+    if (mode === "min") {
+        return (
+            <Box
+                sx={{
+                    height: 36,
+                    display: "flex",
+                    alignItems: "center",
+                    px: 1,
+                    border: "1px solid",
+                    borderColor: "divider",
+                    bgcolor: "background.paper",
+                }}
+            >
+                <Box sx={{ flex: 1 }}>{title}</Box>
+
+                <IconButton size="small" onClick={() => setMode("normal")}>
+                    <CropSquareIcon fontSize="small" />
                 </IconButton>
             </Box>
+        );
+    }
 
-            {/* ===== Content ===== */}
-            <Box sx={{
-                flex: 1,
-                minHeight: 0,
-                height: 0,        // 🔥 关键！！！
-                display: "flex",  // 🔥 关键！！
-                flexDirection: "column"
-            }}>
-                {children}
-            </Box>
-        </Box>
-    )
+    return content;
 }

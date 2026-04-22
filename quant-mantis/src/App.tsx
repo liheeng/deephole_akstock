@@ -3,7 +3,8 @@ import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-do
 import {
     Box, CssBaseline, ThemeProvider, createTheme,
     Drawer, AppBar, Toolbar, List, Typography,
-    Divider, ListItem, ListItemButton, ListItemIcon, ListItemText
+    Divider, ListItem, ListItemButton, ListItemIcon, ListItemText, IconButton,
+    Tooltip  // 👈 导入 Tooltip
 } from "@mui/material";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider"
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs"
@@ -24,8 +25,9 @@ import { initMonacoEnv } from "./monacoEnv";
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { initRegisteredNodes } from "./api/Client";
+import MenuOpenIcon from "@mui/icons-material/MenuOpen";
+import MenuIcon from "@mui/icons-material/Menu";
 
-const drawerWidth = 240;
 
 const theme = createTheme({
     palette: {
@@ -45,13 +47,19 @@ const menuItems = [
 
 function MainLayout({ children }: { children: React.ReactNode }) {
     const location = useLocation();
+    const [drawerCollapsed, setDrawerCollapsed] = useState(false);
+    const drawerWidth = drawerCollapsed ? 64 : 240;
 
     return (
         <Box sx={{ display: 'flex' }}>
             <CssBaseline />
             <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
                 <Toolbar>
-                    <Typography variant="h6" noWrap component="div">
+                    <IconButton onClick={() => setDrawerCollapsed(v => !v)}>
+                        {drawerCollapsed ? <MenuIcon /> : <MenuOpenIcon />}
+                    </IconButton>
+
+                    <Typography variant="h6" sx={{ ml: 1 }}>
                         📊 Stock Back Testing Dashboard
                     </Typography>
                 </Toolbar>
@@ -62,7 +70,12 @@ function MainLayout({ children }: { children: React.ReactNode }) {
                 sx={{
                     width: drawerWidth,
                     flexShrink: 0,
-                    [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' },
+                    "& .MuiDrawer-paper": {
+                        width: drawerWidth,
+                        boxSizing: "border-box",
+                        transition: "width 0.2s ease",
+                        overflowX: "hidden",
+                    },
                 }}
             >
                 <Toolbar />
@@ -75,10 +88,27 @@ function MainLayout({ children }: { children: React.ReactNode }) {
                                     to={item.path}
                                     selected={location.pathname === item.path}
                                 >
-                                    <ListItemIcon sx={{ color: location.pathname === item.path ? 'primary.main' : 'inherit' }}>
-                                        {item.icon}
-                                    </ListItemIcon>
-                                    <ListItemText primary={item.text} />
+                                    {/* 🔥 图标 + Tooltip */}
+                                    <Tooltip
+                                        title={item.text}
+                                        placement="right"
+                                        arrow
+                                        disableHoverListener={!drawerCollapsed}
+                                    >
+                                        <ListItemIcon
+                                            sx={{
+                                                color: location.pathname === item.path
+                                                    ? 'primary.main'
+                                                    : 'inherit'
+                                            }}
+                                        >
+                                            {item.icon}
+                                        </ListItemIcon>
+                                    </Tooltip>
+
+                                    <ListItemText
+                                        primary={drawerCollapsed ? "" : item.text}
+                                    />
                                 </ListItemButton>
                             </ListItem>
                         ))}
@@ -95,20 +125,16 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 
 export default function App() {
     const queryClient = new QueryClient();
-    // 👇 控制初始化完成才渲染页面
     const [ready, setReady] = useState(false);
 
     useEffect(() => {
         const initAll = async () => {
             try {
-                // 1. 先初始化节点（必须等它！）
                 await initRegisteredNodes();
-                // 2. 再初始化编辑器
                 initMonacoEnv();
             } catch (err) {
                 console.error("初始化失败", err);
             } finally {
-                // 3. 全部做完，才允许渲染页面
                 setReady(true);
             }
         };
@@ -116,7 +142,6 @@ export default function App() {
         initAll();
     }, []);
 
-    // 👇 初始化没完成，显示加载中
     if (!ready) {
         return (
             <ThemeProvider theme={theme}>
