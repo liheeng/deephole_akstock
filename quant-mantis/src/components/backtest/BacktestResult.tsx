@@ -21,7 +21,7 @@ export default function BacktestResult({ runBacktest }: any) {
     // 状态：高度占比 (上下) 和 宽度占比 (左右)
     const [topHeight, setTopHeight] = useState(50)
     const [leftWidth, setLeftWidth] = useState(66) // 初始占比约 2/3
-    
+
     const containerRef = useRef<HTMLDivElement>(null)
     const isDraggingVert = useRef(false) // 垂直拖拽标记
     const isDraggingHoriz = useRef(false) // 水平拖拽标记
@@ -31,8 +31,8 @@ export default function BacktestResult({ runBacktest }: any) {
         const d = new Date(ts); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
     }
     const formatNumber = (v: number) => (v == null || !Number.isFinite(v)) ? "-" : v.toFixed(2)
-    
-const filteredTrades = useMemo(() => {
+
+    const filteredTrades = useMemo(() => {
         if (!selectedSymbol || selectedSymbol === "average")
             return trades
         return trades.filter(t => t.Column === selectedSymbol)
@@ -114,7 +114,7 @@ const filteredTrades = useMemo(() => {
         document.body.style.cursor = "default"
     }
 
-    
+
     const statTabs = useMemo(() => {
         if (!stats) return ["average"]
 
@@ -167,7 +167,7 @@ const filteredTrades = useMemo(() => {
             cellClassName: (params) => {
                 if (params.row.name.includes("Return") || params.row.name.includes("Best Sharpe"))
                     return "highlight"
-                if (params.row.name.includes("Drawdown")) 
+                if (params.row.name.includes("Drawdown"))
                     return "danger"
                 return ""
             }
@@ -208,8 +208,8 @@ const filteredTrades = useMemo(() => {
                 name: isBestSharpe
                     ? `⭐ ${symbol}`
                     : isBestReturn
-                    ? `🚀 ${symbol}`
-                    : symbol,
+                        ? `🚀 ${symbol}`
+                        : symbol,
 
                 type: "line",
                 smooth: true,
@@ -226,8 +226,8 @@ const filteredTrades = useMemo(() => {
                     color: isBestSharpe
                         ? "#2e7d32"
                         : isBestReturn
-                        ? "#ed6c02"
-                        : undefined
+                            ? "#ed6c02"
+                            : undefined
                 },
 
                 data: zip(arr as number[])
@@ -383,9 +383,9 @@ const filteredTrades = useMemo(() => {
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
         >
-            <Button variant="contained" onClick={runBacktest} sx={{ mb: 2 }}>
+            {/* <Button variant="contained" onClick={runBacktest} sx={{ mb: 2 }}>
                 Run Backtest
-            </Button>
+            </Button> */}
 
             {/* 上半 */}
             <Box sx={{
@@ -411,7 +411,7 @@ const filteredTrades = useMemo(() => {
                             legendselectchanged: (params: any) => {
                                 const selected = Object.keys(params.selected)
                                     .find(k => params.selected[k] === true)
-                                    
+
                                 if (selected && selected !== "Portfolio") {
                                     setSelectedSymbol(replaceEmji(selected))
                                 } else {
@@ -423,14 +423,14 @@ const filteredTrades = useMemo(() => {
                                 if (params.seriesName && params.seriesName !== "Portfolio") {
                                     setSelectedSymbol(replaceEmji(params.seriesName))
                                 } else {
-                                    setSelectedSymbol(null) 
+                                    setSelectedSymbol(null)
                                 }
                             }
                         }}
-                        
+
                     />
                 </Box>
-                
+
                 {/* 2. 垂直分隔条 (Splitter) */}
                 <Box
                     onMouseDown={handleHorizMouseDown}
@@ -457,7 +457,7 @@ const filteredTrades = useMemo(() => {
                 {/* 3. Stats 区 */}
                 <Box sx={{
                     flex: 1, // 填充剩余宽度
-                    width: `${100 - leftWidth}%`, 
+                    width: `${100 - leftWidth}%`,
                     height: "100%",
                     display: "flex",
                     flexDirection: "column",
@@ -483,31 +483,31 @@ const filteredTrades = useMemo(() => {
                             const isReturn = tab === bestReturn
 
                             return (
-                            <Tab
-                                key={tab}
-                                value={tab}
-                                label={
-                                    tab === "average"
-                                        ? "Portfolio"
-                                        : isSharpe
-                                        ? `⭐ ${tab}`
-                                        : isReturn
-                                        ? `🚀 ${tab}`
-                                        : tab
-                                }
-                                sx={{
-                                    minHeight: 32,
+                                <Tab
+                                    key={tab}
+                                    value={tab}
+                                    label={
+                                        tab === "average"
+                                            ? "Portfolio"
+                                            : isSharpe
+                                                ? `⭐ ${tab}`
+                                                : isReturn
+                                                    ? `🚀 ${tab}`
+                                                    : tab
+                                    }
+                                    sx={{
+                                        minHeight: 32,
 
-                                    // 🔥 核心高亮
-                                    color: isSharpe
-                                        ? "#2e7d32"
-                                        : isReturn
-                                        ? "#ed6c02"
-                                        : undefined,
+                                        // 🔥 核心高亮
+                                        color: isSharpe
+                                            ? "#2e7d32"
+                                            : isReturn
+                                                ? "#ed6c02"
+                                                : undefined,
 
-                                    fontWeight: isSharpe || isReturn ? 600 : 400
-                                }}
-                            />
+                                        fontWeight: isSharpe || isReturn ? 600 : 400
+                                    }}
+                                />
                             )
                         })}
                     </Tabs>
