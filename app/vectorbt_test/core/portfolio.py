@@ -139,3 +139,22 @@ class PortfolioResultWrapper():
     
     def values(self):
         return self.portfolio.value()
+    
+    def clean_for_json(self, obj):
+        if isinstance(obj, pd.DataFrame):
+            return obj.replace([np.nan, np.inf, -np.inf], None).to_dict(orient="records")
+
+        if isinstance(obj, pd.Series):
+            return obj.replace([np.nan, np.inf, -np.inf], None).to_dict()
+
+        if isinstance(obj, dict):
+            return {k: self.clean_for_json(v) for k, v in obj.items()}
+
+        if isinstance(obj, list):
+            return [self.clean_for_json(v) for v in obj]
+
+        if isinstance(obj, float):
+            if np.isnan(obj) or np.isinf(obj):
+                return None
+
+        return obj

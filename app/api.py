@@ -408,6 +408,7 @@ def run_backtest(req: BacktestRequest):
         # ]
 
         stats = pfwrapper.get_pf_stats(as_json=False)
+        stats = pfwrapper.clean_for_json(stats)
         # print(stats)
         return {
             "stats": stats,

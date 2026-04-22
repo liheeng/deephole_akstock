@@ -24,7 +24,7 @@ interface StrategyState {
     strategies: Record<string, Strategy>
     strategyIds: string[]
 
-    createStrategy: () => string
+    createStrategy: (mode: StrategyMode) => string
     deleteStrategy: (id: string) => void
 
     updateStrategyMeta: (id: string, patch: Partial<Strategy>) => void
@@ -44,7 +44,7 @@ export const useStrategyStore = create<StrategyState>((set) => ({
 
     
 
-    createStrategy: () => {
+    createStrategy: (mode: StrategyMode = "ts") => {
         const { createFactor } = useFactorStore.getState()
         const factorId = createFactor()
         const id = `strategy_${uuidv4()}`
@@ -56,7 +56,7 @@ export const useStrategyStore = create<StrategyState>((set) => ({
                     name: `strategy_${state.strategyIds.length + 1}`,
                     factorIds: [factorId],
                     config: {
-                        mode: "ts",
+                        mode: mode,
                         threshold: 0.5
                     }
                 }
