@@ -2,6 +2,7 @@ import { create } from "zustand"
 import { useStrategyStore } from "./strategy.store"
 import { useFactorStore } from "./factor.store"
 import { useSignalStore } from "./signal.store"
+import { SimpleCheckResult, type CheckResult } from "../../common/Types"
 
 type PortfolioMode = "signal_strategy" | "weight_strategy"
 
@@ -26,9 +27,9 @@ interface BacktestState {
         signalId?: string
     }
     
-    datasetId?: string
+    // datasetId?: string
 
-    setDatasetId: (id: string) => void
+    // setDatasetId: (id: string) => void
 
     setPortfolioMode: (mode: PortfolioMode) => void
 
@@ -47,7 +48,7 @@ interface BacktestState {
     setStrategyWeights: (patch: Partial<EnabledField<number[]>>) => void
 
     updatePortfolioParams: (patch: Partial<{ freq: string; init_cash: number }>) => void
-
+    validate: () => CheckResult
     buildPayload: () => any
 }
 
@@ -67,9 +68,9 @@ export const useBacktestStore = create<BacktestState>((set, get) => ({
         signalId: undefined
     },
 
-    datasetId: "",
+    // datasetId: "",
 
-    setDatasetId: (id: string) => set({ datasetId: id }),
+    // setDatasetId: (id: string) => set({ datasetId: id }),
 
     setPortfolioMode: (mode: PortfolioMode) => set({ portfolio_mode: mode }),
 
@@ -128,6 +129,124 @@ export const useBacktestStore = create<BacktestState>((set, get) => ({
                 ...patch
             }   
     })),
+
+// ==============================================
+    // ✅ 标准校验：返回 CheckResult
+    // ==============================================
+    validate: (): CheckResult => {
+        const currentState = get()
+        const { strategyIds, strategies } = useStrategyStore.getState()
+        const { factors } = useFactorStore.getState()
+        const { signals } = useSignalStore.getState()
+        const errors: string[] = []
+
+        // 1. 数据集校验（非空）
+        if (!currentState.datasetId?.trim()) {
+            errors.push("请选择数据集")
+        }
+
+        // 2. 策略列表校验：至少有一个策略
+        if (strategyIds.length === 0) {
+            errors.push("请至少添加一个策略")
+        }
+
+        // 3. 逐个校验策略
+        strategyIds.forEach((strategyId, idx) => {
+            const strategy = strategies[strategyId]
+            if (!strategy) {
+                errors.push(`第 ${idx + 1} 个策略不存在（ID: ${strategyId}）`)
+                return // 跳过不存在的策略的后续校验
+            }
+
+            // 3.1 策略名称（非空）
+            if (!strategy.name?.trim()) {
+                errors.push(`第 ${idx + 1} 个策略名称不能为空`)
+            }
+
+            // 3.2 核心规则：策略必须至少有一个 Factor（强制校验，无例外）
+            if (!strategy.factorIds || strategy.factorIds.length === 0) {
+                errors.push(`策略【${strategy.name || `ID:${strategyId}`}】必须至少选择一个因子`)
+            } else {
+                // 3.3 校验策略下的 Factor 有效性（存在且 expr 非空）
+                strategy.factorIds.forEach((factorId) => {
+                    const factor = factors[factorId]
+                    if (!factor) {
+                        errors.push(`策略【${strategy.name || `ID:${strategyId}`}】包含不存在的因子（ID: ${factorId}）`)
+                    } else if (!factor.expr?.trim()) {
+                        errors.push(`策略【${strategy.name || `ID:${strategyId}`}】中的因子（ID: ${factorId}）表达式不能为空`)
+                    }
+                })
+            }
+
+            // 3.4 Signal 校验：仅当 portfolio 模式为 signal_strategy 时，才校验策略的 signal
+            if (currentState.portfolio_mode === "signal_strategy") {
+                // signalId 是可选字段
+                if (strategy.signalId) {
+                    const signal = signals[strategy.signalId]
+                    if (!signal || !signal.expr?.trim()) {
+                        errors.push(`策略【${strategy.name || `ID:${strategyId}`}】的信号（ID: ${strategy.signalId}）无效或表达式为空`)
+                    }
+                }
+            }
+
+            // 3.5 策略配置校验（可选字段，仅校验存在的配置）
+            if (strategy.config) {
+                if (strategy.config.mode === "ts" && (strategy.config.threshold === undefined || strategy.config.threshold < 0)) {
+                    errors.push(`策略【${strategy.name || `ID:${strategyId}`}】的 threshold 必须大于等于 0`)
+                }
+                if (strategy.config.mode === "cs" && (strategy.config.top_n === undefined || strategy.config.top_n <= 0)) {
+                    errors.push(`策略【${strategy.name || `ID:${strategyId}`}】的 top_n 必须大于 0`)
+                }
+            }
+        })
+
+        // 4. 调度信号校验：仅当 enabled 为 true 时，才校验 signalId 有效性
+        if (currentState.schedule_signal.enabled) {
+            const scheduleSignalId = currentState.schedule_signal.signalId
+            if (!scheduleSignalId) {
+                errors.push("调度信号已启用，但未选择信号（signalId 为空）")
+            } else {
+                const scheduleSignal = signals[scheduleSignalId]
+                if (!scheduleSignal || !scheduleSignal.expr?.trim()) {
+                    errors.push(`调度信号（ID: ${scheduleSignalId}）无效或表达式为空`)
+                }
+            }
+        }
+
+        // 5. 回测参数校验
+        if (currentState.params.init_cash <= 0) {
+            errors.push("初始资金必须大于 0")
+        }
+        if (!currentState.params.freq?.trim()) {
+            errors.push("调仓频率不能为空")
+        }
+
+        // 6. Portfolio 配置校验（仅校验启用的字段）
+        const { strategy_op, vote_weights, strategy_weights } = currentState
+        // 6.1 strategy_op 启用时，值必须是 AND/OR
+        if (strategy_op.enabled && !["AND", "OR"].includes(strategy_op.value)) {
+            errors.push("策略运算符（strategy_op）值必须是 AND 或 OR")
+        }
+        // 6.2 vote_weights 启用时，数组不能为空且元素需为正数
+        if (vote_weights.enabled) {
+            if (vote_weights.value.length === 0) {
+                errors.push("投票权重（vote_weights）已启用，但权重数组为空")
+            } else if (vote_weights.value.some(w => w <= 0)) {
+                errors.push("投票权重（vote_weights）中的值必须大于 0")
+            }
+        }
+        // 6.3 strategy_weights 启用时，数组不能为空且元素需为正数
+        if (strategy_weights.enabled) {
+            if (strategy_weights.value.length === 0) {
+                errors.push("策略权重（strategy_weights）已启用，但权重数组为空")
+            } else if (strategy_weights.value.some(w => w <= 0)) {
+                errors.push("策略权重（strategy_weights）中的值必须大于 0")
+            }
+        }
+
+        // 返回校验结果（SimpleCheckResult 需支持接收错误数组，通常包含 isValid 和 errors 属性）
+        return new SimpleCheckResult(...errors)
+    },
 
     // =========================
     // Payload

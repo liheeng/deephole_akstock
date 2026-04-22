@@ -21,6 +21,8 @@ export default function BacktestPage() {
     const buildPortfolioPayload = useBacktestStore((state) => state.buildPayload)
     const buildBacktestPayload = useDatasetStore((state) => state.buildCurrentDatasetPayload)
     const setBacktestResult = useBacktestResultStore((state) => state.setBacktestResult)
+    const validatePortfolioConfig = useBacktestStore((state) => state.validate)
+    const validateDatasetConfig = useDatasetStore((state) => state.validateCurrentDataset)
     // const nodes = useNodes()
     const nodes = NodeRegistry.toDict()
 
@@ -31,8 +33,20 @@ export default function BacktestPage() {
     const openWizard = useDialogStore((s: any) => s.openDialog)
     
     // ❗防止未加载
-
     const runBacktest = async () => {
+        const portfolioCheck = validatePortfolioConfig()
+        const datasetCheck = validateDatasetConfig()
+        
+        if (!portfolioCheck.isValid()) {
+            alert("投资组合配置错误:\n" + portfolioCheck.errors.join("\n"))
+            return
+        }
+
+        if (!datasetCheck.isValid()) {
+            alert("数据集配置错误:\n" + datasetCheck.errors.join("\n"))
+            return
+        }
+
         const portfolioConfig = buildPortfolioPayload()
         const datasetConfig = buildBacktestPayload()
         const backtestConfig = {
@@ -46,11 +60,12 @@ export default function BacktestPage() {
     }
 
     const launchBacktestWizard = async () => {
-        // const payload = buildPayload()
-        // const data = await callBacktest(payload)
-        // if (data) {
-        //     setBacktestResult(data)
-        // }
+        const portfolioCheck = validatePortfolioConfig()
+        if (!portfolioCheck.isValid()) {
+            alert("投资组合配置错误:\n" + portfolioCheck.errors.join("\n"))
+            return
+        }
+
         openWizard("backtest_wizard", {datasetSourceDef: dataset?.sourceDef, runBacktest: runBacktest})
     }
 
