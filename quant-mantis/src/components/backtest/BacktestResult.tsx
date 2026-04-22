@@ -2,10 +2,11 @@ import { Card, Button, Box } from "@mui/material"
 import ReactECharts from "echarts-for-react"
 import TradesTable from "./TradesTable"
 import { useBacktestResultStore } from "../../store/backtest/backtestresult.store"
-import { useRef, useState, useMemo, useEffect } from "react"
+import { useRef, useState, useMemo } from "react"
 import UniDataGrid from "../table/UniDataGrid"
 import type { GridColDef } from '@mui/x-data-grid'
 import { Tabs, Tab } from "@mui/material"
+import { FullScreenBox } from "../misc//FullScreenBox"
 
 export default function BacktestResult({ runBacktest }: any) {
     const selectedSymbol = useBacktestResultStore(s => s.selectedSymbol)
@@ -19,6 +20,7 @@ export default function BacktestResult({ runBacktest }: any) {
     const bestReturn = stats?.average?.["Best Return Column"]
 
     // 状态：高度占比 (上下) 和 宽度占比 (左右)
+    const [fullSection, setFullSection] = useState<string | null>(null);
     const [topHeight, setTopHeight] = useState(50)
     const [leftWidth, setLeftWidth] = useState(66) // 初始占比约 2/3
 
@@ -392,7 +394,8 @@ export default function BacktestResult({ runBacktest }: any) {
                 display: "flex",
                 height: `${topHeight}%`,
                 minHeight: 0,
-                position: 'relative'
+                width: "100%",
+                flexShrink: 0
             }}>
                 {/* 图表 */}
                 <Box sx={{
@@ -401,41 +404,48 @@ export default function BacktestResult({ runBacktest }: any) {
                     height: "100%",
                     overflow: "hidden"
                 }}>
-                    <ReactECharts
-                        option={chartOption}
-                        style={{ height: "100%" }}
-                        notMerge={true}
-                        opts={{ renderer: "canvas" }}
-                        lazyUpdate={true}   // 🔥 防止频繁重算
-                        onEvents={{
-                            legendselectchanged: (params: any) => {
-                                const selected = Object.keys(params.selected)
-                                    .find(k => params.selected[k] === true)
+                    {/* Chart: 显式设置 width 百分比 */}
+                    <FullScreenBox
+                        isFull={fullSection === 'chart'}
+                        onToggle={() => setFullSection(fullSection === 'chart' ? null : 'chart')}
+                        sx={{ flex: 1, minHeight: 0, minWidth: 0, flexShrink: 0 }}
+                    >
+                        <ReactECharts
+                            option={chartOption}
+                            style={{ height: "100%", width: "100%" }}
+                            notMerge={true}
+                            opts={{ renderer: "canvas" }}
+                            lazyUpdate={true}   // 🔥 防止频繁重算
+                            onEvents={{
+                                legendselectchanged: (params: any) => {
+                                    const selected = Object.keys(params.selected)
+                                        .find(k => params.selected[k] === true)
 
-                                if (selected && selected !== "Portfolio") {
-                                    setSelectedSymbol(replaceEmji(selected))
-                                } else {
-                                    setSelectedSymbol(null)
+                                    if (selected && selected !== "Portfolio") {
+                                        setSelectedSymbol(replaceEmji(selected))
+                                    } else {
+                                        setSelectedSymbol(null)
+                                    }
+                                },
+
+                                click: (params: any) => {
+                                    if (params.seriesName && params.seriesName !== "Portfolio") {
+                                        setSelectedSymbol(replaceEmji(params.seriesName))
+                                    } else {
+                                        setSelectedSymbol(null)
+                                    }
                                 }
-                            },
+                            }}
 
-                            click: (params: any) => {
-                                if (params.seriesName && params.seriesName !== "Portfolio") {
-                                    setSelectedSymbol(replaceEmji(params.seriesName))
-                                } else {
-                                    setSelectedSymbol(null)
-                                }
-                            }
-                        }}
-
-                    />
+                        />
+                    </FullScreenBox>
                 </Box>
 
                 {/* 2. 垂直分隔条 (Splitter) */}
                 <Box
                     onMouseDown={handleHorizMouseDown}
                     sx={{
-                        width: 8,
+                        width: 5,
                         mx: 0.5,
                         cursor: "col-resize",
                         display: "flex",
@@ -455,97 +465,103 @@ export default function BacktestResult({ runBacktest }: any) {
                 />
 
                 {/* 3. Stats 区 */}
-                <Box sx={{
-                    flex: 1, // 填充剩余宽度
-                    width: `${100 - leftWidth}%`,
-                    height: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                    minWidth: 0,
-                    minHeight: 0
-                }}>
-                    {/* Tabs */}
-                    <Tabs
-                        value={statTab}
-                        onChange={(_, v) => {
-                            if (v === "average") {
-                                setSelectedSymbol(null)
-                            } else {
-                                setSelectedSymbol(replaceEmji(v))
-                            }
-                        }}
-                        variant="scrollable"
-                        scrollButtons="auto"
-                        sx={{ minHeight: 32 }}
-                    >
-                        {statTabs.map(tab => {
-                            const isSharpe = tab === bestSharpe
-                            const isReturn = tab === bestReturn
-
-                            return (
-                                <Tab
-                                    key={tab}
-                                    value={tab}
-                                    label={
-                                        tab === "average"
-                                            ? "Portfolio"
-                                            : isSharpe
-                                                ? `⭐ ${tab}`
-                                                : isReturn
-                                                    ? `🚀 ${tab}`
-                                                    : tab
-                                    }
-                                    sx={{
-                                        minHeight: 32,
-
-                                        // 🔥 核心高亮
-                                        color: isSharpe
-                                            ? "#2e7d32"
-                                            : isReturn
-                                                ? "#ed6c02"
-                                                : undefined,
-
-                                        fontWeight: isSharpe || isReturn ? 600 : 400
-                                    }}
-                                />
-                            )
-                        })}
-                    </Tabs>
-
-                    {/* Table */}
-                    <Box sx={{ flex: 1, minHeight: 0 }}>
-                        <UniDataGrid
-                            rows={statRows}
-                            columns={statColumns}
-                            autoHeight={false}
-                            disableRowSelectionOnClick
-                            hideFooterPagination
-                            hideFooter
-                            sx={{
-                                height: "100%",
-                                fontSize: "16px",
-
-                                "& .highlight": {
-                                    color: "#4cd753",
-                                    fontWeight: 600
-                                },
-
-                                "& .danger": {
-                                    color: "#f03535",
-                                    fontWeight: 600
+                <FullScreenBox
+                    isFull={fullSection === 'stats'}
+                    onToggle={() => setFullSection(fullSection === 'stats' ? null : 'stats')}
+                    sx={{ flex: 1, minHeight: 0, minWidth: 0 }} // minWidth: 0 允许它被压缩
+                >
+                    <Box sx={{
+                        flex: 1, // 填充剩余宽度
+                        // width: `${100 - leftWidth}%`,
+                        height: "100%",
+                        display: "flex",
+                        flexDirection: "column",
+                        minWidth: 0,
+                        minHeight: 0
+                    }}>
+                        {/* Tabs */}
+                        <Tabs
+                            value={statTab}
+                            onChange={(_, v) => {
+                                if (v === "average") {
+                                    setSelectedSymbol(null)
+                                } else {
+                                    setSelectedSymbol(replaceEmji(v))
                                 }
                             }}
-                        />
-                    </Box>
+                            variant="scrollable"
+                            scrollButtons="auto"
+                            sx={{ minHeight: 32, minWidth: 0, width: "100%" }}
+                        >
+                            {statTabs.map(tab => {
+                                const isSharpe = tab === bestSharpe
+                                const isReturn = tab === bestReturn
 
-                </Box>
+                                return (
+                                    <Tab
+                                        key={tab}
+                                        value={tab}
+                                        label={
+                                            tab === "average"
+                                                ? "Portfolio"
+                                                : isSharpe
+                                                    ? `⭐ ${tab}`
+                                                    : isReturn
+                                                        ? `🚀 ${tab}`
+                                                        : tab
+                                        }
+                                        sx={{
+                                            minHeight: 32,
+
+                                            // 🔥 核心高亮
+                                            color: isSharpe
+                                                ? "#2e7d32"
+                                                : isReturn
+                                                    ? "#ed6c02"
+                                                    : undefined,
+
+                                            fontWeight: isSharpe || isReturn ? 600 : 400
+                                        }}
+                                    />
+                                )
+                            })}
+                        </Tabs>
+
+                        {/* Table */}
+                        <Box sx={{ flex: 1, minHeight: 0, minWidth: 0 }}>
+                            <UniDataGrid
+                                rows={statRows}
+                                columns={statColumns}
+                                autoHeight={false}
+                                disableRowSelectionOnClick
+                                hideFooterPagination
+                                hideFooter
+                                sx={{
+                                    height: "100%",
+                                    fontSize: "16px",
+
+                                    "& .highlight": {
+                                        color: "#4cd753",
+                                        fontWeight: 600
+                                    },
+
+                                    "& .danger": {
+                                        color: "#f03535",
+                                        fontWeight: 600
+                                    }, flex: 1, minHeight: 0, minWidth: 0
+                                }}
+                            />
+                        </Box>
+
+                    </Box>
+                </FullScreenBox>
             </Box>
 
             {/* 水平分隔条 (上下拖拽) */}
             <Box
                 onMouseDown={handleVertMouseDown}
                 sx={{
-                    height: 8,
+                    height: 5,
                     cursor: "row-resize",
                     my: 1,
                     display: 'flex',
@@ -563,9 +579,22 @@ export default function BacktestResult({ runBacktest }: any) {
             />
 
             {/* 下半部分：Trades */}
-            <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-                <TradesTable trades={filteredTrades} />
-            </Box>
+            <FullScreenBox
+                isFull={fullSection === 'trades'}
+                onToggle={() => setFullSection(fullSection === 'trades' ? null : 'trades')}
+                sx={{ height: "100%", flex: 1, minHeight: 0, minWidth: 0 }}
+            >
+                <Box sx={{
+                        flex: 1, // 填充剩余宽度
+                        height: "100%",
+                        display: "flex",
+                        flexDirection: "column",
+                        minWidth: 0,
+                        minHeight: 0
+                    }}>
+                    <TradesTable trades={filteredTrades} />
+                </Box>
+            </FullScreenBox>
         </Card>
     )
 }
