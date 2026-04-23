@@ -2,7 +2,7 @@ from utils.common import is_running_in_docker
 from datetime import datetime
 
 data_volume = "/data" if is_running_in_docker() else "./data"
-DB = data_volume + "/stock_new.duckdb"
+DB = data_volume + "/stock.duckdb"
 
 
 def safe_time(v: str):
