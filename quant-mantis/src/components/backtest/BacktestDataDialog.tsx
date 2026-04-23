@@ -22,7 +22,7 @@ import { GridToolbar } from "@mui/x-data-grid"
 import PlayArrowIcon from "@mui/icons-material/PlayArrow"
 
 import { apiClient } from "../../api/Client"
-import { type BacktestDataSourceDef } from "../../store/dataset.store"
+import { type BacktestDataSourceDef, getDefaultPresetDateRange } from "../../store/dataset.store"
 import { DatePicker } from "@mui/x-date-pickers/DatePicker"
 import dayjs from "dayjs"
 
@@ -120,8 +120,9 @@ export const BacktestDataEditPanel = forwardRef<BacktestDataEditPanelRef, Props>
         const [symbols, setSymbols] = useState("")
         const [sectors, setSectors] = useState<string[]>([])
         const [universe, setUniverse] = useState("")
-        const [start, setStart] = useState("2020-01-01")
-        const [end, setEnd] = useState("2024-01-01")
+        const initDateRange = getDefaultPresetDateRange()
+        const [start, setStart] = useState(initDateRange.start)
+        const [end, setEnd] = useState(initDateRange.end)
 
         // ===== sql =====
         const [sql, setSql] = useState("SELECT * FROM stock_daily LIMIT 100")
