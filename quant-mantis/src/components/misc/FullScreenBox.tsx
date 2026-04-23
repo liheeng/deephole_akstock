@@ -50,15 +50,15 @@ export const FullScreenBox = ({ children, isFull=false, onToggle, sx }: any) => 
                 }}
                 sx={{ 
                     position: "absolute", 
-                    top: 1, 
-                    right: 2, 
+                    top: 0, 
+                    right: 0, 
                     zIndex: 10000, 
-                    bgcolor: "rgba(0,0,0,0.4)",
+                    bgcolor: "rgba(95, 93, 93, 0.4)",
                     color: "#7d7c7cd8",
                     // "&:hover": { bgcolor: "rgba(0,0,0,0.6)" },
                     "&:hover": {
-                                color: "#400be0",
-                                bgcolor: "rgba(231, 222, 222, 0.92)"
+                                color: "#4003f5",
+                                bgcolor: "rgba(249, 247, 247, 0.92)"
                             },
                     "& svg": {
                                 fontSize: 18   // 🔥 关键：图标变小
