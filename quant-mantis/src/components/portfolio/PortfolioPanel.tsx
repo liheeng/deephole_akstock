@@ -22,6 +22,7 @@ import SignalEditor from "../signal/SignalEditor"
 import { NodeRegistry } from "../../model/dsl_node/node_registry"
 import BacktestDataPanel from "../backtest/BacktestDataPanel"
 import NestedChip from "../misc/NestedChip"
+import { useMessageStore } from "../../store/message.store"
 
 export default function PortfolioPanel() {
 
@@ -38,7 +39,8 @@ export default function PortfolioPanel() {
     const initCash = useBacktestStore(s => s.params.init_cash)
 
     const strategyCount = useStrategyStore(s => s.strategyIds.length)
-
+    const updateStrategyMode = useStrategyStore(s => s.updateStrategyMode)
+    
     const scheduleEnabled = useBacktestStore(s => s.schedule_signal.enabled)
     const scheduleSignalId = useBacktestStore(s => s.schedule_signal.signalId)
     const setScheduleSignal = useBacktestStore(s => s.setScheduleSignal)
@@ -54,6 +56,7 @@ export default function PortfolioPanel() {
 
     const portfolioParams = useBacktestStore(s => s.params)
     const updatePortfolioParams = useBacktestStore(s => s.updatePortfolioParams)
+    const addMessage = useMessageStore(state => state.addMessage)
 
     // 👉 从 signal store 取 expr
     const scheduleValue = useSignalStore(s =>
@@ -67,8 +70,8 @@ export default function PortfolioPanel() {
     const openDialog = useDialogStore(s => s.openDialog)
 
     // ===== helper =====
-    const parseArray = (v: string) =>
-        v.split(",").map(x => Number(x.trim())).filter(x => !isNaN(x))
+    // const parseArray = (v: string) =>
+    //     v.split(",").map(x => Number(x.trim())).filter(x => !isNaN(x))
 
     return (
         <Box>
@@ -120,7 +123,12 @@ export default function PortfolioPanel() {
                         value={portfolioMode}
                         exclusive
                         // ⭐ 注意：onChange 的第二个参数是点击的值
-                        onChange={(_, next) => next && setPortfolioMode(next)}
+                        onChange={(_, value) => {
+                            value && setPortfolioMode(value)
+                            const strategyMode = (value === "signal_strategy" ? "ts": "cs")
+                            updateStrategyMode("", strategyMode)
+                            addMessage("warning", "Portfolio mode changed to " + value + ", all strategies are changed as " + strategyMode + ".")
+                        }}
                         size="small"
                         sx={{
                             backgroundColor: "rgba(0, 0, 0, 0.2)", // 内部背景色，增加层次感

@@ -5,7 +5,8 @@ import {
 import { useRef, useState } from "react"
 
 import StepPreview from "./StepPreview"
-import { BacktestDataEditPanel, type BacktestDataEditPanelRef } from "./BacktestDataDialog"
+// import { BacktestDataEditPanel, type BacktestDataEditPanelRef } from "./BacktestDataDialog"
+import { BacktestDataEditPanel, type BacktestDataEditPanelRef } from "./BacktestDataEditPanel"
 // import { useDialogStore } from "../../store/dialog.store"
 
 export default function BacktestWizardDialog({
@@ -69,7 +70,7 @@ export default function BacktestWizardDialog({
                     {tab === 0 && (
                         <BacktestDataEditPanel
                             ref={panelRef}
-                            initialValue={{ datasetSourceDef: localDSD }}
+                            initialValues={{ datasetSourceDef: localDSD }}
                             sx={{ flex: 1, width: "100%" }}
                         />
                     )}

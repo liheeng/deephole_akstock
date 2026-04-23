@@ -1,5 +1,6 @@
-import { escapeSQL, joinSQL, toSQLList, type Preset } from "../../utils/sqlUtils"
+import { escapeSQL, joinSQL, toSQLList } from "../../utils/sqlUtils"
 import { buildPlan, optimizePlan, compileSQL } from "./queryPlan"
+import { type Preset } from "../../store/dataset.store"
 
 export function buildBacktestSQL(p: Preset) {
 

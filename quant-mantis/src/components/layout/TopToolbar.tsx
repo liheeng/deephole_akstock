@@ -1,5 +1,6 @@
 // components/layout/TopToolbar.tsx
 import { Box, Button } from "@mui/material"
+import MessageBar from "../misc/MessageBar"  // 👈 导入
 
 export default function TopToolbar({ runBacktest, launchBacktestWizard }: any) {
   return (
@@ -24,6 +25,9 @@ export default function TopToolbar({ runBacktest, launchBacktestWizard }: any) {
       <Button variant="outlined">
         💾 Save
       </Button>
+
+      {/* 全局消息条（自动靠右） */}
+      <MessageBar />
     </Box>
   )
 }

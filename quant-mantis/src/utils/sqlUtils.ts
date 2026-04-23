@@ -14,14 +14,3 @@ export function toSQLList(arr: string[]) {
 export function escapeSQL(str: string) {
     return str.replace(/'/g, "''")
 }
-
-export type Preset = {
-    markets?: string[]
-    symbols?: string[]
-    sectors?: string[]
-    universe?: string
-    start: string
-    end: string
-    sql?: string
-    type: "preset" | "sql"
-}

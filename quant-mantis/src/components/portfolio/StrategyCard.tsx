@@ -38,6 +38,7 @@ export default function StrategyCard({ strategyId }: any) {
     const factorIds = useStrategyStore(s => s.strategies[strategyId]?.factorIds || [])
     const signalId = useStrategyStore(s => s.strategies[strategyId]?.signalId)
     const config = useStrategyStore(s => s.strategies[strategyId]?.config)
+    // const strategyMode = config?.mode
 
     // =========================
     // actions（稳定引用）

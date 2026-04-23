@@ -29,6 +29,8 @@ interface StrategyState {
 
     updateStrategyMeta: (id: string, patch: Partial<Strategy>) => void
 
+    updateStrategyMode: (id: string, mode: StrategyMode) => void
+
     setStrategySignal: (id: string, signalId: string) => void
 
     addFactorToStrategy: (id: string, factorId: string) => void
@@ -37,12 +39,12 @@ interface StrategyState {
     updateStrategyConfig: (id: string, patch: Partial<Strategy["config"]>) => void
 }
 
-export const useStrategyStore = create<StrategyState>((set) => ({
+export const useStrategyStore = create<StrategyState>((set, get) => ({
 
     strategies: {},
     strategyIds: [],
 
-    
+
 
     createStrategy: (mode: StrategyMode = "ts") => {
         const { createFactor } = useFactorStore.getState()
@@ -88,6 +90,41 @@ export const useStrategyStore = create<StrategyState>((set) => ({
                 }
             }
         })),
+
+    updateStrategyMode: (id: string, mode: StrategyMode) => {
+        const currentState = get()
+        if (!id || id === "") {
+            if (currentState.strategies) {
+                for (const key in currentState.strategies) {
+                    set(state => ({
+                        strategies: {
+                            ...state.strategies,
+                            [key]: {
+                                ...state.strategies[key],
+                                config: {
+                                    ...state.strategies[key].config,
+                                    mode
+                                }
+                            }
+                        }
+                    }))
+                }
+            }
+        } else {
+            set(state => ({
+                strategies: {
+                    ...state.strategies,
+                    [id]: {
+                        ...state.strategies[id],
+                        config: {
+                            ...state.strategies[id].config,
+                            mode
+                        }
+                    }
+                }
+            }))
+        }
+    },
 
     setStrategySignal: (id, signalId) =>
         set(state => ({

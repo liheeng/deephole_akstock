@@ -26,7 +26,7 @@ export default function BacktestPage() {
     // const nodes = useNodes()
     const nodes = NodeRegistry.toDict()
 
-    const datasetId = useBacktestStore(s => s.datasetId)
+    const datasetId = useDatasetStore(s => s.currentDatasetId)
     const datasets = useDatasetStore(s => s.datasets)
     const dataset = datasets.find(d => d.id === datasetId)
         

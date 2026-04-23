@@ -90,7 +90,7 @@ export default function GlobalDialogs({ nodes }: any) {
             {dialog.type === "backtest_data" && (
                 <BacktestDataDialog
                     open={dialog.open}
-                    initialValue={
+                    initialValues={
                         { datasetSourceDef: dialog.payload?.datasetSourceDef }
                     }
                     onClose={closeDialog}

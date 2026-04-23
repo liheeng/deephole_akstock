@@ -25,24 +25,26 @@ export type Filter =
     | { field: "universe"; op: "in"; value: string }     // 👈 新增
     | { field: "date"; op: "between"; value: [string, string] }
 
+export type Preset = {
+    type: "preset" | "sql"
+    markets?: string[]
+    symbols?: string[]
+    
+    sectors?: string[]
+    universe?: string
+
+    start: string
+    end: string
+    sql?: string
+}
+
 export type BacktestDataSourceDef =
     | {
         type: "sql"
         sql: string
         schema?: string[]
     }
-    | {
-        type: "preset"
-        markets?: string[]
-        symbols?: string[]
-
-        sectors?: string[]      // 👈 新增
-        universe?: string       // 👈 新增
-
-        start: string
-        end: string
-        sql?: string
-    }
+    | Preset
     | {
         type: "filters"
         filters: Filter[]
