@@ -5,7 +5,7 @@ services:
     image: _TEMP_IMAGE_NAME_:_TEMP_IMAGE_VERSION
     container_name: _TEMP_DEEPHOLE_DB_INIT_SERVICE
     build: .
-    command: python /app/init_db.py
+    command: python /app/sql/init_db.py
     volumes:
       - ${DATA_VOLUME}:/data
       - ${LOG_VOLUME}:/logs

@@ -1,0 +1,82 @@
+配套全套 SQL（带注释）
+1. 插入：保存一套完整回测
+sql
+-- 插入回测主配置
+INSERT INTO backtest_config (id, name, portfolio_mode, params, schedule_signal, strategy_op, vote_weights, strategy_weights)
+VALUES (
+    'bt_001',
+    '默认投资组合',
+    'signal_strategy',
+    '{"freq":"1D","init_cash":100000}',
+    '{"enabled":false,"signalId":null}',
+    '{"enabled":true,"value":"OR"}',
+    '{"enabled":false,"value":[]}',
+    '{"enabled":false,"value":[]}'
+);
+
+-- 插入策略
+INSERT INTO backtest_strategy (id, backtest_id, name, factor_ids, signal_id, config)
+VALUES (
+    'st_001',
+    'bt_001',
+    '趋势策略',
+    '["f_001"]',
+    'sig_001',
+    '{"mode":"ts","threshold":0.5}'
+);
+
+-- 插入因子
+INSERT INTO backtest_factor (id, backtest_id, name, expr)
+VALUES ('f_001', 'bt_001', '动量因子', 'close / LAG(close, 1) - 1');
+
+-- 插入信号
+INSERT INTO backtest_signal (id, backtest_id, name, expr)
+VALUES ('sig_001', 'bt_001', '买入信号', 'factor > 0');
+2. 查询：加载单套完整回测
+sql
+-- 查询指定回测的完整配置（含策略、因子、信号）
+SELECT
+    bc.*,
+    st.strategy_list,
+    ft.factor_list,
+    sig.signal_list
+FROM backtest_config bc
+LEFT JOIN (
+    SELECT backtest_id, json_agg(*) AS strategy_list
+    FROM backtest_strategy GROUP BY backtest_id
+) st ON st.backtest_id = bc.id
+LEFT JOIN (
+    SELECT backtest_id, json_agg(*) AS factor_list
+    FROM backtest_factor GROUP BY backtest_id
+) ft ON ft.backtest_id = bc.id
+LEFT JOIN (
+    SELECT backtest_id, json_agg(*) AS signal_list
+    FROM backtest_signal GROUP BY backtest_id
+) sig ON sig.backtest_id = bc.id
+WHERE bc.id = 'bt_001';
+3. 更新：更新主配置
+sql
+-- 更新回测基本信息
+UPDATE backtest_config
+SET
+    name = '增强版趋势策略',
+    params = '{"freq":"1D","init_cash":200000}',
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = 'bt_001';
+4. 删除：删除整套回测（级联）
+sql
+-- 删除回测下所有信号
+DELETE FROM backtest_signal WHERE backtest_id = 'bt_001';
+-- 删除回测下所有因子
+DELETE FROM backtest_factor WHERE backtest_id = 'bt_001';
+-- 删除回测下所有策略
+DELETE FROM backtest_strategy WHERE backtest_id = 'bt_001';
+-- 删除回测主配置
+DELETE FROM backtest_config WHERE id = 'bt_001';
+5. 简单查询
+sql
+-- 查询所有回测配置
+SELECT * FROM backtest_config;
+
+-- 查询某个回测的所有策略
+SELECT * FROM backtest_strategy WHERE backtest_id = 'bt_001';

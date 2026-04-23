@@ -134,4 +134,9 @@ def update_db():
             WHERE sector = '{val}';
         """)
 
+    con.close()
+    
     print("✅ Schema + Views ready")
+
+if __name__ == "__main__":
+    update_db()
