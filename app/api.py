@@ -2,7 +2,7 @@
 
 import os
 import time
-from typing import Optional, List
+from typing import Optional, List, Any, Dict
 from contextlib import asynccontextmanager, closing
 from fastapi import FastAPI, HTTPException, WebSocket, Query
 from fastapi.staticfiles import StaticFiles
@@ -13,6 +13,9 @@ from pydantic import BaseModel
 import pandas as pd
 import traceback
 import re
+import json
+from datetime import datetime
+import nanoid
 
 from fastapi.middleware.cors import CORSMiddleware
 from app.api_config import CORS_CONFIG
@@ -351,6 +354,46 @@ def load_data_somehow(ds: DataSetConfig) -> pd.DataFrame:
     return df
 
 
+class BacktestResultRow(BaseModel):
+    id: str
+    dataset_config_id: str
+    portfolio_name: str
+    stats: Dict[str, Any]
+    equity: Dict[str, Any]
+    trades: List[Dict[str, Any]]
+    created_at: Optional[datetime] = None
+
+
+def save_backtest_result(
+    dataset_config_id: str,
+    portfolio_name: str,
+    stats: dict | None,
+    equity: dict,
+    trades: list
+):
+    conn = db_controller
+    try:
+        result_id = f"bt_result_{nanoid.generate()}"
+
+        conn.execute("""
+            INSERT INTO backtest_portfolio_results (
+                id, dataset_config_id, portfolio_name, stats, equity, trades
+            ) VALUES (?, ?, ?, ?, ?, ?)
+        """, [
+            result_id,
+            dataset_config_id,
+            portfolio_name,
+            json.dumps(stats, ensure_ascii=False),
+            json.dumps(equity, ensure_ascii=False),
+            json.dumps(trades, ensure_ascii=False)
+        ])
+
+        return result_id
+    except Exception as e:
+        logger.exception(f"failed to save backtest result, error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/backtest")
 def run_backtest(req: BacktestRequest):
     try:
@@ -384,43 +427,82 @@ def run_backtest(req: BacktestRequest):
         pf = portfolio.run(DataProvider(None), df)
         pfwrapper = PortfolioResultWrapper(pf)
 
-        # 4. 返回结果
-        # return {
-        #     "stats": pf.stats().to_dict(),
-        #     "trades": pf.trades.records_readable.to_dict(orient="records"),
-        #     "equity": pf.value().squeeze().tolist()
-        # }
         # detailed_stats = pfwrapper.get_pf_stats(agg_func=None)
         # print(detailed_stats.index.tolist()) # 看看具体的指标名到底叫什么
 
         equity_curve = pfwrapper.get_pf_value_dict(as_json=False)
         # print(equity_curve)
-        # # ✅ 统一成组合净值
-        # if isinstance(equity_curve, pd.DataFrame):
-        #     equity_series = equity_curve.sum(axis=1)
-        # else:
-        #     equity_series = equity_curve
-
-        # ✅ 返回带时间
-        # equity_data = [
-        #     {"time": str(t), "value": float(v)}
-        #     for t, v in equity_series.items()
-        # ]
-
-        stats = pfwrapper.get_pf_stats(as_json=False)
-        stats = pfwrapper.clean_for_json(stats)
+    
+        _stats = pfwrapper.get_pf_stats(as_json=False)
+        stats = pfwrapper.clean_for_json(_stats)
         # print(stats)
+        trades = pf.trades.records_readable.to_dict(orient="records")
+        # ==========================
+        # ✅ 保存到数据库
+        # ==========================
+        equity_curve_dict = json.loads(equity_curve) if isinstance(equity_curve, str) else equity_curve
+        save_backtest_result(
+            dataset_config_id=req.dataset_config.id,
+            portfolio_name=portfolio_config.name,
+            stats=stats,
+            equity=equity_curve_dict,
+            trades=trades
+        )
+
         return {
             "stats": stats,
             "equity": equity_curve,
-            "trades": pf.trades.records_readable.to_dict(orient="records")
-                # .replace([float("inf"), -float("inf")], 0)
-                # .fillna(0)
-                # .to_dict(),
+            "trades": trades
         }
     except Exception as e:
         logger.exception(f"failed to run backtest\n{e}")
         raise HTTPException(status_code=500, detail=f"错误: {str(e)}\n{traceback.format_exc()}")
+
+
+@app.get("/backtest/results", response_model=List[BacktestResultRow])
+def query_backtest_results(
+    dataset_config_id: Optional[str] = None,
+    portfolio_name: Optional[str] = None
+):
+    conn = db_controller
+    try:
+        sql = """
+            SELECT id, dataset_config_id, portfolio_name,
+                   stats, equity, trades, created_at
+            FROM backtest_portfolio_results
+            WHERE 1=1
+        """
+        params = []
+
+        if dataset_config_id:
+            sql += " AND dataset_config_id = ?"
+            params.append(dataset_config_id)
+
+        if portfolio_name:
+            sql += " AND portfolio_name = ?"
+            params.append(portfolio_name)
+
+        sql += " ORDER BY created_at DESC"
+
+        rows = conn.execute(sql, params, fetch_mode="all")
+        columns = [
+            "id", "dataset_config_id", "portfolio_name",
+            "stats", "equity", "trades", "created_at"
+        ]
+
+        result = []
+        for row in rows:
+            item = dict(zip(columns, row))
+            item["stats"] = json.loads(item["stats"])
+            item["equity"] = json.loads(item["equity"])
+            item["trades"] = json.loads(item["trades"])
+            result.append(item)
+
+        return result
+
+    except Exception as e:
+        logger.exception(f"failed to query backtest results, error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 def materialize_dataset(dataset_id, source_def):
@@ -466,17 +548,212 @@ def build_dataset_sql(source_def: dict):
     return sql
 
 
+# ==============================
+# 请求模型（前端传过来的结构）
+# ==============================
+class DatasetCreateRequest(BaseModel):
+    id: str
+    name: str
+    sourceDef: Dict[str, Any]
+    schema: Optional[List[str]] = None
+    rowCount: Optional[int] = None
+    cache: Optional[Dict[str, Any]] = None
+
+
+# ==============================
+# ✅ 接口：新增 dataset
+# ==============================
 @app.post("/backtest/dataset")
-def backtest_dataset(req: dict):
-    # POST /api/dataset/materialize
-    # {
-    # "dataset_id": "ds_xxx",
-    # "source": {...}
-    # }
-    dataset_id = req.get("dataset_id")
-    source_def = req.get("sourceDef")
-    materialize_dataset(dataset_id, source_def)
-    pass
+def backtest_create_dataset(req: DatasetCreateRequest):
+    conn = db_controller
+
+    try:
+        # 先检查 ID 是否重复
+        exists = conn.read(
+            sql="SELECT 1 FROM datasets WHERE id = ?", params=[req.id], fetch_mode="one")
+
+        if exists:
+            raise HTTPException(status_code=400, detail=f"数据集 ID {req.id} 已存在")
+
+        # 插入 SQL
+        sql = """
+            INSERT INTO datasets (
+                id, name, createdAt, sourceDef, schema, rowCount, cache
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """
+
+        # 参数
+        params = [
+            req.id,
+            req.name,
+            datetime.now().isoformat(),  # 自动生成创建时间
+            json.dumps(req.sourceDef, ensure_ascii=False),  # JSON 存储
+            json.dumps(req.schema, ensure_ascii=False) if req.schema else None,
+            req.rowCount,
+            json.dumps(req.cache, ensure_ascii=False) if req.cache else None
+        ]
+
+        conn.execute(sql, params)
+
+        return {
+            "success": True,
+            "message": "数据集创建成功",
+            "id": req.id
+        }
+
+    except Exception as e:
+        logger.exception(f"failed to create dataset\n{e}")
+        raise HTTPException(status_code=500, detail=f"错误: {str(e)}\n{traceback.format_exc()}")
+
+
+# ==============================
+# ✅ 接口：查询所有 datasets
+# ==============================
+@app.get("/backtest/datasets", response_model=List[Any])
+def backtest_fetch_datasets():
+    conn = db_controller
+    
+    try:
+        # 查询所有数据集
+        query = """
+            SELECT 
+                id, 
+                name, 
+                createdAt, 
+                sourceDef, 
+                schema, 
+                rowCount, 
+                cache
+            FROM datasets
+            ORDER BY createdAt DESC
+        """
+        result = conn.execute(query, fetch_mode="all")
+        
+        # 列名
+        columns = ["id", "name", "createdAt", "sourceDef", "schema", "rowCount", "cache"]
+        
+        # 转成字典列表
+        datasets = []
+        if not result:
+            return datasets
+        
+        for row in result:
+            item = dict(zip(columns, row))
+            
+            # JSON 字段解析
+            item["sourceDef"] = json.loads(item["sourceDef"]) if item["sourceDef"] else {}
+            item["schema"] = json.loads(item["schema"]) if item["schema"] else None
+            item["cache"] = json.loads(item["cache"]) if item["cache"] else None
+            
+            datasets.append(item)
+        
+        return datasets
+    except Exception as e:
+        logger.exception(f"failed to fetch datasets\n{e}")
+        raise HTTPException(status_code=500, detail=f"错误: {str(e)}\n{traceback.format_exc()}")
+
+
+# ==============================
+# Pydantic 模型（和前端 TS 完全对应）
+# ==============================
+class BacktestConfig(BaseModel):
+    id: str
+    name: str
+    portfolio_mode: str
+    params: Dict[str, Any]
+    schedule_signal: Dict[str, Any]
+    strategy_op: Dict[str, Any]
+    vote_weights: Dict[str, Any]
+    strategy_weights: Dict[str, Any]
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+# ==============================
+# 1. 获取所有回测配置
+# ==============================
+@app.get("/backtest/configs", response_model=List[BacktestConfig])
+def get_all_backtest_configs():
+    conn = db_controller
+    try:
+        rows = conn.execute("""
+            SELECT 
+                id, name, portfolio_mode, params,
+                schedule_signal, strategy_op, vote_weights, strategy_weights,
+                created_at, updated_at
+            FROM backtest_config
+            ORDER BY created_at DESC
+        """, fetch_mode="all")
+
+        columns = [
+            "id", "name", "portfolio_mode", "params",
+            "schedule_signal", "strategy_op", "vote_weights", "strategy_weights",
+            "created_at", "updated_at"
+        ]
+
+        result = []
+        for row in rows:
+            item = dict(zip(columns, row))
+            # 解析 JSON 字段
+            item["params"] = json.loads(item["params"]) if item["params"] else {}
+            item["schedule_signal"] = json.loads(item["schedule_signal"]) if item["schedule_signal"] else {}
+            item["strategy_op"] = json.loads(item["strategy_op"]) if item["strategy_op"] else {}
+            item["vote_weights"] = json.loads(item["vote_weights"]) if item["vote_weights"] else {}
+            item["strategy_weights"] = json.loads(item["strategy_weights"]) if item["strategy_weights"] else {}
+            result.append(item)
+
+        return result
+
+    except Exception as e:
+        logger.exception(f"failed to fetch backtest configs\n{e}")
+        raise HTTPException(status_code=500, detail=f"错误: {str(e)}\n{traceback.format_exc()}")
+
+
+# ==============================
+# 2. 保存（新增）一个 backtest config
+# ==============================
+@app.post("/backtest/config")
+def create_backtest_config(config: BacktestConfig):
+    conn = db_controller
+    try:
+        # 检查 ID 是否重复
+        exists = conn.execute(
+            "SELECT 1 FROM backtest_config WHERE id = ?", [config.id]
+        ).fetchone()
+
+        if exists:
+            raise HTTPException(status_code=400, detail=f"backtest id {config.id} 已存在")
+
+        now = datetime.now().isoformat()
+
+        conn.execute("""
+            INSERT INTO backtest_config (
+                id, name, portfolio_mode, params,
+                schedule_signal, strategy_op, vote_weights, strategy_weights,
+                created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, [
+            config.id,
+            config.name,
+            config.portfolio_mode,
+            json.dumps(config.params),
+            json.dumps(config.schedule_signal),
+            json.dumps(config.strategy_op),
+            json.dumps(config.vote_weights),
+            json.dumps(config.strategy_weights),
+            now,
+            now
+        ])
+
+        return {
+            "success": True,
+            "message": "保存成功",
+            "id": config.id
+        }
+
+    except Exception as e:
+        logger.exception(f"failed to create backtest config\n{e}")
+        raise HTTPException(status_code=500, detail=f"错误: {str(e)}\n{traceback.format_exc()}")
 
 
 @app.websocket("/ws/terminal/{container}")

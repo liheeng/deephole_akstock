@@ -111,6 +111,31 @@ def update_db():
         CREATE INDEX IF NOT EXISTS idx_backtest_signal_bid ON backtest_signal(backtest_id);
     """)
 
+
+    # =========================
+    # 3. -- 回测系统 - 回测结果表
+    # =========================
+    con.execute("""
+        -- =============================================
+        -- 回测结果表（每次运行回测保存一条）
+        -- 联合 KEY：dataset_config_id + portfolio_name
+        -- =============================================
+        CREATE TABLE IF NOT EXISTS backtest_portfolio_results (
+            id VARCHAR PRIMARY KEY,
+            dataset_config_id VARCHAR NOT NULL,
+            portfolio_name VARCHAR NOT NULL,
+            stats JSON NOT NULL,
+            equity JSON NOT NULL,
+            trades JSON NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        -- 索引必须单独创建！
+        CREATE INDEX IF NOT EXISTS idx_backtest_res_ds_id ON backtest_portfolio_results (dataset_config_id);
+        CREATE INDEX IF NOT EXISTS idx_backtest_res_portfolio ON backtest_portfolio_results (portfolio_name);
+        CREATE INDEX IF NOT EXISTS idx_backtest_res_ds_portfolio ON backtest_portfolio_results (dataset_config_id, portfolio_name);
+    """)
+
     con.close()
 
     print("✅ Schema + Views ready")

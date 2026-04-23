@@ -128,7 +128,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
     datasets: [],
 
     createDataset: (sourceDef, schema) => {
-        const id = "ds_" + nanoid(6)
+        const id = "ds_" + nanoid()
 
         // ✅ 如果是 preset 类型，自动填充默认日期
         let finalSourceDef = sourceDef;

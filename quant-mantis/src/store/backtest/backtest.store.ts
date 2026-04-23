@@ -3,6 +3,7 @@ import { useStrategyStore } from "./strategy.store"
 import { useFactorStore } from "./factor.store"
 import { useSignalStore } from "./signal.store"
 import { SimpleCheckResult, type CheckResult } from "../../common/Types"
+import { nanoid } from "nanoid"
 
 type PortfolioMode = "signal_strategy" | "weight_strategy"
 
@@ -54,7 +55,7 @@ interface BacktestState {
 
 export const useBacktestStore = create<BacktestState>((set, get) => ({
 
-    name: "MyPortfolio",
+    name: "MyPortfolio-" + nanoid(),
 
     portfolio_mode: "signal_strategy",
 
