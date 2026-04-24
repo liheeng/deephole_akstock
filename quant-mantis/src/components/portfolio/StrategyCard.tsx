@@ -35,7 +35,10 @@ export default function StrategyCard({ strategyId }: any) {
     // =========================
 
     const name = useStrategyStore(s => s.strategies[strategyId]?.name)
-    const factorIds = useStrategyStore(s => s.strategies[strategyId]?.factorIds || [])
+    const factorIds = useStrategyStore(
+        s => s.strategies[strategyId]?.factorIds
+    )
+    const factorCount = factorIds?.length ?? 0
     const signalId = useStrategyStore(s => s.strategies[strategyId]?.signalId)
     const config = useStrategyStore(s => s.strategies[strategyId]?.config)
     // const strategyMode = config?.mode
@@ -104,8 +107,6 @@ export default function StrategyCard({ strategyId }: any) {
             }
         )
     }, [strategyId, signalId, signal, openDialog])
-
-    const factorCount = factorIds.length
 
     // =========================
     // render
@@ -221,7 +222,7 @@ export default function StrategyCard({ strategyId }: any) {
                         >
                             Strategy Signal
                         </Typography>
-                        
+
                         <SignalEditor
                             value={signal?.expr || ""}
                             enabled={!!signalId}

@@ -8,9 +8,7 @@ import { useStrategyStore } from "../../store/backtest/strategy.store"
 import { useBacktestStore } from "../../store/backtest/backtest.store"
 
 import BacktestDataDialog from "../backtest/BacktestDataDialog"
-import { useDatasetStore } from "../../store/dataset.store"
-import { type BacktestDataSourceDef } from "../../store/dataset.store"
-
+import { useDatasetStore, type Dataset,type BacktestDataSourceDef } from "../../store/dataset.store"
 
 export default function GlobalDialogs({ nodes }: any) {
 
@@ -26,8 +24,7 @@ export default function GlobalDialogs({ nodes }: any) {
 
     const setScheduleSignal = useBacktestStore(state => state.setScheduleSignal)
 
-    const createDataset = useDatasetStore(s => s.createDataset)
-    const setDatasetId = useDatasetStore(s => s.setCurrentDataset)
+    const selectDataset = useDatasetStore(s => s.setCurrentDataset)
     
     const { expr } = dialog.payload || {}
 
@@ -91,13 +88,11 @@ export default function GlobalDialogs({ nodes }: any) {
                 <BacktestDataDialog
                     open={dialog.open}
                     initialValues={
-                        { datasetSourceDef: dialog.payload?.datasetSourceDef }
+                        { dataset: dialog.payload?.dataset }
                     }
                     onClose={closeDialog}
-                    onConfirm={(datasetSourceDef: any) => {
-                        const datasetId = createDataset(datasetSourceDef)
-                        setDatasetId(datasetId)
-
+                    onConfirm={(datasetId: any) => {
+                        selectDataset(datasetId)
                         closeDialog()
                     }}
                 />
@@ -108,11 +103,10 @@ export default function GlobalDialogs({ nodes }: any) {
                         open={dialog.open}
                         datasetSourceDef={dialog.payload?.datasetSourceDef}
                         onClose={closeDialog}
-                        onConfirm={(datasetSourceDef: BacktestDataSourceDef) => {  
+                        onConfirm={(dataset: Dataset) => {  
                             const { runBacktest } = dialog.payload
-                            const datasetId = createDataset(datasetSourceDef)
-                            setDatasetId(datasetId)  
-                            runBacktest(datasetSourceDef)
+                            selectDataset(dataset.id)  
+                            runBacktest(dataset.sourceDef)
                             closeDialog()
                         }}
                     />

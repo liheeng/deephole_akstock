@@ -1,4 +1,4 @@
-import { useRef } from "react"
+import { use, useRef } from "react"
 import {
     Dialog,
     DialogTitle,
@@ -7,7 +7,7 @@ import {
     Button
 } from "@mui/material"
 
-import { type BacktestDataSourceDef } from "../../store/dataset.store"
+import { type BacktestDataSourceDef, type Dataset, useDatasetStore } from "../../store/dataset.store"
 import { BacktestDataEditPanel, type BacktestDataEditPanelRef } from "./BacktestDataEditPanel"
 import { Light as SyntaxHighlighter } from "react-syntax-highlighter"
 import sql from "react-syntax-highlighter/dist/esm/languages/hljs/sql"
@@ -15,13 +15,16 @@ SyntaxHighlighter.registerLanguage("sql", sql)
 
 
 type BacktestDataDialogProps = {
-    initialValues: { datasetSourceDef: BacktestDataSourceDef }
+    initialValues: { dataset: Dataset }
     [key: string]: any
 }
 
 export default function BacktestDataDialog(props: BacktestDataDialogProps) {
     // const datasetSourceDef: BacktestDataSourceDef = props.initialValues?.datasetSourceDef
     const panelRef = useRef<BacktestDataEditPanelRef>(null)
+    const dataset = props.initialValues?.dataset
+    const createDataset = useDatasetStore(s => s.createDataset)
+    const updateSourceDef = useDatasetStore(s => s.updateSourceDef)
 
     return (
         <Dialog open={props.open} onClose={props.onClose} maxWidth="lg" fullWidth>
@@ -45,10 +48,17 @@ export default function BacktestDataDialog(props: BacktestDataDialogProps) {
             <DialogActions>
                 <Button onClick={props.onClose}>Cancel</Button>
                 <Button
-                    onClick={() => {
-                        const datasetSourceDef = panelRef.current?.getValue()
-                        props.onConfirm?.(datasetSourceDef)
-                    }
+                    onClick={
+                        () => {
+                            const datasetSourceDef: BacktestDataSourceDef = panelRef.current?.getValue()
+                            if (!dataset) {
+                                const ds = createDataset(datasetSourceDef)
+                                props.onConfirm?.(ds.id)
+                            } else {
+                                updateSourceDef(dataset.id, datasetSourceDef)
+                                props.onConfirm?.(dataset.id)
+                            }
+                        }
                     }
                 >
                     Confirm

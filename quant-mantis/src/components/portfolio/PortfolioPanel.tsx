@@ -1,5 +1,6 @@
 import {
     Box,
+    Button,
     Typography,
     Stack,
     Chip,
@@ -23,6 +24,7 @@ import { NodeRegistry } from "../../model/dsl_node/node_registry"
 import BacktestDataPanel from "../backtest/BacktestDataPanel"
 import NestedChip from "../misc/NestedChip"
 import { useMessageStore } from "../../store/message.store"
+import { updateBacktestConfig } from "../../api/Client"
 
 export default function PortfolioPanel() {
 
@@ -32,6 +34,9 @@ export default function PortfolioPanel() {
     // ✅ 精细订阅（核心）
     // =========================
 
+    const getPortfolio = useBacktestStore(s => s.getPortfolio)
+    const portfolioName = useBacktestStore(s => s.name)
+    const setPortfolioName = useBacktestStore(s => s.setPortfolioName)
     const portfolioMode = useBacktestStore(s => s.portfolio_mode)
     const setPortfolioMode = useBacktestStore(s => s.setPortfolioMode)
 
@@ -40,7 +45,7 @@ export default function PortfolioPanel() {
 
     const strategyCount = useStrategyStore(s => s.strategyIds.length)
     const updateStrategyMode = useStrategyStore(s => s.updateStrategyMode)
-    
+
     const scheduleEnabled = useBacktestStore(s => s.schedule_signal.enabled)
     const scheduleSignalId = useBacktestStore(s => s.schedule_signal.signalId)
     const setScheduleSignal = useBacktestStore(s => s.setScheduleSignal)
@@ -54,7 +59,7 @@ export default function PortfolioPanel() {
     const strategyWeights = useBacktestStore(s => s.strategy_weights)
     const setStrategyWeights = useBacktestStore(s => s.setStrategyWeights)
 
-    const portfolioParams = useBacktestStore(s => s.params)
+    // const portfolioParams = useBacktestStore(s => s.params)
     const updatePortfolioParams = useBacktestStore(s => s.updatePortfolioParams)
     const addMessage = useMessageStore(state => state.addMessage)
 
@@ -72,6 +77,26 @@ export default function PortfolioPanel() {
     // ===== helper =====
     // const parseArray = (v: string) =>
     //     v.split(",").map(x => Number(x.trim())).filter(x => !isNaN(x))
+    const validateCurrentPortfolio = useBacktestStore(s => s.validate)
+
+    const handleSave = async () => {
+
+        const result = validateCurrentPortfolio()
+
+        if (!result.isValid()) {
+            addMessage("error", result.message || "Validation current portfolio config failed")
+            return
+        }
+
+        const res = await updateBacktestConfig(getPortfolio())
+
+        if (res) {
+            addMessage("success", `Portfolio config "${portfolioName}" saved`)
+        } else {
+            addMessage("error", `Save portfolio config "${portfolioName}" failed`)
+        }
+    }
+
 
     return (
         <Box>
@@ -85,11 +110,60 @@ export default function PortfolioPanel() {
 
             {/* ================= Header ================= */}
             <Box sx={{ mb: 1 }}>
-                {/* <BacktestDataPanel />
-                <Divider sx={{ mb: 1 }} /> */}
-                <Typography variant="subtitle1" sx={{ textAlign: "left", width: "100%", mb: 1 }}>
-                    📂 Portfolio
-                </Typography>
+                {/* BacktestDataPanel */}
+                <Box
+                    sx={{
+                        display: "flex",
+                        flexDirection: "row",
+                        alignItems: "center",   // ⭐ 核心：垂直居中
+                        // justifyContent: "space-between",
+                        justifyContent: 'flex-start',
+                        mb: 1,
+                        minHeight: 40           // ⭐ 关键：统一这一行高度
+
+                    }}
+                >
+
+                    <Divider sx={{ mb: 1 }} />
+                    <Typography variant="subtitle1" sx={{ textAlign: "left", maxWidth: "50%", width: "200", mb: 1 }}>
+                        📂 Portfolio Name:
+                    </Typography>
+                    <Stack
+                        component="div"
+                        direction="row"
+                        spacing={1}
+                        alignItems="center"   // ⭐ 必须有
+                    >
+                        <Tooltip title="Edit portfolio name">
+                            <TextField
+                                size="small"
+                                value={portfolioName}
+                                sx={{ flex: 1, width: 400, maxWidth: 600, height: 40, paddingLeft: 2 }}
+                                onChange={(e) => {
+                                    if (e.target.value && e.target.value.trim() == portfolioName) {
+                                        return
+                                    }
+
+                                    setPortfolioName(e.target.value)
+                                }
+                                }
+                            />
+                        </Tooltip>
+                        <Tooltip title="Save current portfolio config">
+                            <Button
+                                size="small"
+                                onClick={handleSave}
+                                sx={{
+                                    height: 40,          // ⭐ 和 Select 对齐
+                                    display: "flex",
+                                    alignItems: "center"
+                                }}
+                            >
+                                Save
+                            </Button>
+                        </Tooltip>
+                    </Stack>
+                </Box>
 
                 {/* mode */}
                 <Box
@@ -125,7 +199,7 @@ export default function PortfolioPanel() {
                         // ⭐ 注意：onChange 的第二个参数是点击的值
                         onChange={(_, value) => {
                             value && setPortfolioMode(value)
-                            const strategyMode = (value === "signal_strategy" ? "ts": "cs")
+                            const strategyMode = (value === "signal_strategy" ? "ts" : "cs")
                             updateStrategyMode("", strategyMode)
                             addMessage("warning", "Portfolio mode changed to " + value + ", all strategies are changed as " + strategyMode + ".")
                         }}
@@ -174,13 +248,13 @@ export default function PortfolioPanel() {
                         {/* <CustomNestedChip size="small" label={`🧠 ${strategyCount}`} /> */}
                         <NestedChip size="small" label={
                             <>
-                            {`🧠 ${strategyCount}`}
-                            {/* <NestedChip size="small" label={`🧠 ${strategyCount}`} /> */}
+                                {`🧠 ${strategyCount}`}
+                                {/* <NestedChip size="small" label={`🧠 ${strategyCount}`} /> */}
                             </>
                         } />
                     </Tooltip>
                     {/* {/* 📦 *} */}
-                    
+
                     <Tooltip title="Schedule Signal">
                         <Chip
                             size="small"
@@ -190,7 +264,7 @@ export default function PortfolioPanel() {
                                 scheduleEnabled
                                     ? (scheduleValue ? `🎯 ${scheduleValue}` : "🎯 Schedule")
                                     : "🎯 None"
-                                    // ❌ 🔗 
+                                // ❌ 🔗 
                             }
                         // ⚡
                         />

@@ -24,6 +24,8 @@ interface StrategyState {
     strategies: Record<string, Strategy>
     strategyIds: string[]
 
+    init: (strategies: Strategy[]) => void
+
     createStrategy: (mode: StrategyMode) => string
     deleteStrategy: (id: string) => void
 
@@ -44,8 +46,53 @@ export const useStrategyStore = create<StrategyState>((set, get) => ({
     strategies: {},
     strategyIds: [],
 
+    init: (strategies: Strategy[] = []) => {
 
+        if (!Array.isArray(strategies)) {
+            console.warn("init strategies is not array", strategies)
+            return
+        }
 
+        const valid = strategies.filter(s => {
+            if (!s?.id) {
+                console.warn("invalid strategy", s)
+                return false
+            }
+            return true
+        })
+
+        set(() => ({
+            strategies: Object.fromEntries(
+                valid.map(s => [s.id, { ...s }])
+            ),
+            // strategies: Object.fromEntries(
+            //     valid.map(s => [s.id, JSON.parse(JSON.stringify(s))])
+            // ),
+            strategyIds: valid.map(s => s.id)
+        }))
+    },
+
+    init: (strategies: Strategy[] = []) => {
+
+        const state = get()
+
+        if (state.initialized) return
+
+        if (!Array.isArray(strategies)) {
+            console.warn("init strategies is not array", strategies)
+            return
+        }
+
+        const valid = strategies.filter(s => s?.id)
+
+        set(() => ({
+            strategies: Object.fromEntries(
+                valid.map(s => [s.id, { ...s }])
+            ),
+            strategyIds: valid.map(s => s.id),
+            initialized: true
+        }))
+    },
     createStrategy: (mode: StrategyMode = "ts") => {
         const { createFactor } = useFactorStore.getState()
         const factorId = createFactor()
@@ -55,7 +102,7 @@ export const useStrategyStore = create<StrategyState>((set, get) => ({
                 ...state.strategies,
                 [id]: {
                     id,
-                    name: `strategy_${state.strategyIds.length + 1}`,
+                    name: `strategy_${id}`,
                     factorIds: [factorId],
                     config: {
                         mode: mode,

@@ -22,7 +22,7 @@ export default function BacktestPage() {
     const buildBacktestPayload = useDatasetStore((state) => state.buildCurrentDatasetPayload)
     const setBacktestResult = useBacktestResultStore((state) => state.setBacktestResult)
     const validatePortfolioConfig = useBacktestStore((state) => state.validate)
-    const validateDatasetConfig = useDatasetStore((state) => state.validateCurrentDataset)
+    const validateDatasetConfig = useDatasetStore((state) => state.validateDataset)
     // const nodes = useNodes()
     const nodes = NodeRegistry.toDict()
 
@@ -66,7 +66,7 @@ export default function BacktestPage() {
             return
         }
 
-        openWizard("backtest_wizard", {datasetSourceDef: dataset?.sourceDef, runBacktest: runBacktest})
+        openWizard("backtest_wizard", {dataset: dataset, runBacktest: runBacktest})
     }
 
     if (!nodes || Object.keys(nodes).length === 0) {

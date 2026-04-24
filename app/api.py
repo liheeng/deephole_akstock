@@ -27,7 +27,7 @@ from utils.log_manager import get_logger
 from utils.task_util import create_sync_daily_task
 from core.scheduler import run_task
 from core.worker import start_workers
-from db.duckdb import DuckDBController
+from db.duckdb import DuckDBController, DuckDBTransaction
 from sources.ifind.ifind_api import IFinDApi
 from sources.data_source import DataSourceApiName
 
@@ -496,6 +496,8 @@ def query_backtest_results(
             item["stats"] = json.loads(item["stats"])
             item["equity"] = json.loads(item["equity"])
             item["trades"] = json.loads(item["trades"])
+
+            item["created_at"] = item["created_at"].isoformat()
             result.append(item)
 
         return result
@@ -561,116 +563,128 @@ class DatasetCreateRequest(BaseModel):
 
 
 # ==============================
-# ✅ 接口：新增 dataset
+# 自动创建 or 更新 dataset
 # ==============================
+@app.get("/backtest/datasets", response_model=List[Any])
+def backtest_fetch_datasets():
+    try:
+        with DuckDBTransaction(db_controller) as tx:
+
+            rows = tx.read("""
+                SELECT 
+                    id, 
+                    name, 
+                    createdAt, 
+                    sourceDef, 
+                    schema, 
+                    rowCount, 
+                    cache
+                FROM datasets
+                ORDER BY createdAt DESC
+            """, fetch_mode="all")
+
+        if not rows:
+            return []
+
+        def parse_json(x, default):
+            if not x:
+                return default
+            try:
+                return json.loads(x)
+            except:
+                return default
+
+        result = []
+
+        for r in rows:
+            item = {
+                "id": r[0],
+                "name": r[1],
+                "createdAt": r[2].isoformat() if r[2] else None,
+                "sourceDef": parse_json(r[3], {}),
+                "schema": parse_json(r[4], None),
+                "rowCount": r[5],
+                "cache": parse_json(r[6], None),
+            }
+            result.append(item)
+
+        return result
+
+    except Exception as e:
+        logger.exception("failed to fetch datasets")
+        raise HTTPException(
+            status_code=500,
+            detail=f"错误: {str(e)}\n{traceback.format_exc()}"
+        )
+    
 @app.post("/backtest/dataset")
-def backtest_create_dataset(req: DatasetCreateRequest):
-    conn = db_controller
+def backtest_update_dataset(req: DatasetCreateRequest):
+
+    now = datetime.now()
 
     try:
-        # 先检查 ID 是否重复
-        exists = conn.read(
-            sql="SELECT 1 FROM datasets WHERE id = ?", params=[req.id], fetch_mode="one")
+        with DuckDBTransaction(db_controller) as tx:
 
-        if exists:
-            raise HTTPException(status_code=400, detail=f"数据集 ID {req.id} 已存在")
+            sql = """
+                INSERT INTO datasets (
+                    id, name, createdAt, updatedAt,
+                    sourceDef, schema, rowCount, cache
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    name = excluded.name,
+                    updatedAt = excluded.updatedAt,
+                    sourceDef = excluded.sourceDef,
+                    schema = excluded.schema,
+                    rowCount = excluded.rowCount,
+                    cache = excluded.cache
+            """
 
-        # 插入 SQL
-        sql = """
-            INSERT INTO datasets (
-                id, name, createdAt, sourceDef, schema, rowCount, cache
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
-        """
-
-        # 参数
-        params = [
-            req.id,
-            req.name,
-            datetime.now().isoformat(),  # 自动生成创建时间
-            json.dumps(req.sourceDef, ensure_ascii=False),  # JSON 存储
-            json.dumps(req.schema, ensure_ascii=False) if req.schema else None,
-            req.rowCount,
-            json.dumps(req.cache, ensure_ascii=False) if req.cache else None
-        ]
-
-        conn.execute(sql, params)
+            tx.execute(sql, [
+                req.id,
+                req.name,
+                now,
+                now,
+                json.dumps(req.sourceDef, ensure_ascii=False),
+                json.dumps(req.schema) if req.schema else None,
+                req.rowCount,
+                json.dumps(req.cache) if req.cache else None
+            ])
 
         return {
             "success": True,
-            "message": "数据集创建成功",
+            "message": "保存成功",
             "id": req.id
         }
 
     except Exception as e:
-        logger.exception(f"failed to create dataset\n{e}")
-        raise HTTPException(status_code=500, detail=f"错误: {str(e)}\n{traceback.format_exc()}")
-
-
-# ==============================
-# ✅ 接口：查询所有 datasets
-# ==============================
-@app.get("/backtest/datasets", response_model=List[Any])
-def backtest_fetch_datasets():
-    conn = db_controller
-    
-    try:
-        # 查询所有数据集
-        query = """
-            SELECT 
-                id, 
-                name, 
-                createdAt, 
-                sourceDef, 
-                schema, 
-                rowCount, 
-                cache
-            FROM datasets
-            ORDER BY createdAt DESC
-        """
-        result = conn.execute(query, fetch_mode="all")
-        
-        # 列名
-        columns = ["id", "name", "createdAt", "sourceDef", "schema", "rowCount", "cache"]
-        
-        # 转成字典列表
-        datasets = []
-        if not result:
-            return datasets
-        
-        for row in result:
-            item = dict(zip(columns, row))
-            
-            # JSON 字段解析
-            item["sourceDef"] = json.loads(item["sourceDef"]) if item["sourceDef"] else {}
-            item["schema"] = json.loads(item["schema"]) if item["schema"] else None
-            item["cache"] = json.loads(item["cache"]) if item["cache"] else None
-            
-            datasets.append(item)
-        
-        return datasets
-    except Exception as e:
-        logger.exception(f"failed to fetch datasets\n{e}")
-        raise HTTPException(status_code=500, detail=f"错误: {str(e)}\n{traceback.format_exc()}")
+        logger.exception("failed to create/update dataset")
+        raise HTTPException(500, str(e))
 
 
 # ==============================
 # Pydantic 模型（和前端 TS 完全对应）
 # ==============================
+
+# 你的 Pydantic 模型（必须加 strategies 字段）
 class BacktestConfig(BaseModel):
     id: str
     name: str
     portfolio_mode: str
-    params: Dict[str, Any]
-    schedule_signal: Dict[str, Any]
-    strategy_op: Dict[str, Any]
-    vote_weights: Dict[str, Any]
-    strategy_weights: Dict[str, Any]
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
-
+    params: dict
+    schedule_signal: dict
+    strategy_op: dict
+    vote_weights: dict
+    strategy_weights: dict
+    # 前端必传的策略数组
+    strategies: dict
+    factors: dict
+    signals: dict
+    created_at: str = None
+    updated_at: str = None
 
 # ==============================
-# 1. 获取所有回测配置
+# 1. 获取所有回测配置 + 关联3张表数据
 # ==============================
 @app.get("/backtest/configs", response_model=List[BacktestConfig])
 def get_all_backtest_configs():
@@ -694,12 +708,86 @@ def get_all_backtest_configs():
         result = []
         for row in rows:
             item = dict(zip(columns, row))
-            # 解析 JSON 字段
+            
+            # JSON 解析
             item["params"] = json.loads(item["params"]) if item["params"] else {}
             item["schedule_signal"] = json.loads(item["schedule_signal"]) if item["schedule_signal"] else {}
             item["strategy_op"] = json.loads(item["strategy_op"]) if item["strategy_op"] else {}
             item["vote_weights"] = json.loads(item["vote_weights"]) if item["vote_weights"] else {}
             item["strategy_weights"] = json.loads(item["strategy_weights"]) if item["strategy_weights"] else {}
+            
+            # 时间格式化
+            if item["created_at"]:
+                item["created_at"] = item["created_at"].isoformat()
+            if item["updated_at"]:
+                item["updated_at"] = item["updated_at"].isoformat()
+
+            # ==========================================
+            # 关联查询：strategy / factor / signal
+            # 严格按你的表结构 + backtest_id 关联
+            # ==========================================
+            backtest_id = item["id"]
+
+
+            # 1. 查询策略
+            backtest_strategy_columns = [
+                "id", "backtest_id", "name", "factor_ids", "signal_id", "config", "created_at"
+            ]
+            strategies = conn.execute(
+                "SELECT id, backtest_id, name, factor_ids, signal_id, config, created_at FROM backtest_strategy WHERE backtest_id = ?",
+                params=[backtest_id],
+                fetch_mode="all"
+            )
+            # 2. 查询因子
+            backtest_factor_columns = [
+                "id", "backtest_id", "name", "expr", "created_at"
+            ]
+            factors = conn.execute(
+                "SELECT id, backtest_id, name, expr, created_at FROM backtest_factor WHERE backtest_id = ?",
+                params=[backtest_id],
+                fetch_mode="all"
+            )
+            # 3. 查询信号
+            backtest_signal_columns = [
+                "id", "backtest_id", "name", "expr", "created_at"
+            ]
+            signals = conn.execute(
+                "SELECT id, backtest_id, name, expr, created_at FROM backtest_signal WHERE backtest_id = ?",
+                params=[backtest_id],
+                fetch_mode="all"
+            )
+
+            logger.info(f"strategies: {strategies}, factors: {factors}, signals: {signals}")
+
+            # 组装到返回结构
+            if strategies is not None:
+                strategies_dict = {}
+                for strategy in strategies:
+                    backtest_strategy_item = dict(zip(backtest_strategy_columns, strategy))
+                    backtest_strategy_item["created_at"] = backtest_strategy_item["created_at"].isoformat()
+                    strategies_dict[backtest_strategy_item["id"]] = backtest_strategy_item
+
+                item["strategies"] = strategies_dict
+
+            if factors is not None:
+                factors_dict = {}
+                for factor in factors:
+                    backtest_factor_item = dict(zip(backtest_factor_columns, factor))
+                    backtest_factor_item["created_at"] = backtest_factor_item["created_at"].isoformat()
+                    factors_dict[backtest_factor_item["id"]] = backtest_factor_item
+
+                item["factors"] = factors_dict
+
+            if signals is not None:
+                signals_dict = {}
+                for signal in signals:
+                    backtest_signal_item = dict(zip(backtest_signal_columns, signal))
+                    backtest_signal_item["created_at"] = backtest_signal_item["created_at"].isoformat()
+                    signals_dict[backtest_signal_item["id"]] = backtest_signal_item
+
+                item["signals"] = signals_dict
+
+
             result.append(item)
 
         return result
@@ -710,51 +798,115 @@ def get_all_backtest_configs():
 
 
 # ==============================
-# 2. 保存（新增）一个 backtest config
+# 2. 自动创建或更新 backtest config（含子表保存）
 # ==============================
 @app.post("/backtest/config")
-def create_backtest_config(config: BacktestConfig):
-    conn = db_controller
+def update_backtest_config(config: BacktestConfig):
+    if not config.id:
+        raise HTTPException(status_code=400, detail="Backtest(Portfolio) id 不能为空")
+
+    backtest_id = config.id
+
     try:
-        # 检查 ID 是否重复
-        exists = conn.execute(
-            "SELECT 1 FROM backtest_config WHERE id = ?", [config.id]
-        ).fetchone()
+        with DuckDBTransaction(db_controller) as tx:
 
-        if exists:
-            raise HTTPException(status_code=400, detail=f"backtest id {config.id} 已存在")
+            # =========================
+            # 1. 主表 UPSERT
+            # =========================
+            sql = """
+                INSERT INTO backtest_config (
+                    id, name, portfolio_mode, params,
+                    schedule_signal, strategy_op, vote_weights, strategy_weights
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT (id) DO UPDATE SET
+                    name = excluded.name,
+                    portfolio_mode = excluded.portfolio_mode,
+                    params = excluded.params,
+                    schedule_signal = excluded.schedule_signal,
+                    strategy_op = excluded.strategy_op,
+                    vote_weights = excluded.vote_weights,
+                    strategy_weights = excluded.strategy_weights,
+                    updated_at = now()
+            """
 
-        now = datetime.now().isoformat()
+            tx.execute(sql, [
+                backtest_id,
+                config.name,
+                config.portfolio_mode,
+                json.dumps(config.params),
+                json.dumps(config.schedule_signal),
+                json.dumps(config.strategy_op),
+                json.dumps(config.vote_weights),
+                json.dumps(config.strategy_weights)
+            ])
 
-        conn.execute("""
-            INSERT INTO backtest_config (
-                id, name, portfolio_mode, params,
-                schedule_signal, strategy_op, vote_weights, strategy_weights,
-                created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, [
-            config.id,
-            config.name,
-            config.portfolio_mode,
-            json.dumps(config.params),
-            json.dumps(config.schedule_signal),
-            json.dumps(config.strategy_op),
-            json.dumps(config.vote_weights),
-            json.dumps(config.strategy_weights),
-            now,
-            now
-        ])
+            # =========================
+            # 2. 删除旧数据
+            # =========================
+            tx.execute("DELETE FROM backtest_strategy WHERE backtest_id = ?", [backtest_id])
+            tx.execute("DELETE FROM backtest_factor WHERE backtest_id = ?", [backtest_id])
+            tx.execute("DELETE FROM backtest_signal WHERE backtest_id = ?", [backtest_id])
 
+            # =========================
+            # 3. 插入 strategy
+            # =========================
+            for strategy in config.strategies.values():
+                tx.execute("""
+                    INSERT INTO backtest_strategy
+                    (id, backtest_id, name, factor_ids, signal_id, config)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, [
+                    strategy.get("id"),
+                    backtest_id,
+                    strategy.get("name"),
+                    json.dumps(strategy.get("factor_ids", [])),
+                    strategy.get("signal_id"),
+                    json.dumps(strategy.get("config", {}))
+                ])
+
+            # =========================
+            # 4. 插入 factor
+            # =========================
+            for factor in config.factors.values():
+                tx.execute("""
+                    INSERT INTO backtest_factor
+                    (id, backtest_id, name, expr)
+                    VALUES (?, ?, ?, ?)
+                """, [
+                    factor.get("id"),
+                    backtest_id,
+                    factor.get("name"),
+                    factor.get("expr")
+                ])
+
+            # =========================
+            # 5. 插入 signal
+            # =========================
+            for signal in config.signals.values():
+                tx.execute("""
+                    INSERT INTO backtest_signal
+                    (id, backtest_id, name, expr)
+                    VALUES (?, ?, ?, ?)
+                """, [
+                    signal.get("id"),
+                    backtest_id,
+                    signal.get("name"),
+                    signal.get("expr")
+                ])
+
+        # 👇 能执行到这里，说明已经自动 COMMIT
         return {
             "success": True,
             "message": "保存成功",
-            "id": config.id
+            "id": backtest_id
         }
 
     except Exception as e:
-        logger.exception(f"failed to create backtest config\n{e}")
-        raise HTTPException(status_code=500, detail=f"错误: {str(e)}\n{traceback.format_exc()}")
-
+        logger.exception(f"failed to save backtest config: {config}, error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"错误: {str(e)}\n{traceback.format_exc()}"
+        )
 
 @app.websocket("/ws/terminal/{container}")
 async def terminal_ws(websocket: WebSocket, container: str):

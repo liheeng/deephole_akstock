@@ -31,10 +31,11 @@ class DuckDBController:
         sql: Optional[str] = None,
         view_name: str = "temp_df",
         table_name: Optional[str] = None,
-        if_exists: str = "append"
+        if_exists: str = "append",
+        conn: Optional[DuckDBPyConnection] = None
     ):
         with self._lock:
-            con = self._get_connection()
+            con = conn or self._get_connection()
             try:
                 if df is not None:
                     con.register(view_name, df)
@@ -57,20 +58,22 @@ class DuckDBController:
                     else:
                         raise ValueError("必须提供 table_name 或 sql 来创建表")
             finally:
-                con.close()
+                if conn is None:
+                    con.close()
 
     def read(
         self,
         sql: str,
         params: Optional[list] = None,
         fetch_mode: Optional[str] = None,
-        callback: Optional[Callable] = None
+        callback: Optional[Callable] = None,
+        conn: Optional[DuckDBPyConnection] = None
     ) -> Any:
         """
         增强版读取：支持 fetch_mode + callback
         fetch_mode: None / 'one' / 'all' / 'df'
         """
-        con = self._get_connection(read_only=True)
+        con = conn or self._get_connection(read_only=True)
         try:
             result = con.execute(sql, params)
             if result:
@@ -89,18 +92,20 @@ class DuckDBController:
                 return callback(data)
             return data
         finally:
-            con.close()
+            if conn is None:
+                con.close()
 
     def execute(
         self,
         sql: str,
         params: Optional[list] = None,
         fetch_mode: Optional[str] = None,
-        callback: Optional[Callable] = None
+        callback: Optional[Callable] = None,
+        conn: Optional[DuckDBPyConnection] = None
     ):
         """带锁执行任意 SQL（写操作专用）"""
         with self._lock:
-            con = self._get_connection()
+            con = conn or self._get_connection()
             try:
                 result = con.execute(sql, params)
                 if result:
@@ -119,17 +124,59 @@ class DuckDBController:
                     return callback(res)
                 return res
             finally:
-                con.close()
+                if conn is None:
+                    con.close()
 
-    def start_transaction(self) -> DuckDBPyConnection:
+    def _start_transaction(self) -> DuckDBPyConnection:
         con = self._get_connection()
         con.execute("BEGIN TRANSACTION")
         return con
 
-    def commit_transaction(self, con: DuckDBPyConnection):
+    def _commit_transaction(self, con: DuckDBPyConnection):
         con.execute("COMMIT TRANSACTION")
         con.close()
 
+    def _rollback_transaction(self, con: DuckDBPyConnection):
+        # 执行回滚，放弃所有未提交的修改
+        con.execute("ROLLBACK TRANSACTION")
+        # 回滚后也必须关闭连接（和 commit 保持一致）
+        con.close()
+
+
+class DuckDBTransaction:
+    def __init__(self, db_controller: DuckDBController):
+        self.db_controller = db_controller
+        self.conn = None
+
+    def __enter__(self):
+        # 开启事务
+        self.conn = self.db_controller._start_transaction()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # 有异常 → 回滚
+        if exc_type:
+            self.db_controller._rollback_transaction(self.conn)
+        else:
+            self.db_controller._commit_transaction(self.conn)
+
+        # 一定要关闭连接
+        self.conn.close()
+
+        # False = 不吞异常（推荐）
+        return False
+
+    # =========================
+    # DB 操作封装
+    # =========================
+    def read(self, sql: str, params=None, fetch_mode=None, callback=None):
+        return self.db_controller.read(sql, params, fetch_mode, callback, self.conn)
+
+    def execute(self, sql: str, params=None, fetch_mode=None, callback=None):
+        return self.db_controller.execute(sql, params, fetch_mode, callback, self.conn)
+
+    def write(self, df=None, sql=None, view_name="temp_df", table_name=None, if_exists="append"):
+        return self.db_controller.write(df, sql, view_name, table_name, if_exists, self.conn)
 
 # ==============================
 # 【最终版】DuckDB Service（读写一体化）
@@ -260,10 +307,10 @@ class DuckDBService:
     # 事务
     # ==========================
     def start_transaction(self):
-        return self.db.start_transaction()
+        return self.db._start_transaction()
 
     def commit_transaction(self, con):
-        self.db.commit_transaction(con)
+        self.db._commit_transaction(con)
 
     # ==========================
     # 关闭服务

@@ -1,35 +1,148 @@
-import { Box, Typography, Button } from "@mui/material"
+import { useState } from "react"
+import { Box, Typography, Button, Tooltip, Stack, TextField, Popover, List, ListItemButton, ListItemText } from "@mui/material"
+import IconButton from "@mui/material/IconButton"
+import StorageIcon from "@mui/icons-material/Storage"
 import MainCard from "../visual/MainCard"
 import KeyValueRow from "../misc/KeyValueRow"
 
 import { useDialogStore } from "../../store/dialog.store"
-import { useDatasetStore } from "../../store/dataset.store"
+import { useDatasetStore, type Dataset } from "../../store/dataset.store"
+import { useMessageStore } from "../../store/message.store"
 
+import { updateDataset as apiUpdateDataset, fetchDatasets } from "../../api/Client"
 export default function BacktestDataPanel() {
 
 
     const openDialog = useDialogStore(s => s.openDialog)
-    const datasetId = useDatasetStore(s => s.currentDatasetId)
-    const datasets = useDatasetStore(s => s.datasets)
+    // const getDatasetName = useDatasetStore(s => s.getDatasetName)
+    const setDatesetName = useDatasetStore(s => s.setDatasetName)
+    const getDataset = useDatasetStore(s => s.getDataset)
+    const validateDataset = useDatasetStore(s => s.validateDataset)
+    
+    const currentDatasetId = useDatasetStore(s => s.currentDatasetId)
+    const dataset = getDataset(currentDatasetId)
+    const datasetName = dataset?.name
 
-    const dataset = datasets.find(d => d.id === datasetId)
+    const addMessage = useMessageStore(state => state.addMessage)
 
+    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+    const [remoteDatasets, setRemoteDatasets] = useState<Dataset[]>([])
+
+    const handleOpenSelect = async (e: React.MouseEvent<HTMLElement>) => {
+        setAnchorEl(e.currentTarget)
+
+        const res = await fetchDatasets()
+        if (res) {
+            setRemoteDatasets(res)
+        }
+    }
+
+    const handleCloseSelect = () => {
+        setAnchorEl(null)
+    }
+
+    const applyDataset = (ds: Dataset) => {
+        // 👉 复用你 store 逻辑
+        useDatasetStore.setState(state => ({
+            datasets: [ds, ...state.datasets.filter(d => d.id !== ds.id)],
+            currentDatasetId: ds.id
+        }))
+
+        handleCloseSelect()
+    }
+
+    const handleSave = async () => {
+        const result = validateDataset(currentDatasetId)
+
+        if (!result.isValid()) {
+            addMessage("error", result.message || "Validation current portfolio config failed")
+            return
+        }
+
+        if (!dataset) {
+            addMessage("error", "No dataset found to save/update")
+            return
+        }
+
+        const res = await apiUpdateDataset(dataset)
+
+        if (res) {
+            addMessage("success", `Dataset config "${datasetName}" saved`)
+        } else {
+            addMessage("error", `Save dataset config "${datasetName}" failed`)
+        }
+    }
     return (
         <MainCard
             title={
-                <Typography sx={{ textAlign: "left", width: "100%", mb: 1 }}>
+                <Typography sx={{ textAlign: "left", minWidth: 0, mb: 1 }}>
                     📊 Backtest Data
                 </Typography>
             }
+
             secondary={
-                <Button
-                    size="small"
-                    onClick={() =>
-                        openDialog("backtest_data", { datasetSourceDef: dataset?.sourceDef })
-                    }
+                <Stack
+                    component="div"
+                    direction="row"
+                    spacing={1}
+                    alignItems="center"   // ⭐ 必须有
+                    alignContent="left"
                 >
-                    Edit
-                </Button>
+                    <Tooltip title="Edit dataset name">
+                        <TextField
+                            size="small"
+                            value={datasetName}
+                            sx={{ flex: 1, width: 400, maxWidth: 600, height: 40, paddingLeft: 2 }}
+                            onChange={(e) => {
+                                if (e.target.value && e.target.value.trim() == datasetName) {
+                                    return
+                                }
+
+                                setDatesetName(currentDatasetId || "", e.target.value)
+                            }
+                            }
+                        />
+                    </Tooltip>
+                    <Tooltip title="Save current dataset config">
+                        <Button
+                            size="small"
+                            onClick={handleSave}
+                            sx={{
+                                height: 40,          // ⭐ 和 Select 对齐
+                                display: "flex",
+                                alignItems: "center"
+                            }}
+                        >
+                            Save
+                        </Button>
+                    </Tooltip>
+                    <Tooltip title="Select dataset">
+                        <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={handleOpenSelect}
+                            sx={{
+                                height: 40,
+                                "&:hover": {
+                                    backgroundColor: "action.hover"
+                                }
+                            }}
+                        >
+                            <StorageIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Edit dataset">
+                        <Button
+                            size="small"
+                            onClick={() =>
+                                openDialog("backtest_data", { dataset: dataset })
+                            }
+                        >
+                            Edit
+                        </Button>
+                    </Tooltip>
+                </Stack>
+
             }
         >
 
@@ -61,6 +174,47 @@ export default function BacktestDataPanel() {
                 </Box>
             )}
 
+            <Popover
+                open={Boolean(anchorEl)}
+                anchorEl={anchorEl}
+                onClose={handleCloseSelect}
+                anchorOrigin={{
+                    vertical: "bottom",
+                    horizontal: "left"
+                }}
+            >
+                <List sx={{ width: 320, maxHeight: 400, overflow: "auto" }}>
+                    {remoteDatasets.map(ds => (
+                        <ListItemButton
+                            key={ds.id}
+                            onClick={() => applyDataset(ds)}
+                            sx={{ alignItems: "flex-start" }}
+                        >
+                            <Box sx={{ display: "flex", flexDirection: "column", width: "100%" }}>
+                                <Typography sx={{ fontSize: 16, fontWeight: 500 }}>
+                                    {ds.id === currentDatasetId ? (
+                                        <Box>
+                                            💙 {ds.name}
+                                        </Box>
+                                    ) : (
+                                        ds.name
+                                    )}
+                                </Typography>
+
+                                <Typography
+                                    sx={{
+                                        fontSize: 13,
+                                        opacity: 0.6
+                                    }}
+                                >
+                                    ID: {ds.id}
+                                </Typography>
+                            </Box>
+                        </ListItemButton>
+                    ))}
+                </List>
+            </Popover>
         </MainCard>
+
     )
 }

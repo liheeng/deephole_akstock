@@ -19,7 +19,7 @@ interface EquityData {
     }
 }
 
-interface BacktestResultState {
+export interface BacktestResultState {
 
     equity: EquityData | null
     stats: StatsData | null   // 🔥 改这里

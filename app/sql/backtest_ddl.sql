@@ -15,9 +15,8 @@ CREATE TABLE IF NOT EXISTS backtest_config (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP   -- 更新时间
 );
 
--- 索引：按名称查询
-CREATE INDEX IF NOT EXISTS idx_backtest_config_name ON backtest_config(name);
-
+-- 索引：Unique index based on name
+REATE UNIQUE INDEX IF NOT EXISTS uniq_backtest_config_name ON backtest_config(name);
 
 -- =============================================
 -- 回测策略表

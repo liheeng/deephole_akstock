@@ -12,7 +12,8 @@ interface EnabledField<T> {
     value: T
 }
 
-interface BacktestState {
+export interface BacktestState {
+    id: string
 
     name: string
     portfolio_mode: PortfolioMode
@@ -28,9 +29,9 @@ interface BacktestState {
         signalId?: string
     }
 
-    // datasetId?: string
+    setPortfolioName: (name: string) => void
 
-    // setDatasetId: (id: string) => void
+    getPortfolio(): BacktestState
 
     setPortfolioMode: (mode: PortfolioMode) => void
 
@@ -54,7 +55,8 @@ interface BacktestState {
 }
 
 export const useBacktestStore = create<BacktestState>((set, get) => ({
-
+    id: "MyPortfolio-" + nanoid(),
+    
     name: "MyPortfolio-" + nanoid(),
 
     portfolio_mode: "signal_strategy",
@@ -68,6 +70,10 @@ export const useBacktestStore = create<BacktestState>((set, get) => ({
         enabled: false,
         signalId: undefined
     },
+    
+    setPortfolioName: (name: string) => set({ name }),
+
+    getPortfolio: () => get(),
 
     setPortfolioMode: (mode: PortfolioMode) => set({ portfolio_mode: mode }),
 

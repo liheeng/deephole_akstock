@@ -18,7 +18,7 @@ import { GridToolbar } from "@mui/x-data-grid"
 import PlayArrowIcon from "@mui/icons-material/PlayArrow"
 
 import { apiClient } from "../../api/Client"
-import { type BacktestDataSourceDef, getDefaultPresetDateRange } from "../../store/dataset.store"
+import { type BacktestDataSourceDef, getDefaultPresetDateRange, type Dataset } from "../../store/dataset.store"
 import { DatePicker } from "@mui/x-date-pickers/DatePicker"
 import dayjs from "dayjs"
 
@@ -54,12 +54,12 @@ function FormRow({
 }
 
 export type BacktestDataEditPanelRef = {
-    getValue: () => BacktestDataSourceDef | null
+    getValue: () => BacktestDataSourceDef
     isValid: () => boolean
 }
 
 type BacktestDataEditPanelProps = {
-    initialValues: { datasetSourceDef: BacktestDataSourceDef }
+    initialValues: { dataset: Dataset }
     [key: string]: any
 }
 
@@ -67,8 +67,8 @@ export const BacktestDataEditPanel = forwardRef<BacktestDataEditPanelRef, Backte
     ({ initialValues }, ref) => {
 
 
-        const datasetSourceDef: BacktestDataSourceDef = initialValues?.datasetSourceDef
-        const isSql = (datasetSourceDef?.type === "sql")
+        const dataset: Dataset = initialValues?.dataset
+        const isSql = (dataset?.sourceDef?.type === "sql")
 
         const [tab, setTab] = useState(isSql ? 1 : 0)
 
@@ -98,18 +98,18 @@ export const BacktestDataEditPanel = forwardRef<BacktestDataEditPanelRef, Backte
         // 同步 initialValue
         // =========================
         useEffect(() => {
-            if (!datasetSourceDef) return
+            if (!dataset?.sourceDef) return
 
-            if (datasetSourceDef.type === "sql") {
-                setSql(datasetSourceDef.sql)
+            if (dataset?.sourceDef?.type === "sql") {
+                setSql(dataset?.sourceDef?.sql || "")
                 setTab(1)
             } else {
-                setMarkets(datasetSourceDef.markets || [])
-                setSymbols(datasetSourceDef.symbols?.join(",") || "")
-                setSectors(datasetSourceDef.sectors || [])
-                setUniverse(datasetSourceDef.universe || "")
-                setStart(datasetSourceDef.start)
-                setEnd(datasetSourceDef.end)
+                setMarkets(dataset?.sourceDef?.markets || [])
+                setSymbols(dataset?.sourceDef?.symbols?.join(",") || "")
+                setSectors(dataset?.sourceDef?.sectors || [])
+                setUniverse(dataset?.sourceDef?.universe || "")
+                setStart(dataset?.sourceDef?.start || "")
+                setEnd(dataset?.sourceDef?.end || "")
                 setTab(0)
             }
 
@@ -240,35 +240,6 @@ export const BacktestDataEditPanel = forwardRef<BacktestDataEditPanelRef, Backte
                 setValid(false)
             }
         }
-
-        // // =========================
-        // // confirm
-        // // =========================
-        // const handleConfirm = () => {
-
-        //     if (tab === 1) {
-        //         if (!valid) return
-
-        //         onConfirm({
-        //             type: "sql",
-        //             sql,
-        //             schema: data.columns.map((c: any) => c.field)
-        //         })
-
-        //     } else {
-        //         onConfirm({
-        //             type: "preset",
-        //             markets: markets.length ? markets : undefined,
-        //             symbols: symbols
-        //                 ? symbols.split(",").map(s => s.trim()).filter(Boolean)
-        //                 : undefined,
-        //             sectors: sectors.length ? sectors : undefined,
-        //             universe: universe || undefined,
-        //             start,
-        //             end
-        //         })
-        //     }
-        // }
 
         return (
             <Box sx={{ height: "100%", width: "100%", display: "flex", flexDirection: "column" }}>

@@ -7,25 +7,36 @@ import { useRef, useState } from "react"
 import StepPreview from "./StepPreview"
 // import { BacktestDataEditPanel, type BacktestDataEditPanelRef } from "./BacktestDataDialog"
 import { BacktestDataEditPanel, type BacktestDataEditPanelRef } from "./BacktestDataEditPanel"
+import { useDatasetStore } from "../../store/dataset.store"
+import { data } from "react-router-dom"
 // import { useDialogStore } from "../../store/dialog.store"
 
 export default function BacktestWizardDialog({
     open,
     onClose,
-    datasetSourceDef,
+    dataset,
     onConfirm
 }: any) {
 
+    const createDataset = useDatasetStore(s => s.createDataset)
+    const updateSourceDef = useDatasetStore(s => s.updateSourceDef)
     const [tab, setTab] = useState(0)
-    const [localDSD, setLocalDSD] = useState(datasetSourceDef)
+    const [localDataset, setLocalDataset] = useState(dataset)
     const panelRef = useRef<BacktestDataEditPanelRef>(null)
 
     const handleNext = () => {
-        const val = panelRef.current?.getValue()
+        const datasetSourceDef = panelRef.current?.getValue()
 
-        if (!val) return  // 校验失败（比如 SQL 未 validate）
+        if (!datasetSourceDef) return  // 校验失败（比如 SQL 未 validate）
 
-        setLocalDSD(val)
+        if (!dataset) {
+            const ds = createDataset(datasetSourceDef)
+            setLocalDataset(ds)
+        } else {
+            const ds = updateSourceDef(dataset.id, datasetSourceDef)
+            setLocalDataset(ds)
+        }
+        
         setTab(1)
     }
 
@@ -70,14 +81,14 @@ export default function BacktestWizardDialog({
                     {tab === 0 && (
                         <BacktestDataEditPanel
                             ref={panelRef}
-                            initialValues={{ datasetSourceDef: localDSD }}
+                            initialValues={{ dataset: localDataset }}
                             sx={{ flex: 1, width: "100%" }}
                         />
                     )}
 
                     {tab === 1 && (
                         <StepPreview
-                            ds={localDSD} 
+                            ds={localDataset.sourceDef} 
                             sx={{ flex: 1, width: "100%" }}
                         />
                     )}
@@ -100,7 +111,7 @@ export default function BacktestWizardDialog({
                         <Button onClick={handlePrev}>Back</Button>
                         <Button
                             variant="contained"
-                            onClick={() => onConfirm(localDSD)}
+                            onClick={() => onConfirm(localDataset)}
                         >
                             Run
                         </Button>

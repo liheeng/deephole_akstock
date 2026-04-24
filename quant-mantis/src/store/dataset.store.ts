@@ -29,7 +29,7 @@ export type Preset = {
     type: "preset" | "sql"
     markets?: string[]
     symbols?: string[]
-    
+
     sectors?: string[]
     universe?: string
 
@@ -40,6 +40,7 @@ export type Preset = {
 
 export type BacktestDataSourceDef =
     | {
+        name: string
         type: "sql"
         sql: string
         schema?: string[]
@@ -117,9 +118,14 @@ interface DatasetState {
     datasets: Dataset[]
     currentDatasetId?: string
 
-    createDataset: (ds: BacktestDataSourceDef, schema?: string[]) => string
+    createDataset: (ds: BacktestDataSourceDef, schema?: string[]) => Dataset
+    getDatasetName: (id: string) => string
+    setDatasetName: (id: string, name: string) => void
+    getDataset: (id: string | undefined) => Dataset | undefined
+    updateDataset: (dataset: Dataset) => void
     setCurrentDataset: (id: string) => void
-    validateCurrentDataset: () => CheckResult
+    updateSourceDef: (id: string|undefined,sourceDef: BacktestDataSourceDef) => Dataset
+    validateDataset: (id: string | undefined) => CheckResult
     buildCurrentDatasetPayload: () => any
 }
 
@@ -127,17 +133,17 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
 
     datasets: [],
 
-    createDataset: (sourceDef, schema) => {
+    createDataset: (ds: BacktestDataSourceDef, schema?: string[]) => {
         const id = "ds_" + nanoid()
 
         // ✅ 如果是 preset 类型，自动填充默认日期
-        let finalSourceDef = sourceDef;
-        if (sourceDef.type === "preset") {
+        let finalSourceDef = ds;
+        if (ds.type === "preset") {
             const { start, end } = getDefaultPresetDateRange();
             finalSourceDef = {
-                ...sourceDef,
-                start: sourceDef.start || start,
-                end: sourceDef.end || end,
+                ...ds,
+                start: ds.start || start,
+                end: ds.end || end,
             };
         }
 
@@ -154,25 +160,76 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
             currentDatasetId: id
         }))
 
-        return id
+        return dataset
     },
 
+    getDatasetName: (id): string => {
+        let _id: string | undefined = id
+        if (!_id || _id.trim() === "") {
+            _id = get().currentDatasetId
+        }
+        return get().datasets.find(d => d.id === _id)?.name || ""
+    },
+    setDatasetName: (id, name) => {
+        let _id: string | undefined = id
+        if (!_id || _id.trim() === "") {
+            _id = get().currentDatasetId
+        }
+        if (!_id) {
+            const sourceDef = { type: "preset" }
+            const ds = get().createDataset(sourceDef as BacktestDataSourceDef)
+            _id = ds.id
+        }
+        set(state => ({
+            datasets: state.datasets.map(d => d.id === _id ? { ...d, name } : d)
+        }))
+    },
+    getDataset: (id: string | undefined) => {
+        let _id: string | undefined = id
+        if (!_id || _id.trim() === "") {
+            _id = get().currentDatasetId
+        }
+        const dataset = get().datasets.find(d => d.id === _id)
+        return dataset
+    },
+    updateDataset: (dataset: Dataset) => {
+        set(state => ({
+            datasets: state.datasets.map(d => d.id === dataset.id ? dataset : d)
+        }))
+    },
     setCurrentDataset: (id) => set({ currentDatasetId: id }),
+    updateSourceDef(id: string | undefined, sourceDef: BacktestDataSourceDef) {
+        let _id: string | undefined = id
+        if (!_id || _id.trim() === "") {
+            _id = get().currentDatasetId
+        }
 
+        const s = get()
+        const dataset = s.datasets.find(d => d.id === _id)
+        if (dataset) {
+            dataset.sourceDef = sourceDef
+        }
+
+        return dataset
+    },
     // ==============================================
     // ✅ 完美实现：严格按类型 & 可选字段允许为空
     // ==============================================
-    validateCurrentDataset: (): CheckResult => {
+    validateDataset: (id: string | undefined): CheckResult => {
         const s = get()
         const errors: string[] = []
 
+        let _id: string | undefined = id
+        if (!_id || _id.trim() === "") {
+            _id = s.currentDatasetId
+        }
         // 1. 必须选择数据集
-        if (!s.currentDatasetId) {
+        if (!_id) {
             errors.push("未选择任何数据集")
             return new SimpleCheckResult(...errors)
         }
 
-        const dataset = s.datasets.find(d => d.id === s.currentDatasetId)
+        const dataset = s.datasets.find(d => d.id === _id)
         if (!dataset) {
             errors.push("数据集不存在或已被删除")
             return new SimpleCheckResult(...errors)
@@ -239,6 +296,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
 
         return new SimpleCheckResult(...errors)
     },
+
     // =========================
     // Payload
     // =========================
