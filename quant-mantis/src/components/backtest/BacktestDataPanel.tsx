@@ -23,6 +23,11 @@ export default function BacktestDataPanel() {
     const dataset = getDataset(currentDatasetId)
     const datasetName = dataset?.name
 
+    const setOriginalDataset = useDatasetStore(s => s.setOriginalDataset)
+    const isDirty = useDatasetStore(s =>
+                    s.isDatasetDirty(s.currentDatasetId)
+)
+
     const addMessage = useMessageStore(state => state.addMessage)
 
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
@@ -47,7 +52,7 @@ export default function BacktestDataPanel() {
             datasets: [ds, ...state.datasets.filter(d => d.id !== ds.id)],
             currentDatasetId: ds.id
         }))
-
+        setOriginalDataset(ds)
         handleCloseSelect()
     }
 
@@ -67,6 +72,7 @@ export default function BacktestDataPanel() {
         const res = await apiUpdateDataset(dataset)
 
         if (res) {
+            setOriginalDataset(dataset)
             addMessage("success", `Dataset config "${datasetName}" saved`)
         } else {
             addMessage("error", `Save dataset config "${datasetName}" failed`)
@@ -105,6 +111,7 @@ export default function BacktestDataPanel() {
                     </Tooltip>
                     <Tooltip title="Save current dataset config">
                         <Button
+                            disabled={!isDirty}
                             size="small"
                             onClick={handleSave}
                             sx={{
