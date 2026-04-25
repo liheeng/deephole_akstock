@@ -11,10 +11,11 @@ import subprocess
 import asyncio
 from pydantic import BaseModel
 import pandas as pd
+import numpy as np
 import traceback
 import re
 import json
-from datetime import datetime
+from datetime import datetime, date
 import nanoid
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -31,7 +32,7 @@ from db.duckdb import DuckDBController, DuckDBTransaction
 from sources.ifind.ifind_api import IFinDApi
 from sources.data_source import DataSourceApiName
 
-from backtest.backtest_base import DataSetConfig, BacktestRequest
+from backtest.backtest_base import ApiDataSetConfig, ApiBacktestRequest
 from vectorbt_test.core.registry import NodeRegistry
 from vectorbt_test.core.portfolio import PortfolioParameters, PortfolioResultWrapper
 from vectorbt_test.engine.data_provider import DataProvider
@@ -343,7 +344,7 @@ def get_nodes():
     return nodes
 
 
-def load_data_somehow(ds: DataSetConfig) -> pd.DataFrame:
+def load_data_somehow(ds: ApiDataSetConfig) -> pd.DataFrame:
     sql = build_dataset_sql(ds.sourceDef.model_dump(exclude_none=False))
     logger.info(f"built sql for backtest data source: {sql}")
     # from db.stock_daily_util import get_symbol_data, get_symbols_data
@@ -362,6 +363,46 @@ class BacktestResultRow(BaseModel):
     equity: Dict[str, Any]
     trades: List[Dict[str, Any]]
     created_at: Optional[datetime] = None
+
+
+def json_serial(obj):
+    """
+    针对 vectorbt 和 pandas 结果的万能 JSON 序列化器
+    涵盖: Timestamp, Timedelta, NaT, NaN, Inf, NumPy types
+    """
+    # 1. 处理空值 (Pandas 的 NaT 和 NaN)
+    if pd.isna(obj):
+        return None
+
+    # 2. 处理日期和时间 (Timestamp, datetime, date)
+    if isinstance(obj, (pd.Timestamp, datetime, date)):
+        return obj.isoformat()
+
+    # 3. 处理时间间隔 (Timedelta / Offset)
+    if isinstance(obj, (pd.Timedelta, pd.tseries.offsets.BaseOffset)):
+        return str(obj)
+
+    # 4. 处理数字 (NumPy 标量)
+    if isinstance(obj, (np.integer, np.floating)):
+        # 检查 NumPy 特有的 inf
+        if np.isinf(obj):
+            return None
+        return obj.item()  # 转换为 Python 原生 int 或 float
+
+    # 5. 处理数组/序列 (ndarray, Series, Index)
+    if isinstance(obj, (np.ndarray, pd.Series, pd.Index)):
+        return obj.tolist()
+
+    # 6. 处理字典 (如果有嵌套的话)
+    if isinstance(obj, dict):
+        return {str(k): json_serial(v) for k, v in obj.items()}
+
+    # 7. 处理 Python 原生的 inf / -inf
+    if isinstance(obj, float):
+        if obj == float('inf') or obj == float('-inf'):
+            return None
+
+    raise TypeError(f"Type {type(obj)} not serializable")
 
 
 def save_backtest_result(
@@ -383,9 +424,9 @@ def save_backtest_result(
             result_id,
             dataset_config_id,
             portfolio_name,
-            json.dumps(stats, ensure_ascii=False),
-            json.dumps(equity, ensure_ascii=False),
-            json.dumps(trades, ensure_ascii=False)
+            json.dumps(stats, ensure_ascii=False, default=json_serial),
+            json.dumps(equity, ensure_ascii=False, default=json_serial),
+            json.dumps(trades, ensure_ascii=False, default=json_serial)
         ])
 
         return result_id
@@ -395,24 +436,59 @@ def save_backtest_result(
 
 
 @app.post("/backtest")
-def run_backtest(req: BacktestRequest):
+def run_backtest(req: ApiBacktestRequest):
     try:
         # 1. 构建 Portfolio
         portfolio_config = req.portfolio_config
-        builder = PortfolioBuilder.new(portfolio_config.name, portfolio_config.mode)
+        builder = PortfolioBuilder.new(portfolio_config.name, portfolio_config.portfolio_mode)
 
-        for s in portfolio_config.strategies:
-            builder.add_strategy(s.name)
+        if portfolio_config.strategies is not None and len(portfolio_config.strategies) > 0:
+            for s in portfolio_config.strategies.values():
+                builder.add_strategy(s.name)
 
-            for f in s.factors:
-                builder.add_factor(f)
+                if s.factorIds is not None and len(s.factorIds) > 0:
+                    for fid in s.factorIds:
+                        factor = portfolio_config.factors.get(fid)  # 修复
+                        if factor is not None:
+                            ff = {"id": factor.id, "name": factor.name, "expr": factor.expr}
+                            builder.add_factor(ff)
 
-            builder.end_strategy()
+                if s.signalId is not None:
+                    signal = portfolio_config.signals.get(s.signalId)  # 修复
+                    if signal is not None:
+                        sig = {"id": signal.id, "name": signal.name, "expr": signal.expr}
+                        builder.set_strategy_signal(sig)
 
-        builder.set_strategy_op(portfolio_config.strategy_op or StrategyOp.OR.value)
+                # 全部修复：用 .get() 防止 KeyError
+                if s.config is not None and s.config.get("mode") is not None:
+                    builder.set_strategy_mode(s.config.get("mode"))
 
-        if portfolio_config.schedule_signal:
-            builder.set_schedule_signal(portfolio_config.schedule_signal)
+                if s.config is not None and s.config.get("threshold") is not None:
+                    builder.set_strategy_threshold(s.config.get("threshold"))
+
+                if s.config is not None and s.config.get("top_n") is not None:
+                    builder.set_strategy_top_n(s.config.get("top_n"))
+
+                builder.end_strategy()
+
+        # 修复：.get()
+        if portfolio_config.strategy_op is not None and portfolio_config.strategy_op.get("enabled") is True:
+            builder.set_strategy_op((portfolio_config.strategy_op.get("value") or StrategyOp.OR.value).upper())
+
+        # 修复：.get()
+        if portfolio_config.schedule_signal and portfolio_config.schedule_signal.get("enabled") is True:
+            signal_id = portfolio_config.schedule_signal.get("signalId")
+            signal = portfolio_config.signals.get(signal_id)
+            if signal is not None:
+                sig = {"id": signal.id, "name": signal.name, "expr": signal.expr}
+                builder.set_schedule_signal(sig)
+
+        # 修复：.get()
+        if portfolio_config.vote_weights is not None and portfolio_config.vote_weights.get("enabled") is True:
+            builder.vote_weights(portfolio_config.vote_weights.get("value"))
+
+        if portfolio_config.strategy_weights is not None and portfolio_config.strategy_weights.get("enabled") is True:
+            builder.strategy_weights(portfolio_config.strategy_weights.get("value"))
 
         builder.set_portfolio_params(
             PortfolioParameters(**portfolio_config.params)
@@ -427,16 +503,12 @@ def run_backtest(req: BacktestRequest):
         pf = portfolio.run(DataProvider(None), df)
         pfwrapper = PortfolioResultWrapper(pf)
 
-        # detailed_stats = pfwrapper.get_pf_stats(agg_func=None)
-        # print(detailed_stats.index.tolist()) # 看看具体的指标名到底叫什么
-
         equity_curve = pfwrapper.get_pf_value_dict(as_json=False)
-        # print(equity_curve)
     
         _stats = pfwrapper.get_pf_stats(as_json=False)
         stats = pfwrapper.clean_for_json(_stats)
-        # print(stats)
         trades = pf.trades.records_readable.to_dict(orient="records")
+        
         # ==========================
         # ✅ 保存到数据库
         # ==========================

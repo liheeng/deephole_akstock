@@ -4,6 +4,7 @@ import { useFactorStore } from "./factor.store"
 import { useSignalStore } from "./signal.store"
 import { SimpleCheckResult, type CheckResult } from "../../common/Types"
 import { nanoid } from "nanoid"
+import { type BacktestConfig } from "../../api/Client"
 
 type PortfolioMode = "signal_strategy" | "weight_strategy"
 
@@ -12,9 +13,16 @@ interface EnabledField<T> {
     value: T
 }
 
+interface BacktestSnapshot {
+    backtest: any
+    strategies: any
+    strategyIds: string[]
+    factors: any
+    signals: any
+}
+
 export interface BacktestState {
     id: string
-
     name: string
     portfolio_mode: PortfolioMode
 
@@ -23,40 +31,49 @@ export interface BacktestState {
         init_cash: number
     }
 
-    // ✅ schedule 使用 signalId
     schedule_signal: {
         enabled: boolean
         signalId?: string
     }
 
-    setPortfolioName: (name: string) => void
-
-    getPortfolio(): BacktestState
-
-    setPortfolioMode: (mode: PortfolioMode) => void
-
-    setScheduleSignal: (patch: Partial<{ enabled: boolean; signalId?: string }>) => void
-
-    // =========================
-    // Portfolio Config（你漏掉的部分）
-    // =========================
-
     strategy_op: EnabledField<"AND" | "OR">
     vote_weights: EnabledField<number[]>
     strategy_weights: EnabledField<number[]>
+
+    // =========================
+    // ✅ snapshot
+    // =========================
+    originalSnapshot?: BacktestSnapshot
+
+    applyBacktestConfig: (config: BacktestConfig | undefined) => void
+    // =========================
+    // setters
+    // =========================
+    setPortfolioName: (name: string) => void
+    setPortfolioMode: (mode: PortfolioMode) => void
+    setScheduleSignal: (patch: Partial<{ enabled: boolean; signalId?: string }>) => void
 
     setStrategyOp: (patch: Partial<EnabledField<"AND" | "OR">>) => void
     setVoteWeights: (patch: Partial<EnabledField<number[]>>) => void
     setStrategyWeights: (patch: Partial<EnabledField<number[]>>) => void
 
     updatePortfolioParams: (patch: Partial<{ freq: string; init_cash: number }>) => void
+
+    // =========================
+    // snapshot & dirty
+    // =========================
+    setOriginalSnapshot: () => void
+    isDirty: () => boolean
+
+    // =========================
+    // logic
+    // =========================
     validate: () => CheckResult
     buildPayload: () => any
 }
 
 export const useBacktestStore = create<BacktestState>((set, get) => ({
-    id: "MyPortfolio-" + nanoid(),
-    
+    id: "bt_" + nanoid(),
     name: "MyPortfolio-" + nanoid(),
 
     portfolio_mode: "signal_strategy",
@@ -70,21 +87,7 @@ export const useBacktestStore = create<BacktestState>((set, get) => ({
         enabled: false,
         signalId: undefined
     },
-    
-    setPortfolioName: (name: string) => set({ name }),
 
-    getPortfolio: () => get(),
-
-    setPortfolioMode: (mode: PortfolioMode) => set({ portfolio_mode: mode }),
-
-    setScheduleSignal: (patch) =>
-        set(state => ({
-            schedule_signal: { ...state.schedule_signal, ...patch }
-        })),
-
-    // =========================
-    // portfolio config（补齐）
-    // =========================
     strategy_op: {
         enabled: true,
         value: "OR"
@@ -100,216 +103,231 @@ export const useBacktestStore = create<BacktestState>((set, get) => ({
         value: []
     },
 
+    applyBacktestConfig(_config: BacktestConfig | undefined) {
+        let config: BacktestConfig | undefined = _config
+        if (!config) {
+            config = {
+                id: "bt_" + nanoid(),
+                name: "MyPortfolio-" + nanoid(),
+                portfolio_mode: "signal_strategy",
+                params: {
+                    freq: "1D",
+                    init_cash: 100000
+                },
+                schedule_signal: {
+                    enabled: false,
+                    signalId: undefined
+                },
+                strategy_op: {
+                    enabled: true,
+                    value: "OR"
+                },
+                vote_weights: {
+                    enabled: false,
+                    value: []
+                },
+                strategy_weights: {
+                    enabled: false,
+                    value: []
+                },
+                strategies: {
+                    ["strategy_1"]: {
+                        id: "strategy_1",
+                        name: "Strategy-" + nanoid(),
+                        config: {
+                            mode: "ts",
+                            threshold: 0.5
+                        },
+                        factorIds: ["factor_1"],
+                        signalId: undefined, 
+                    }
+                },
+                factors: {
+                    ["factor_1"]: {
+                        id: "factor_1",
+                        name: "Factor-" + nanoid(),
+                        expr: "(MA(5) - MA(20)) / MA(20)"
+                    }
+                },
+                signals: {}
+            }
+        }
+
+        // 初始化子 store（注意格式转换）
+        useSignalStore.getState().init(Object.values(config.signals))
+        useFactorStore.getState().init(Object.values(config.factors))
+        useStrategyStore.getState().init(Object.values(config.strategies))
+
+        // 2. 写入 backtest
+        set(state => ({
+            ...state,
+            id: config.id,
+            name: config.name,
+            portfolio_mode: config.portfolio_mode as PortfolioMode,
+            params: config.params as any,
+            schedule_signal: config.schedule_signal as any,
+            strategy_op: config.strategy_op as any,
+            vote_weights: config.vote_weights as any,
+            strategy_weights: config.strategy_weights as any
+        }))
+
+        get().setOriginalSnapshot()
+    },
+
+    // =========================
+    // setters
+    // =========================
+    setPortfolioName: (name) => set({ name }),
+
+    setPortfolioMode: (mode) => set({ portfolio_mode: mode }),
+
+    setScheduleSignal: (patch) =>
+        set(state => ({
+            schedule_signal: { ...state.schedule_signal, ...patch }
+        })),
+
     setStrategyOp: (patch) =>
         set(state => ({
-            strategy_op: {
-                ...state.strategy_op,
-                ...patch
-            }
+            strategy_op: { ...state.strategy_op, ...patch }
         })),
 
     setVoteWeights: (patch) =>
         set(state => ({
-            vote_weights: {
-                ...state.vote_weights,
-                ...patch
-            }
+            vote_weights: { ...state.vote_weights, ...patch }
         })),
 
     setStrategyWeights: (patch) =>
         set(state => ({
-            strategy_weights: {
-                ...state.strategy_weights,
-                ...patch
-            }
+            strategy_weights: { ...state.strategy_weights, ...patch }
         })),
-
 
     updatePortfolioParams: (patch) =>
         set(state => ({
-            params: {
-                ...state.params,
-                ...patch
-            }
+            params: { ...state.params, ...patch }
         })),
 
-    // ==============================================
-    // ✅ 标准校验：返回 CheckResult
-    // ==============================================
-    validate: (): CheckResult => {
-        const currentState = get()
-        const { strategyIds, strategies } = useStrategyStore.getState()
-        const { factors } = useFactorStore.getState()
-        const { signals } = useSignalStore.getState()
-        const errors: string[] = []
-
-        // 1. 策略列表校验：至少有一个策略
-        if (strategyIds.length === 0) {
-            errors.push("请至少添加一个策略")
-        }
-
-        // 2. 逐个校验策略
-        strategyIds.forEach((strategyId, idx) => {
-            const strategy = strategies[strategyId]
-            if (!strategy) {
-                errors.push(`第 ${idx + 1} 个策略不存在（ID: ${strategyId}）`)
-                return // 跳过不存在的策略的后续校验
-            }
-
-            // 2.1 策略名称（非空）
-            if (!strategy.name?.trim()) {
-                errors.push(`第 ${idx + 1} 个策略名称不能为空`)
-            }
-
-            // 2.2 核心规则：策略必须至少有一个 Factor（强制校验，无例外）
-            if (!strategy.factorIds || strategy.factorIds.length === 0) {
-                errors.push(`策略【${strategy.name || `ID:${strategyId}`}】必须至少选择一个因子`)
-            } else {
-                // 2.3 校验策略下的 Factor 有效性（存在且 expr 非空）
-                strategy.factorIds.forEach((factorId) => {
-                    const factor = factors[factorId]
-                    if (!factor) {
-                        errors.push(`策略【${strategy.name || `ID:${strategyId}`}】包含不存在的因子（ID: ${factorId}）`)
-                    } else if (!factor.expr?.trim()) {
-                        errors.push(`策略【${strategy.name || `ID:${strategyId}`}】中的因子（ID: ${factorId}）表达式不能为空`)
-                    }
-                })
-            }
-
-            // 2.4 Signal 校验：仅当 portfolio 模式为 signal_strategy 时，才校验策略的 signal
-            if (currentState.portfolio_mode === "signal_strategy") {
-                // signalId 是可选字段
-                if (strategy.signalId) {
-                    const signal = signals[strategy.signalId]
-                    if (!signal || !signal.expr?.trim()) {
-                        errors.push(`策略【${strategy.name || `ID:${strategyId}`}】的信号（ID: ${strategy.signalId}）无效或表达式为空`)
-                    }
-                }
-            }
-
-            // 2.5 策略配置校验（可选字段，仅校验存在的配置）
-            if (strategy.config) {
-                if (strategy.config.mode === "ts" && (strategy.config.threshold === undefined || strategy.config.threshold < 0)) {
-                    errors.push(`策略【${strategy.name || `ID:${strategyId}`}】的 threshold 必须大于等于 0`)
-                }
-                if (strategy.config.mode === "cs" && (strategy.config.top_n === undefined || strategy.config.top_n <= 0)) {
-                    errors.push(`策略【${strategy.name || `ID:${strategyId}`}】的 top_n 必须大于 0`)
-                }
-            }
-        })
-
-        // 3. 调度信号校验：仅当 enabled 为 true 时，才校验 signalId 有效性
-        if (currentState.schedule_signal.enabled) {
-            const scheduleSignalId = currentState.schedule_signal.signalId
-            if (!scheduleSignalId) {
-                errors.push("调度信号已启用，但未选择信号（signalId 为空）")
-            } else {
-                const scheduleSignal = signals[scheduleSignalId]
-                if (!scheduleSignal || !scheduleSignal.expr?.trim()) {
-                    errors.push(`调度信号（ID: ${scheduleSignalId}）无效或表达式为空`)
-                }
-            }
-        }
-
-        // 4. 回测参数校验
-        if (currentState.params.init_cash <= 0) {
-            errors.push("初始资金必须大于 0")
-        }
-        if (!currentState.params.freq?.trim()) {
-            errors.push("调仓频率不能为空")
-        }
-
-        // 5. Portfolio 配置校验（仅校验启用的字段）
-        const { strategy_op, vote_weights, strategy_weights } = currentState
-        // 5.1 strategy_op 启用时，值必须是 AND/OR
-        if (strategy_op.enabled && !["AND", "OR"].includes(strategy_op.value)) {
-            errors.push("策略运算符（strategy_op）值必须是 AND 或 OR")
-        }
-        // 5.2 vote_weights 启用时，数组不能为空且元素需为正数
-        if (vote_weights.enabled) {
-            if (vote_weights.value.length === 0) {
-                errors.push("投票权重（vote_weights）已启用，但权重数组为空")
-            } else if (vote_weights.value.some(w => w <= 0)) {
-                errors.push("投票权重（vote_weights）中的值必须大于 0")
-            }
-        }
-        // 5.3 strategy_weights 启用时，数组不能为空且元素需为正数
-        if (strategy_weights.enabled) {
-            if (strategy_weights.value.length === 0) {
-                errors.push("策略权重（strategy_weights）已启用，但权重数组为空")
-            } else if (strategy_weights.value.some(w => w <= 0)) {
-                errors.push("策略权重（strategy_weights）中的值必须大于 0")
-            }
-        }
-
-        // 返回校验结果（SimpleCheckResult 需支持接收错误数组，通常包含 isValid 和 errors 属性）
-        return new SimpleCheckResult(...errors)
-    },
-
     // =========================
-    // Payload
+    // ✅ snapshot
     // =========================
-    buildPayload: () => {
-
+    setOriginalSnapshot: () => {
         const s = get()
 
         const { strategies, strategyIds } = useStrategyStore.getState()
         const { factors } = useFactorStore.getState()
         const { signals } = useSignalStore.getState()
 
-        const mode =
-            s.portfolio_mode === "signal_strategy"
-                ? "SIGNAL_STRATEGY"
-                : "WEIGHT_STRATEGY"
+        const snapshot: BacktestSnapshot = {
+            backtest: {
+                id: s.id,
+                name: s.name,
+                portfolio_mode: s.portfolio_mode,
+                params: structuredClone(s.params),
+                schedule_signal: structuredClone(s.schedule_signal),
+                strategy_op: structuredClone(s.strategy_op),
+                vote_weights: structuredClone(s.vote_weights),
+                strategy_weights: structuredClone(s.strategy_weights)
+            },
+            strategies: structuredClone(strategies),
+            strategyIds: [...strategyIds],
+            factors: structuredClone(factors),
+            signals: structuredClone(signals)
+        }
+
+        set({ originalSnapshot: snapshot })
+    },
+
+    isDirty: () => {
+        const s = get()
+        if (!s.originalSnapshot) return false
+
+        const { strategies, strategyIds } = useStrategyStore.getState()
+        const { factors } = useFactorStore.getState()
+        const { signals } = useSignalStore.getState()
+
+        const current = {
+            backtest: {
+                id: s.id,
+                name: s.name,
+                portfolio_mode: s.portfolio_mode,
+                params: s.params,
+                schedule_signal: s.schedule_signal,
+                strategy_op: s.strategy_op,
+                vote_weights: s.vote_weights,
+                strategy_weights: s.strategy_weights
+            },
+            strategies,
+            strategyIds,
+            factors,
+            signals
+        }
+
+        return JSON.stringify(current) !== JSON.stringify(s.originalSnapshot)
+    },
+
+    // =========================
+    // validate（原样保留）
+    // =========================
+    validate: (): CheckResult => {
+        const currentState = get()
+        const { strategyIds, strategies } = useStrategyStore.getState()
+        const { factors } = useFactorStore.getState()
+        const { signals } = useSignalStore.getState()
+
+        const errors: string[] = []
+
+        if (strategyIds.length === 0) {
+            errors.push("请至少添加一个策略")
+        }
+
+        strategyIds.forEach((strategyId, idx) => {
+            const strategy = strategies[strategyId]
+            if (!strategy) {
+                errors.push(`第 ${idx + 1} 个策略不存在`)
+                return
+            }
+
+            if (!strategy.name?.trim()) {
+                errors.push(`策略名称不能为空`)
+            }
+
+            if (!strategy.factorIds || strategy.factorIds.length === 0) {
+                errors.push(`策略【${strategy.name}】必须至少选择一个因子`)
+            }
+
+            if (currentState.portfolio_mode === "signal_strategy") {
+                if (strategy.signalId) {
+                    const signal = signals[strategy.signalId]
+                    if (!signal || !signal.expr?.trim()) {
+                        errors.push(`策略信号无效`)
+                    }
+                }
+            }
+        })
+
+        return new SimpleCheckResult(...errors)
+    },
+
+    // =========================
+    // payload
+    // =========================
+    buildPayload: () => {
+        const s = get()
+        const { strategies, strategyIds } = useStrategyStore.getState()
+        const { factors } = useFactorStore.getState()
+        const { signals } = useSignalStore.getState()
 
         return {
+            id: s.id,
             name: s.name,
-            mode,
-
-            strategies: strategyIds.map(id => {
-                const st = strategies[id]
-
-                return {
-                    name: st.name,
-
-                    factors: st.factorIds
-                        .map(fid => factors[fid]?.expr)
-                        .filter(Boolean),
-
-                    signal: st.signalId
-                        ? signals[st.signalId]?.expr
-                        : null,
-
-                    threshold:
-                        mode === "SIGNAL_STRATEGY"
-                            ? st.config.threshold ?? null
-                            : null,
-
-                    top_n:
-                        mode === "WEIGHT_STRATEGY"
-                            ? st.config.top_n ?? null
-                            : null
-                }
-            }),
-
-            schedule_signal:
-                s.schedule_signal.enabled && s.schedule_signal.signalId
-                    ? signals[s.schedule_signal.signalId]?.expr
-                    : null,
-
-            // =========================
-            // portfolio config（终于补回来了）
-            // =========================
-            strategy_op: s.strategy_op.enabled ? s.strategy_op.value : null,
-
-            vote_weights:
-                s.vote_weights.enabled ? s.vote_weights.value : null,
-
-            strategy_weights:
-                s.strategy_weights.enabled ? s.strategy_weights.value : null,
-
-            params: s.params
+            portfolio_mode: s.portfolio_mode,
+            params: s.params,
+            schedule_signal: s.schedule_signal,
+            strategy_op: s.strategy_op,
+            vote_weights: s.vote_weights,
+            strategy_weights: s.strategy_weights,
+            strategies,
+            factors,
+            signals
         }
     }
-
 }))

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from vectorbt_test.core.nodes import Node, FeatureNode, NodeType, NodeDType
 from vectorbt_test.core.node_builder import NodeBuilder
 from vectorbt_test.core.functions import Rank

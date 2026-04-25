@@ -101,7 +101,7 @@ export default function GlobalDialogs({ nodes }: any) {
             {dialog.type === "backtest_wizard" && (
                     <BacktestWizardDialog
                         open={dialog.open}
-                        datasetSourceDef={dialog.payload?.datasetSourceDef}
+                        dataset={dialog.payload?.dataset}
                         onClose={closeDialog}
                         onConfirm={(dataset: Dataset) => {  
                             const { runBacktest } = dialog.payload

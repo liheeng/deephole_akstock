@@ -1,5 +1,5 @@
 import enum
-from typing import List, Sequence
+from typing import List, Sequence, Dict
 import pandas as pd
 import vectorbt as vbt
 from vectorbt_test.core.signals import Signal
@@ -20,7 +20,7 @@ class SignalStrategyPortfolio(StrategyPortfolio):
     def __init__(self,
                  strategies: Sequence[SignalStrategy],
                  strategy_op: StrategyOp = StrategyOp.AND,
-                 schedule_signal: str | Signal | None = None,
+                 schedule_signal: str | Signal | Dict[str, str] | None = None,
                  vote_weights: List[float] | None = None,
                  portfolio_params: PortfolioParameters | None = None):
         super().__init__(strategies, schedule_signal, portfolio_params)

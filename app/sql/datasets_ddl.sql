@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS datasets (
     id VARCHAR PRIMARY KEY,                     -- 数据集唯一ID（如 ds_xxxxxx）
     name VARCHAR NOT NULL,                      -- 数据集名称
     createdAt TIMESTAMP NOT NULL,               -- 创建时间
+    updatedAt TIMESTAMP NOT NULL,               -- 更新时间
     sourceDef JSON NOT NULL,                    -- 数据源定义（preset/sql/filters）
     schema JSON,                                -- 字段结构（string[] 数组）
     rowCount BIGINT,                            -- 数据总行数

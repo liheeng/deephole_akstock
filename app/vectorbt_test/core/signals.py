@@ -1,5 +1,6 @@
 import enum
 from abc import ABC
+from typing import Dict
 from vectorbt_test.core.base import GeneralExpr
 from vectorbt_test.core.nodes import Node, FeatureNode, NodeType, NodeDType, BinaryOp, to_args
 from vectorbt_test.core.node_builder import NodeBuilder
@@ -19,18 +20,28 @@ class Signal(FeatureNode, ABC):
     dtype = NodeDType.SIGNAL
 
     @staticmethod
-    def build(node_expr: str | GeneralExpr | Node) -> "Signal":
+    def build(node_arg: str | GeneralExpr | Dict[str, str] | Node) -> "Signal":
         name: str | None = None
-        node: Node | None = None
-        if isinstance(node_expr, GeneralExpr):
-            name = node_expr.name
-            node_expr = node_expr.expr
+        expr: str | None = None
+        
+        if isinstance(node_arg, Signal):
+            return node_arg
+        
+        if isinstance(node_arg, dict) and "expr" in node_arg and "name" in node_arg:
+            name = node_arg["name"]
+            expr = node_arg["expr"]
 
-        if isinstance(node_expr, str):
-            node = NodeBuilder().build(node_expr)
+        elif isinstance(node_arg, GeneralExpr):
+            name = node_arg.name
+            expr = node_arg.expr
+
+        elif isinstance(node_arg, str):
+            expr = node_arg
         else:
-            node = node_expr
-
+            raise ValueError(f"Invalid argument type: {type(node_arg)} ({node_arg})")
+        
+        node = NodeBuilder().build(expr)
+        
         if not node.is_signal:
             return SignalWrapper(name=name, node=node)
         else:

@@ -4,7 +4,7 @@ from vectorbt_test.core.strategy import Strategy, StrategyMode, StrategyResult
 from vectorbt_test.core.context import PortfolioContext
 from vectorbt_test.core.node_builder import NodeBuilder
 from vectorbt_test.core.nodes import NodeType
-from typing import List
+from typing import List, Dict
 import numpy as np
 
 
@@ -13,8 +13,8 @@ class HybridStrategy(Strategy):
     def __init__(
             self, 
             name: str,
-            factors: List[Factor | str],
-            signal: str | Signal | None = None,
+            factors: List[Factor | str | Dict[str, str]],
+            signal: str | Signal | Dict[str, str]| None = None,
             strategy_mode=StrategyMode.AUTO, 
             top_n=10,
             threshold=0):
@@ -35,7 +35,7 @@ class HybridStrategy(Strategy):
         self.name = name
         self.factors: List[Factor] = []
         for f in factors:
-            factor: Factor | None = NodeBuilder().build_factor(f, wrap_numberic_node_as_factor) if isinstance(f, str) else f  # type: ignore
+            factor: Factor | None = NodeBuilder().build_factor(f, wrap_numberic_node_as_factor)  # type: ignore
             assert factor is not None and factor.type == NodeType.Factor
             self.factors.append(factor)
 

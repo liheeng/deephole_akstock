@@ -1,4 +1,4 @@
-from typing import List, Sequence
+from typing import List, Sequence, Dict
 import pandas as pd
 import vectorbt as vbt
 from vectorbt_test.core.portfolio import StrategyPortfolio
@@ -14,7 +14,7 @@ class WeightStrategyPortfolio(StrategyPortfolio):
     def __init__(self,
                  strategies: Sequence[WeightStrategy],
                  strategy_weights: List[float] | None = None,
-                 schedule_signal: str | Signal | None = None,
+                 schedule_signal: str | Signal | Dict[str, str] | None = None,
                  portfolio_params: PortfolioParameters | None = None):
         super().__init__(strategies, schedule_signal, portfolio_params)
         self.strategy_weights = strategy_weights or [1.0 / len(self.strategies)] * len(self.strategies)

@@ -15,10 +15,10 @@ class PortfolioBuilder:
     strategy_weights: List[float] | None
     vote_weights: List[float] | None
     strategy_op: StrategyOp
-    schedule_signal: str | Signal
+    schedule_signal: str | Signal | Dict[str, str] | None
     portfolio_params: PortfolioParameters | None
     _current_strategy: Dict[str, Any] | None
-    _current_factor: Factor | str
+    _current_factor: Factor | str | Dict[str, str] | None
     
     def __init__(self, name: str, portfolio_mode: str):
         self.name = name
@@ -50,7 +50,7 @@ class PortfolioBuilder:
         self._current_strategy = strategy
         return self
     
-    def add_factor(self, factor: Factor | str):
+    def add_factor(self, factor: Factor | str | Dict[str, str]):
         if self._current_strategy:
             self._current_strategy["factors"].append(factor)
             self._current_factor = factor
@@ -60,7 +60,7 @@ class PortfolioBuilder:
         self._current_factor = None
         return self
     
-    def set_strategy_signal(self, signal: str | Signal):
+    def set_strategy_signal(self, signal: str | Signal | Dict[str, str]):
         if self._current_strategy:
             self._current_strategy['signal'] = signal
         return self
@@ -69,12 +69,22 @@ class PortfolioBuilder:
         if self._current_strategy:
             self._current_strategy['strategy_mode'] = StrategyMode(strategy_mode) if isinstance(strategy_mode, str) else strategy_mode
         return self
+    
+    def set_strategy_threshold(self, threshold: float):
+        if self._current_strategy:
+            self._current_strategy['threshold'] = threshold
+        return self
+    
+    def set_strategy_top_n(self, top_n: int):
+        if self._current_strategy:
+            self._current_strategy['top_n'] = top_n
+        return self
       
     def end_strategy(self):
         self._current_strategy = None
         return self
     
-    def set_schedule_signal(self, signal: str | Signal):
+    def set_schedule_signal(self, signal: str | Signal | Dict[str, str]):
         self.schedule_signal = signal
         return self
     

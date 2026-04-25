@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 
 class DataView:
@@ -35,6 +36,12 @@ class DataAdapter:
 
     def _init_data(self, df: pd.DataFrame):
         df = df.copy()
+        
+        # Recommended: Clean the dataframe immediately after loading
+        df = df.replace([np.inf, -np.inf], np.nan)
+        df['close'] = df['close'].ffill() # Forward fill gaps (e.g. trading suspensions)
+        df = df[df['close'] > 0]         # Drop any remaining unpriced rows
+
         df['date'] = pd.to_datetime(df['date'])
 
         # 🔥 单股票补 symbol（关键）

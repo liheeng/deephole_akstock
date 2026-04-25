@@ -4,14 +4,17 @@ import { Box, Button, MenuItem, Select, Typography, Tooltip } from "@mui/materia
 import MessageBar from "../misc/MessageBar"  // 👈 导入
 import { type BacktestConfig, fetchBacktestConfigs } from "../../api/Client"
 import { useBacktestStore } from "../../store/backtest/backtest.store"
-import { useStrategyStore } from "../../store/backtest/strategy.store"
-import { useFactorStore } from "../../store/backtest/factor.store"
-import { useSignalStore } from "../../store/backtest/signal.store"
+// import { useStrategyStore } from "../../store/backtest/strategy.store"
+// import { useFactorStore } from "../../store/backtest/factor.store"
+// import { useSignalStore } from "../../store/backtest/signal.store"
 
 export default function TopToolbar({ runBacktest, launchBacktestWizard }: any) {
     const [configs, setConfigs] = useState<BacktestConfig[]>([])
     const [selectedId, setSelectedId] = useState<string>("")
     const currentConfigIdRef = useRef<string>("")
+    const applyBacktestConfigStore = useBacktestStore(s => s.applyBacktestConfig)
+    // const setOriginalSnapshot = useBacktestStore(s => s.setOriginalSnapshot)
+
     useEffect(() => {
         fetchBacktestConfigs().then(res => {
             if (res) setConfigs(res)
@@ -23,23 +26,26 @@ export default function TopToolbar({ runBacktest, launchBacktestWizard }: any) {
         if (currentConfigIdRef.current === config.id) return
         currentConfigIdRef.current = config.id
 
-        // 初始化子 store（注意格式转换）
-        useSignalStore.getState().init(Object.values(config.signals))
+        applyBacktestConfigStore(config)
+        // // 初始化子 store（注意格式转换）
+        // useSignalStore.getState().init(Object.values(config.signals))
 
-        useFactorStore.getState().init(Object.values(config.factors))
-        useStrategyStore.getState().init(Object.values(config.strategies))
+        // useFactorStore.getState().init(Object.values(config.factors))
+        // useStrategyStore.getState().init(Object.values(config.strategies))
 
-        // 2. 写入 backtest
-        useBacktestStore.setState({
-            id: config.id,
-            name: config.name,
-            portfolio_mode: config.portfolio_mode,
-            params: config.params,
-            schedule_signal: config.schedule_signal,
-            strategy_op: config.strategy_op,
-            vote_weights: config.vote_weights,
-            strategy_weights: config.strategy_weights
-        })
+        // // 2. 写入 backtest
+        // useBacktestStore.setState({
+        //     id: config.id,
+        //     name: config.name,
+        //     portfolio_mode: config.portfolio_mode,
+        //     params: config.params,
+        //     schedule_signal: config.schedule_signal,
+        //     strategy_op: config.strategy_op,
+        //     vote_weights: config.vote_weights,
+        //     strategy_weights: config.strategy_weights
+        // })
+
+        // setOriginalSnapshot()
     }
 
     return (

@@ -1,6 +1,6 @@
 import enum
 from dataclasses import dataclass
-from typing import Sequence, Callable
+from typing import Sequence, Callable, Dict
 from abc import ABC, abstractmethod
 import pandas as pd
 from vectorbt_test.core.strategy import Strategy
@@ -30,11 +30,11 @@ class PortfolioParameters:
 class StrategyPortfolio(ABC):
     def __init__(self,
                  strategies: Sequence[Strategy],
-                 schedule_signal: str | Signal | None = None,
+                 schedule_signal: str | Signal | Dict[str, str] | None = None,
                  portfolio_params: PortfolioParameters | None = None):
         self.strategies = strategies
-        built_signal = NodeBuilder().build(schedule_signal) if isinstance(schedule_signal, str) else schedule_signal
-        self.schedule_signal: Signal | None = built_signal if isinstance(built_signal, Signal) or built_signal is None else None
+        # built_signal = NodeBuilder().build(schedule_signal) if isinstance(schedule_signal, str) else schedule_signal
+        self.schedule_signal: Signal | None = Signal.build(schedule_signal) if schedule_signal is not None else None 
         if self.schedule_signal is not None:
             assert self.schedule_signal.is_signal and self.schedule_signal.is_group(SignalGroup.CS.value | SignalGroup.TS_CS.value)
         self.params = portfolio_params

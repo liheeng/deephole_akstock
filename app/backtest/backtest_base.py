@@ -1,30 +1,50 @@
 import enum
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel
 
 
-class StrategyConfig(BaseModel):
+class ApiStrategyConfig(BaseModel):
+    id: str
     name: str
-    factors: List[str]
-    signal: Optional[str] = None
+    factorIds: List[str]
+    signalId: Optional[str] = None
+    config: Dict[str, Any]
 
 
-class PortfolioConfig(BaseModel):
+class ApiFactorConfig(BaseModel):
+    id: str
     name: str
-    mode: str
-    strategies: List[StrategyConfig]
-    strategy_op: Optional[str] = "AND"
-    schedule_signal: Optional[str] = None
+    expr: str
+
+
+class ApiSignalConfig(BaseModel):
+    id: str
+    name: str
+    expr: str
+
+
+class ApiPortfolioConfig(BaseModel):
+    id: str
+    name: str
+    portfolio_mode: str
+    # strategies: List[StrategyConfig]
+    strategy_op: Optional[dict] = None
+    schedule_signal: Optional[dict] = None
     params: dict
+    strategies: Dict[str, ApiStrategyConfig]
+    factors: Dict[str, ApiFactorConfig]
+    signals: Dict[str, ApiSignalConfig]
+    vote_weights: Optional[dict] = None
+    strategy_weights: Optional[dict] = None
 
 
-class DataSetSourceDefType(enum.Enum):
+class ApiDataSetSourceDefType(enum.Enum):
     PRESET = "preset"
     FILTER = "filter"
     SQL = "sql"
 
 
-class DataSetSourceDef(BaseModel):
+class ApiDataSetSourceDef(BaseModel):
     type: str
     markets: Optional[List[str]] = None
     symbols: Optional[List[str]] = None
@@ -35,17 +55,17 @@ class DataSetSourceDef(BaseModel):
     sql: Optional[str] = None  # 👈 加 = None
 
 
-class DataSetConfig(BaseModel):
+class ApiDataSetConfig(BaseModel):
     id: str
     name: str
     createdAt: str
-    sourceDef: DataSetSourceDef
+    sourceDef: ApiDataSetSourceDef
 
     schema: Optional[List[str]] = None  # 👈 加 = None
     rowCount: Optional[int] = None      # 👈 加 = None
     cache: Optional[dict] = None        # 👈 加 = None
 
 
-class BacktestRequest(BaseModel):
-    dataset_config: DataSetConfig
-    portfolio_config: PortfolioConfig
+class ApiBacktestRequest(BaseModel):
+    dataset_config: ApiDataSetConfig
+    portfolio_config: ApiPortfolioConfig

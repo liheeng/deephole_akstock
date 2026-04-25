@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import {
     Box,
     Button,
@@ -24,7 +25,7 @@ import { NodeRegistry } from "../../model/dsl_node/node_registry"
 import BacktestDataPanel from "../backtest/BacktestDataPanel"
 import NestedChip from "../misc/NestedChip"
 import { useMessageStore } from "../../store/message.store"
-import { updateBacktestConfig } from "../../api/Client"
+import { updateBacktestConfig, type BacktestConfig} from "../../api/Client"
 
 export default function PortfolioPanel() {
 
@@ -33,8 +34,12 @@ export default function PortfolioPanel() {
     // =========================
     // ✅ 精细订阅（核心）
     // =========================
+    useEffect(() => {
+        // 👇 初始化 snapshot
+        useBacktestStore.getState().applyBacktestConfig(undefined)
+    }, [])
 
-    const getPortfolio = useBacktestStore(s => s.getPortfolio)
+    // const getPortfolio = useBacktestStore(s => s)
     const portfolioName = useBacktestStore(s => s.name)
     const setPortfolioName = useBacktestStore(s => s.setPortfolioName)
     const portfolioMode = useBacktestStore(s => s.portfolio_mode)
@@ -63,6 +68,9 @@ export default function PortfolioPanel() {
     const updatePortfolioParams = useBacktestStore(s => s.updatePortfolioParams)
     const addMessage = useMessageStore(state => state.addMessage)
 
+    const setOriginalSnapshot = useBacktestStore(s => s.setOriginalSnapshot)
+    const isDirty = useBacktestStore(s => s.isDirty())
+
     // 👉 从 signal store 取 expr
     const scheduleValue = useSignalStore(s =>
         scheduleSignalId ? s.signals[scheduleSignalId]?.expr || "" : ""
@@ -88,9 +96,10 @@ export default function PortfolioPanel() {
             return
         }
 
-        const res = await updateBacktestConfig(getPortfolio())
+        const res = await updateBacktestConfig(useBacktestStore.getState())
 
         if (res) {
+            setOriginalSnapshot()
             addMessage("success", `Portfolio config "${portfolioName}" saved`)
         } else {
             addMessage("error", `Save portfolio config "${portfolioName}" failed`)
@@ -151,6 +160,7 @@ export default function PortfolioPanel() {
                         </Tooltip>
                         <Tooltip title="Save current portfolio config">
                             <Button
+                                disabled={!isDirty}
                                 size="small"
                                 onClick={handleSave}
                                 sx={{
