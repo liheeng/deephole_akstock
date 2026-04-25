@@ -73,8 +73,10 @@ export interface BacktestState {
 }
 
 export const useBacktestStore = create<BacktestState>((set, get) => ({
-    id: "bt_" + nanoid(),
-    name: "MyPortfolio-" + nanoid(),
+    // id: "_id_backtest_" + nanoid(),
+    // name: "_name-backtest-" + nanoid(),
+    id: "",
+    name: "",
 
     portfolio_mode: "signal_strategy",
 
@@ -105,7 +107,16 @@ export const useBacktestStore = create<BacktestState>((set, get) => ({
 
     applyBacktestConfig(_config: BacktestConfig | undefined) {
         let config: BacktestConfig | undefined = _config
+        if (!config && get().id !== "") {
+            // Do not apply if id is not null and config is null
+            return
+        }
+
         if (!config) {
+            // Create default config
+            get().setOriginalSnapshot()
+            const strategyId = "strategy-" + nanoid()
+            const factorId= "factor-" + nanoid()
             config = {
                 id: "bt_" + nanoid(),
                 name: "MyPortfolio-" + nanoid(),
@@ -131,21 +142,21 @@ export const useBacktestStore = create<BacktestState>((set, get) => ({
                     value: []
                 },
                 strategies: {
-                    ["strategy_1"]: {
-                        id: "strategy_1",
-                        name: "Strategy-" + nanoid(),
+                    [strategyId]: {
+                        id: strategyId,
+                        name: "Strategy-1",
                         config: {
                             mode: "ts",
                             threshold: 0.5
                         },
-                        factorIds: ["factor_1"],
+                        factorIds: [factorId],
                         signalId: undefined, 
                     }
                 },
                 factors: {
-                    ["factor_1"]: {
-                        id: "factor_1",
-                        name: "Factor-" + nanoid(),
+                    [factorId]: {
+                        id: factorId,
+                        name: "Factor-1",
                         expr: "(MA(5) - MA(20)) / MA(20)"
                     }
                 },
@@ -170,8 +181,6 @@ export const useBacktestStore = create<BacktestState>((set, get) => ({
             vote_weights: config.vote_weights as any,
             strategy_weights: config.strategy_weights as any
         }))
-
-        get().setOriginalSnapshot()
     },
 
     // =========================

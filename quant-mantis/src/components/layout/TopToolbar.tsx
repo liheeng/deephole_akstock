@@ -13,12 +13,16 @@ export default function TopToolbar({ runBacktest, launchBacktestWizard }: any) {
     const [selectedId, setSelectedId] = useState<string>("")
     const currentConfigIdRef = useRef<string>("")
     const applyBacktestConfigStore = useBacktestStore(s => s.applyBacktestConfig)
-    // const setOriginalSnapshot = useBacktestStore(s => s.setOriginalSnapshot)
+    // const originalSnapshot = useBacktestStore(s => s.originalSnapshot)
 
-    useEffect(() => {
+    const refreshBacktestConfigs = () => {
         fetchBacktestConfigs().then(res => {
+            // originalSnapshot
             if (res) setConfigs(res)
         })
+    }
+    useEffect(() => {
+        refreshBacktestConfigs()
     }, [])
 
     const applyBacktestConfig = (config: BacktestConfig) => {
@@ -27,25 +31,6 @@ export default function TopToolbar({ runBacktest, launchBacktestWizard }: any) {
         currentConfigIdRef.current = config.id
 
         applyBacktestConfigStore(config)
-        // // 初始化子 store（注意格式转换）
-        // useSignalStore.getState().init(Object.values(config.signals))
-
-        // useFactorStore.getState().init(Object.values(config.factors))
-        // useStrategyStore.getState().init(Object.values(config.strategies))
-
-        // // 2. 写入 backtest
-        // useBacktestStore.setState({
-        //     id: config.id,
-        //     name: config.name,
-        //     portfolio_mode: config.portfolio_mode,
-        //     params: config.params,
-        //     schedule_signal: config.schedule_signal,
-        //     strategy_op: config.strategy_op,
-        //     vote_weights: config.vote_weights,
-        //     strategy_weights: config.strategy_weights
-        // })
-
-        // setOriginalSnapshot()
     }
 
     return (
@@ -110,6 +95,7 @@ export default function TopToolbar({ runBacktest, launchBacktestWizard }: any) {
                             </Box>
                         )
                     }}
+                    onOpen={() => refreshBacktestConfigs()}
                     onChange={(e) => {
                         const id = e.target.value
                         // ✅ 正确的防重复

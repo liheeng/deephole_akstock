@@ -20,7 +20,7 @@ class Updater:
         self.dbc = DuckDBController()
   
     def get_last_date(self, symbol):
-        r = self.dbc.execute(
+        r = self.dbc.read(
             "SELECT max(date) FROM stock_daily WHERE symbol=?", 
             [symbol],
             fetch_mode="one")

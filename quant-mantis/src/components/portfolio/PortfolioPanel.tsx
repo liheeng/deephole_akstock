@@ -30,7 +30,9 @@ import { updateBacktestConfig, type BacktestConfig} from "../../api/Client"
 export default function PortfolioPanel() {
 
     const nodes = NodeRegistry.toDict()
-
+    // Init
+    useBacktestStore.getState().applyBacktestConfig(undefined)
+    
     // =========================
     // ✅ 精细订阅（核心）
     // =========================
@@ -39,7 +41,6 @@ export default function PortfolioPanel() {
         useBacktestStore.getState().applyBacktestConfig(undefined)
     }, [])
 
-    // const getPortfolio = useBacktestStore(s => s)
     const portfolioName = useBacktestStore(s => s.name)
     const setPortfolioName = useBacktestStore(s => s.setPortfolioName)
     const portfolioMode = useBacktestStore(s => s.portfolio_mode)

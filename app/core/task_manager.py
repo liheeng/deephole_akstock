@@ -8,7 +8,7 @@ from db.db_common import DB, safe_time
 import json
 from db.duckdb import DuckDBController
 
-db = DuckDBController(DB)
+dbc = DuckDBController(DB)
 
 logger = get_logger(__name__)
 
@@ -17,7 +17,7 @@ def job_dag_ok(job: Job) -> bool:
     if not job.depends_on:
         return True
 
-    rows = db.execute("""
+    rows = dbc.read("""
         SELECT COUNT(*)
         FROM jobs
         WHERE id IN ?
@@ -33,7 +33,7 @@ def job_concurrency_ok(job: Job) -> bool:
     if defn.max_concurrency == 0:
         return True
 
-    row = db.execute("""
+    row = dbc.read("""
         SELECT COUNT(*)
         FROM running_jobs
         WHERE concurrency_key = ?
@@ -48,7 +48,7 @@ def job_singleton_ok(job: Job) -> bool:
     if not defn.singleton:
         return True
 
-    row = db.execute("""
+    row = dbc.read("""
         SELECT COUNT(*)
         FROM jobs
         WHERE type = ?
@@ -160,7 +160,7 @@ class TaskManager:
             return _task
 
     def save_task(self, task: Task):
-        db.execute(
+        dbc.execute(
         """
         INSERT INTO tasks (
             id, description, status, mode,
@@ -183,7 +183,7 @@ class TaskManager:
             self.save_job(job)
 
     def save_job(self, job: Job):
-        db.execute("""
+        dbc.execute("""
             INSERT INTO jobs (
                 id, type, status, task_id,
                 params, depends_on,
@@ -222,7 +222,7 @@ class TaskManager:
 
             return job_rows
 
-        job_rows = db.execute("SELECT 1", callback=callback)
+        job_rows = dbc.read("SELECT 1", callback=callback)
 
         jobs = []
         if job_rows:
@@ -260,14 +260,14 @@ class TaskManager:
 
             return task_row, job_rows
 
-        task_row, job_rows = db.execute("SELECT 1", callback=callback)
+        task_row, job_rows = dbc.read("SELECT 1", callback=callback)
 
         return build_task(task_row, job_rows) # type: ignore
 
     def update_job_status_by_id(self, job_id: str, new_status: JobStatus, message="", error="") -> datetime:
         _time = datetime.now()
         if new_status in [JobStatus.SUCCESS, JobStatus.FAILED]:
-            db.execute("""
+            dbc.execute("""
                 UPDATE jobs
                 SET status=?, message=?, error=?, stop_time=?, update_time=now()
                 WHERE id=?
@@ -280,7 +280,7 @@ class TaskManager:
                 job_id
             ])
         elif new_status == JobStatus.RUNNING:
-            db.execute("""
+            dbc.execute("""
                 UPDATE jobs
                 SET status=?, message=?, error=?, execute_time=?, update_time=now()
                 WHERE id=?
@@ -293,7 +293,7 @@ class TaskManager:
                 job_id
             ])
         elif new_status == JobStatus.QUEUED:
-            db.execute("""
+            dbc.execute("""
                 UPDATE jobs
                 SET status=?, message=?, error=?, update_time=now()
                 WHERE id=?
@@ -327,7 +327,7 @@ class TaskManager:
     def update_task_status_by_id(self, task_id: str, new_status: TaskStatus, message="") -> datetime:
         _time = datetime.now()
         if new_status in [TaskStatus.SUCCESS, TaskStatus.FAILED, TaskStatus.PARTIAL_SUCCESS]:
-            db.execute("""
+            dbc.execute("""
                 UPDATE tasks
                 SET status=?, stop_time=?, message=?, update_time=now()
                 WHERE id=?
@@ -339,7 +339,7 @@ class TaskManager:
                 task_id
             ])
         elif new_status == TaskStatus.SUBMITTED:
-            db.execute("""
+            dbc.execute("""
                 UPDATE tasks
                 SET status=?, start_time=?, message=?, update_time=now()
                 WHERE id=?
@@ -351,7 +351,7 @@ class TaskManager:
                 task_id
             ])
         elif new_status == TaskStatus.RUNNING:
-            db.execute("""
+            dbc.execute("""
                 UPDATE tasks
                 SET status=?, execute_time=?, message=?, update_time=now()
                 WHERE id=?
@@ -391,7 +391,7 @@ class TaskManager:
             task_ids = [row[0] for row in task_rows]
             job_rows = []
             if task_ids:
-                job_rows =con.execute("""
+                job_rows = con.execute("""
                     SELECT * FROM jobs WHERE task_id in ?
                 """, (tuple(task_ids),)).fetchall()
 
@@ -404,7 +404,7 @@ class TaskManager:
             return task_rows, job_map
         
         try:
-            task_rows, job_map = db.execute("SELECT 1", callback=callback)
+            task_rows, job_map = dbc.read("SELECT 1", callback=callback)
 
             tasks = []
             for task_row in task_rows:
@@ -414,7 +414,7 @@ class TaskManager:
         return tasks
     
     def clean_stale_running_jobs(self):
-        db.execute("""
+        dbc.execute("""
             DELETE FROM running_jobs
             WHERE start_time < now() - INTERVAL 12 HOUR
         """)
@@ -424,7 +424,7 @@ class TaskManager:
         if defn.max_concurrency == 0:
             return True
 
-        row = db.execute("""
+        row = dbc.read("""
             SELECT COUNT(*)
             FROM running_jobs
             WHERE concurrency_key = ?
@@ -434,7 +434,7 @@ class TaskManager:
             return False
 
         # 占用槽位
-        db.execute("""
+        dbc.execute("""
             INSERT INTO running_jobs (job_id, task_id, type, concurrency_key, start_time)
             VALUES (?, ?, ?, ?, now())
         """, [job.id, job.task_id, job.type.value, defn.concurrency_key])
@@ -442,7 +442,7 @@ class TaskManager:
         return True
 
     def release_concurrency_slot(self, job: Job):
-        db.execute("""
+        dbc.execute("""
             DELETE FROM running_jobs
             WHERE job_id = ?
         """, [job.id])
