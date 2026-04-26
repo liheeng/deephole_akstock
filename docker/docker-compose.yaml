@@ -1,10 +1,11 @@
-version: "3.9"
 
 services:
   _TEMP_DEEPHOLE_DB_INIT_SERVICE:
     image: _TEMP_IMAGE_NAME_:_TEMP_IMAGE_VERSION
     container_name: _TEMP_DEEPHOLE_DB_INIT_SERVICE
-    build: .
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
     command: python /app/sql/init_db.py
     volumes:
       - ${DATA_VOLUME}:/data
@@ -26,6 +27,9 @@ services:
       - API_SERVICE_NAME=_TEMP_DEEPHOLE_API_SERVICE
       - ENABLE_CRON=false
       - IFIND_REFRESH_TOKEN=${IFIND_REFRESH_TOKEN}
+      - NUMBA_NUM_THREADS=auto
+      - OMP_NUM_THREADS=auto
+      - MKL_NUM_THREADS=auto
     ports:
       - "${API_PORT}:${API_PORT}"
     command: uvicorn api:app --host 0.0.0.0 --port ${API_PORT}
@@ -52,15 +56,38 @@ services:
       - CRON_SCHEDULE_US=${CRON_SCHEDULE_US}
     restart: unless-stopped
 
+  # _TEMP_DEEPHOLE_DASHBOARD_SERVICE:
+  #   image: _TEMP_IMAGE_NAME_:_TEMP_IMAGE_VERSION
+  #   container_name: _TEMP_DEEPHOLE_DASHBOARD_SERVICE
+  #   depends_on:
+  #     - _TEMP_DEEPHOLE_DB_INIT_SERVICE
+  #     - _TEMP_DEEPHOLE_API_SERVICE
+  #   volumes:
+  #     - ${DATA_VOLUME}:/data
+  #     - ${LOG_VOLUME}:/logs
+  #   environment:
+  #     - TZ=${TIME_ZONE}
+  #     - API_SERVICE_NAME=_TEMP_DEEPHOLE_API_SERVICE
+  #     - API_PORT=${API_PORT}
+  #     - DASHBOARD_PORT=${DASHBOARD_PORT}
+  #     - ENABLE_CRON=false
+  #   ports:
+  #     - "${DASHBOARD_PORT}:${DASHBOARD_PORT}"   # 👈 从 .env 读取端口
+  #   command: streamlit run dashboard.py --server.port ${DASHBOARD_PORT} --server.address 0.0.0.0
+  #   restart: unless-stopped
+
   _TEMP_DEEPHOLE_DASHBOARD_SERVICE:
     image: _TEMP_IMAGE_NAME_:_TEMP_IMAGE_VERSION
     container_name: _TEMP_DEEPHOLE_DASHBOARD_SERVICE
+
     depends_on:
       - _TEMP_DEEPHOLE_DB_INIT_SERVICE
       - _TEMP_DEEPHOLE_API_SERVICE
+
     volumes:
       - ${DATA_VOLUME}:/data
       - ${LOG_VOLUME}:/logs
+
     environment:
       - TZ=${TIME_ZONE}
       - API_SERVICE_NAME=_TEMP_DEEPHOLE_API_SERVICE
@@ -68,8 +95,9 @@ services:
       - DASHBOARD_PORT=${DASHBOARD_PORT}
       - ENABLE_CRON=false
     ports:
-      - "${DASHBOARD_PORT}:${DASHBOARD_PORT}"   # 👈 从 .env 读取端口
-    command: streamlit run dashboard.py --server.port ${DASHBOARD_PORT} --server.address 0.0.0.0
+      - "${DASHBOARD_PORT}:3000"
+
+    command: nginx -g "daemon off;"
     restart: unless-stopped
 
 volumes:

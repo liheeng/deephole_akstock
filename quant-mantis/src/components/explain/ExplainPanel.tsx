@@ -26,8 +26,8 @@ export default function ExplainPanel({
         )
     }
 
-    const tree = parseDuckDBExplain(text)
-    const hints = analyzeExplain(tree)
+    const tree = parseDuckDBExplain(text);
+    const hints = analyzeExplain(tree);
 
     return (
         <Box
@@ -42,7 +42,7 @@ export default function ExplainPanel({
             }}
         >
             {/* ✅ 自动优化建议 */}
-            <ExplainHints hints={hints} />
+            <ExplainHints hints={hints} props={{}} />
 
             {/* explain tree */}
             <Box sx={{ flex: 1, fontSize, overflow: "auto" }}>

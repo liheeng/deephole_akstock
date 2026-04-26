@@ -63,6 +63,7 @@ export default function DSLInput({
     };
 
     const updateSuggestions = (val: string) => {
+        val
         const prefix = getPrefix();
         if (prefix.length > 0) {
             const suggestions = allFunctions.filter(fn =>

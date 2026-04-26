@@ -13,7 +13,7 @@ export default function StepPreview({ ds, ...props }: { ds: any }) {
     const [sql, setSql] = useState("")
     const [explain, setExplain] = useState("")
     const [count, setCount] = useState<number | null>(null)
-    const [loading, setLoading] = useState(false)
+    // const [loading, setLoading] = useState(false)
     const [explainDetailOpen, setExplainDetailOpen] = useState(false)
 
     useEffect(() => {
@@ -23,14 +23,14 @@ export default function StepPreview({ ds, ...props }: { ds: any }) {
     }, [ds])
 
     const runExplain = async () => {
-        setLoading(true)
+        // setLoading(true)
         const res = await apiClient.post("/execute_sql", {
             sql: buildExplainSQL_v2(ds)
         })
         if (res.data.status === "success") {
             setExplain(JSON.stringify(res.data.data, null, 2))
         }
-        setLoading(false)
+        // setLoading(false)
     }
 
     const runCount = async () => {

@@ -25,7 +25,7 @@ import { NodeRegistry } from "../../model/dsl_node/node_registry"
 import BacktestDataPanel from "../backtest/BacktestDataPanel"
 import NestedChip from "../misc/NestedChip"
 import { useMessageStore } from "../../store/message.store"
-import { updateBacktestConfig, type BacktestConfig} from "../../api/Client"
+import { updateBacktestConfig } from "../../api/Client"
 
 export default function PortfolioPanel() {
 
@@ -93,7 +93,7 @@ export default function PortfolioPanel() {
         const result = validateCurrentPortfolio()
 
         if (!result.isValid()) {
-            addMessage("error", result.message || "Validation current portfolio config failed")
+            addMessage("error", result.errors.join(", ") || "Validation current portfolio config failed")
             return
         }
 
@@ -142,7 +142,7 @@ export default function PortfolioPanel() {
                         component="div"
                         direction="row"
                         spacing={1}
-                        alignItems="center"   // ⭐ 必须有
+                        // alignItems="center"   // ⭐ 必须有
                     >
                         <Tooltip title="Edit portfolio name">
                             <TextField

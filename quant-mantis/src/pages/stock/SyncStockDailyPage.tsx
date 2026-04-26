@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Box,
   Tabs,
@@ -11,7 +11,6 @@ import {
   CircularProgress,
   Paper
 } from "@mui/material";
-import axios from "axios";
 
 import { apiClient } from "../../api/Client";
 
@@ -57,7 +56,7 @@ export function SyncStockDailyPage() {
   };
 
   return (
-    <Box p={3}>
+    <Box sx={{ p: 3 }}>
       <Typography variant="h5" gutterBottom>
         📊 同步日线数据
       </Typography>
@@ -66,6 +65,7 @@ export function SyncStockDailyPage() {
       <Tabs
         value={market}
         onChange={(e, v) => {
+            e
           setMarket(v);
           setResult(null);
           setError(null);
@@ -78,7 +78,7 @@ export function SyncStockDailyPage() {
       </Tabs>
 
       {/* 数据源 */}
-      <Box mb={2}>
+      <Box sx={{ mb: 2 }}>
         <Select
           size="small"
           value={dataSource}
@@ -93,7 +93,7 @@ export function SyncStockDailyPage() {
       </Box>
 
       {/* 按钮 */}
-      <Box mb={2}>
+      <Box sx={{ mb: 2 }}>
         <Button
           variant="contained"
           onClick={handleSync}

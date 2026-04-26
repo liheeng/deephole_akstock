@@ -55,7 +55,7 @@ export default function ExplainNode({
     if (!matched) return null
 
     // ✅ 核心：获取样式
-    const style = getNodeStyle(node.name, node.rows)
+    const style = getNodeStyle(node.name, parseInt(node.rows || "0"))
 
     return (
         <Box sx={{ ml: 1.5, pl: 2, borderLeft: "1px dashed rgba(255,255,255,0.2)" }}>

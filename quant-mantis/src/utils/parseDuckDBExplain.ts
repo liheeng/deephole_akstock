@@ -1,8 +1,8 @@
 export type PlanNode = {
     name: string
     rows?: string
-    extra: string[]
-    children: PlanNode[]
+    extra?: string[]
+    children?: PlanNode[]
 }
 
 export function parseDuckDBExplain(text: string): PlanNode[] {
@@ -44,13 +44,13 @@ export function parseDuckDBExplain(text: string): PlanNode[] {
             !line.includes("└")
         ) {
             const content = line.replace(/│/g, "").trim()
-            if (content) current.extra.push(content)
+            if (content) current.extra?.push(content)
         }
     }
 
     // ===== 4️⃣ 构建链式树（DuckDB 默认是线性 pipeline）=====
     for (let i = 0; i < nodes.length - 1; i++) {
-        nodes[i].children.push(nodes[i + 1])
+        nodes[i].children?.push(nodes[i + 1])
     }
 
     return nodes.length ? [nodes[0]] : []

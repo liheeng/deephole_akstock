@@ -1,10 +1,11 @@
-version: "3.9"
 
 services:
   deephole_stock_db_init:
-    image: deephole-stock-data:1.3.3
+    image: deephole-stock-data:4.1
     container_name: deephole_stock_db_init
-    build: .
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
     command: python /app/sql/init_db.py
     volumes:
       - ${DATA_VOLUME}:/data
@@ -14,7 +15,7 @@ services:
       - ENABLE_CRON=false
 
   deephole_stock_api_service:
-    image: deephole-stock-data:1.3.3
+    image: deephole-stock-data:4.1
     container_name: deephole_stock_api_service
     depends_on:
       - deephole_stock_db_init
@@ -26,13 +27,16 @@ services:
       - API_SERVICE_NAME=deephole_stock_api_service
       - ENABLE_CRON=false
       - IFIND_REFRESH_TOKEN=${IFIND_REFRESH_TOKEN}
+      - NUMBA_NUM_THREADS=auto
+      - OMP_NUM_THREADS=auto
+      - MKL_NUM_THREADS=auto
     ports:
       - "${API_PORT}:${API_PORT}"
     command: uvicorn api:app --host 0.0.0.0 --port ${API_PORT}
     restart: unless-stopped
 
   deephole_stock_cron_fetcher:
-    image: deephole-stock-data:1.3.3
+    image: deephole-stock-data:4.1
     container_name: deephole_stock_cron_fetcher
     depends_on:
       - deephole_stock_db_init
@@ -52,15 +56,38 @@ services:
       - CRON_SCHEDULE_US=${CRON_SCHEDULE_US}
     restart: unless-stopped
 
+  # deephole_stock_dashboard:
+  #   image: deephole-stock-data:4.1
+  #   container_name: deephole_stock_dashboard
+  #   depends_on:
+  #     - deephole_stock_db_init
+  #     - deephole_stock_api_service
+  #   volumes:
+  #     - ${DATA_VOLUME}:/data
+  #     - ${LOG_VOLUME}:/logs
+  #   environment:
+  #     - TZ=${TIME_ZONE}
+  #     - API_SERVICE_NAME=deephole_stock_api_service
+  #     - API_PORT=${API_PORT}
+  #     - DASHBOARD_PORT=${DASHBOARD_PORT}
+  #     - ENABLE_CRON=false
+  #   ports:
+  #     - "${DASHBOARD_PORT}:${DASHBOARD_PORT}"   # 👈 从 .env 读取端口
+  #   command: streamlit run dashboard.py --server.port ${DASHBOARD_PORT} --server.address 0.0.0.0
+  #   restart: unless-stopped
+
   deephole_stock_dashboard:
-    image: deephole-stock-data:1.3.3
+    image: deephole-stock-data:4.1
     container_name: deephole_stock_dashboard
+
     depends_on:
       - deephole_stock_db_init
       - deephole_stock_api_service
+
     volumes:
       - ${DATA_VOLUME}:/data
       - ${LOG_VOLUME}:/logs
+
     environment:
       - TZ=${TIME_ZONE}
       - API_SERVICE_NAME=deephole_stock_api_service
@@ -68,8 +95,9 @@ services:
       - DASHBOARD_PORT=${DASHBOARD_PORT}
       - ENABLE_CRON=false
     ports:
-      - "${DASHBOARD_PORT}:${DASHBOARD_PORT}"   # 👈 从 .env 读取端口
-    command: streamlit run dashboard.py --server.port ${DASHBOARD_PORT} --server.address 0.0.0.0
+      - "${DASHBOARD_PORT}:3000"
+
+    command: nginx -g "daemon off;"
     restart: unless-stopped
 
 volumes:

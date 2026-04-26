@@ -1,0 +1,14 @@
+data/
+*.duckdb
+*.parquet
+*.csv
+*.feather
+*.db
+__pycache__/
+.git/
+node_modules
+dist
+.git
+data
+logs
+*.log

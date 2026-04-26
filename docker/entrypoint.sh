@@ -51,3 +51,8 @@ echo "=============================="
 
 # 启动 cron
 exec /usr/local/bin/supercronic /app/crontab
+
+export CPU_COUNT=$(nproc)
+export NUMBA_NUM_THREADS=$CPU_COUNT
+export OMP_NUM_THREADS=$CPU_COUNT
+export MKL_NUM_THREADS=$CPU_COUNT

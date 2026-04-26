@@ -1,4 +1,4 @@
-import { use, useRef } from "react"
+import { useRef } from "react"
 import {
     Dialog,
     DialogTitle,
@@ -50,13 +50,15 @@ export default function BacktestDataDialog(props: BacktestDataDialogProps) {
                 <Button
                     onClick={
                         () => {
-                            const datasetSourceDef: BacktestDataSourceDef = panelRef.current?.getValue()
-                            if (!dataset) {
-                                const ds = createDataset(datasetSourceDef)
-                                props.onConfirm?.(ds.id)
-                            } else {
-                                updateSourceDef(dataset.id, datasetSourceDef)
-                                props.onConfirm?.(dataset.id)
+                            const datasetSourceDef: BacktestDataSourceDef | undefined = panelRef.current?.getValue() as BacktestDataSourceDef | undefined;
+                            if (datasetSourceDef !== undefined) {
+                                if (!dataset) {
+                                    const ds = createDataset(datasetSourceDef)
+                                    props.onConfirm?.(ds.id)
+                                } else {
+                                    updateSourceDef(dataset.id, datasetSourceDef)
+                                    props.onConfirm?.(dataset.id)
+                                }
                             }
                         }
                     }

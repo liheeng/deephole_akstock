@@ -28,7 +28,7 @@ export default function UniDataGrid({
             // 原生属性透传 100% 支持
             {...props}
             // ✅ 强制自动生成 ID（永远不报错）
-            rows={rows.map((row, idx) => ({ id: idx, ...row }))}
+            rows={rows?.map((row, idx) => ({ id: idx, ...row }))}
             // 合并插槽：保留用户传入的 slots + 默认自带 toolbar
             slots={{
                 toolbar: GridToolbar,

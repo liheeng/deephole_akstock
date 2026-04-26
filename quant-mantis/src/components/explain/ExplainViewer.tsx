@@ -43,7 +43,7 @@ export default function ExplainViewer({
             </Box>
 
             {/* ✅ 自动优化建议 */}
-            <ExplainHints hints={hints} />
+            <ExplainHints hints={hints} props={{}} />
 
             {/* 🌳 Tree */}
             <Box

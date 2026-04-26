@@ -2,12 +2,12 @@ import { Box, IconButton } from "@mui/material"
 import { Fullscreen, FullscreenExit } from "@mui/icons-material"
 import { useEffect } from "react"
 
-interface FullscreenBoxProps {
-    children: React.ReactNode
-    isFull: boolean
-    onToggle?: () => void
-    sx?: any
-}
+// interface FullscreenBoxProps {
+//     children: React.ReactNode
+//     isFull: boolean
+//     onToggle?: () => void
+//     sx?: any
+// }
 
 export const FullScreenBox = ({ children, isFull=false, onToggle, sx }: any) => {
     

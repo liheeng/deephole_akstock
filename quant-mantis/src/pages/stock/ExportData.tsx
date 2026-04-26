@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
     Box,
     Typography,
@@ -148,7 +148,14 @@ export function ExportDataPage() {
     // UI
     // ========================
     return (
-        <Box p={3} sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
+        <Box
+            sx={{
+                p:3,
+                height: "100vh",
+                display: "flex",
+                flexDirection: "column",
+            }}
+            >
             <Typography variant="h5" gutterBottom>
                 📤 数据导出
             </Typography>
@@ -227,7 +234,7 @@ export function ExportDataPage() {
             )}
 
             {/* 按钮 */}
-            <Box mb={2}>
+            <Box sx={{mb:2}} >
                 <Button variant="outlined" onClick={handlePreview} sx={{ mr: 2 }}>
                     👁 预览50条
                 </Button>
@@ -244,7 +251,7 @@ export function ExportDataPage() {
 
             {/* 进度 */}
             {loading && (
-                <Box mb={2}>
+                <Box sx={{mb:2}} >
                     <LinearProgress variant="determinate" value={progress} />
                     <Typography variant="body2">{progress}%</Typography>
                 </Box>

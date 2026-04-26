@@ -8,10 +8,9 @@ import {
   DialogContent,
   List,
   ListItemButton,
-  ListItemText,
   Stack
 } from '@mui/material';
-
+import ListItemText from '@mui/material/ListItemText';
 import UniDataGrid from '../../components/table/UniDataGrid';
 import { GridToolbar } from '@mui/x-data-grid';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';

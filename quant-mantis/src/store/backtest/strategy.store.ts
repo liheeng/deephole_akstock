@@ -24,6 +24,8 @@ interface StrategyState {
     strategies: Record<string, Strategy>
     strategyIds: string[]
 
+    initialized: boolean
+
     init: (strategies: Strategy[]) => void
 
     createStrategy: (mode: StrategyMode) => string
@@ -46,31 +48,33 @@ export const useStrategyStore = create<StrategyState>((set, get) => ({
     strategies: {},
     strategyIds: [],
 
-    init: (strategies: Strategy[] = []) => {
+    initialized: false,
 
-        if (!Array.isArray(strategies)) {
-            console.warn("init strategies is not array", strategies)
-            return
-        }
+    // init: (strategies: Strategy[] = []) => {
 
-        const valid = strategies.filter(s => {
-            if (!s?.id) {
-                console.warn("invalid strategy", s)
-                return false
-            }
-            return true
-        })
+    //     if (!Array.isArray(strategies)) {
+    //         console.warn("init strategies is not array", strategies)
+    //         return
+    //     }
 
-        set(() => ({
-            strategies: Object.fromEntries(
-                valid.map(s => [s.id, { ...s }])
-            ),
-            // strategies: Object.fromEntries(
-            //     valid.map(s => [s.id, JSON.parse(JSON.stringify(s))])
-            // ),
-            strategyIds: valid.map(s => s.id)
-        }))
-    },
+    //     const valid = strategies.filter(s => {
+    //         if (!s?.id) {
+    //             console.warn("invalid strategy", s)
+    //             return false
+    //         }
+    //         return true
+    //     })
+
+    //     set(() => ({
+    //         strategies: Object.fromEntries(
+    //             valid.map(s => [s.id, { ...s }])
+    //         ),
+    //         // strategies: Object.fromEntries(
+    //         //     valid.map(s => [s.id, JSON.parse(JSON.stringify(s))])
+    //         // ),
+    //         strategyIds: valid.map(s => s.id)
+    //     }))
+    // },
 
     init: (strategies: Strategy[] = []) => {
 

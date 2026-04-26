@@ -35,7 +35,7 @@ export default function GlobalDialogs({ nodes }: any) {
             {/* Visual Editor */}
             {/* ========================= */}
             
-            {["factor", "signal", "schedule_signal"].includes(dialog.type) && (
+            {["factor", "signal", "schedule_signal"].includes(dialog.type || "") && (
                 <VisualEditorDialog
                     open={dialog.open}
                     value={expr}

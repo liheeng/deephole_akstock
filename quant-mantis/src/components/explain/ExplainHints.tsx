@@ -1,4 +1,4 @@
-import { Box, Typography, Chip, Stack } from "@mui/material"
+import { Box, Typography, Chip, Stack, type TypographyProps } from "@mui/material"
 
 type Hint = {
     level: "info" | "warning" | "error"
@@ -11,7 +11,7 @@ const colorMap = {
     error: "error"
 } as const
 
-export default function ExplainHints({ hints }: { hints: Hint[] }) {
+export default function ExplainHints({ hints, props={} }: { hints: Hint[], props: {} }) {
 
     return (
         <Box
@@ -34,12 +34,17 @@ export default function ExplainHints({ hints }: { hints: Hint[] }) {
                             label={h.level.toUpperCase()}
                             color={colorMap[h.level] as any}
                         />
-                        <Typography fontSize={14}>
+                        <Typography
+                            component="span"
+                            sx={{ fontSize: 14 }}
+                            {...props}
+                        >
                             {h.message}
                         </Typography>
                     </Box>
-                ))}
-            </Stack>
-        </Box>
+                ))
+                }
+            </Stack >
+        </Box >
     )
 }

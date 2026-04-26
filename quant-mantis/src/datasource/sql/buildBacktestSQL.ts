@@ -103,6 +103,9 @@ export function buildExplainSQL_v2(p: Preset | string) {
 export function buildCountSQL_v2(p: Preset | string) {
     const base = typeof p === "string" ? p : buildBacktestSQL_v2(p)
 
+    if (!base || base==="") {
+        throw new Error("Empty/Invalid SQL", { cause: p })
+    }
     return joinSQL([
         "SELECT COUNT(*) as cnt",
         "FROM (",

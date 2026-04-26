@@ -1,4 +1,5 @@
-import { escapeSQL, joinSQL, toSQLList, type Preset } from "../../utils/sqlUtils"
+import { escapeSQL, joinSQL, toSQLList } from "../../utils/sqlUtils"
+import { type Preset } from "../../store/dataset.store"
 
 type QueryPlan = {
     from: string

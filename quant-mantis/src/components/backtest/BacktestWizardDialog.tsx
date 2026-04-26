@@ -5,11 +5,9 @@ import {
 import { useRef, useState } from "react"
 
 import StepPreview from "./StepPreview"
-// import { BacktestDataEditPanel, type BacktestDataEditPanelRef } from "./BacktestDataDialog"
 import { BacktestDataEditPanel, type BacktestDataEditPanelRef } from "./BacktestDataEditPanel"
 import { useDatasetStore } from "../../store/dataset.store"
-import { data } from "react-router-dom"
-// import { useDialogStore } from "../../store/dialog.store"
+
 
 export default function BacktestWizardDialog({
     open,

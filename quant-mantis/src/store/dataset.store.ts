@@ -35,7 +35,7 @@ export type Preset = {
 
 export type BacktestDataSourceDef =
     | {
-        name: string
+        // name: string
         type: "sql"
         sql: string
         schema?: string[]

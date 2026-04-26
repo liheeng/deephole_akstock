@@ -1,9 +1,15 @@
-type ExplainNode = {
-    type: string
-    rows?: number
-    extra?: string[]
-    children?: ExplainNode[]
-}
+import { type PlanNode } from "./parseDuckDBExplain"
+import { asNumber } from "./Strings"
+// export type ExplainNode = {
+//     type: string
+//     rows?: number
+//     extra?: string[]
+//     children?: ExplainNode[]
+// }
+
+export type ExplainNode = PlanNode & {
+    type: string;
+};
 
 export type ExplainHint = {
     level: "info" | "warning" | "error"
@@ -24,7 +30,7 @@ export function analyzeExplain(tree: ExplainNode[]): ExplainHint[] {
         // =========================
         if (node.type === "SEQ_SCAN") {
 
-            if ((node.rows || 0) > 1_000_000) {
+            if ((asNumber(node.rows) || 0) > 1_000_000) {
                 hints.push({
                     level: "warning",
                     message: `Sequential Scan on large table (~${node.rows?.toLocaleString()} rows)`
@@ -44,7 +50,7 @@ export function analyzeExplain(tree: ExplainNode[]): ExplainHint[] {
         // =========================
         // ORDER BY
         // =========================
-        if (node.type === "ORDER_BY" && (node.rows || 0) > 1_000_000) {
+        if (node.type === "ORDER_BY" && (asNumber(node.rows) || 0) > 1_000_000) {
             hints.push({
                 level: "warning",
                 message: "Large ORDER BY detected"
@@ -65,14 +71,14 @@ export function analyzeExplain(tree: ExplainNode[]): ExplainHint[] {
         // =========================
         // Rows explosion
         // =========================
-        if ((node.rows || 0) > 5_000_000) {
+        if ((asNumber(node.rows) || 0) > 5_000_000) {
             hints.push({
                 level: "warning",
                 message: `Large intermediate result (~${node.rows?.toLocaleString()} rows)`
             })
         }
 
-        node.children?.forEach(walk)
+        node.children?.forEach(walk as any)
     }
 
     tree.forEach(walk)

@@ -10,7 +10,8 @@ import {
     Select,
     Typography,
     Checkbox,
-    ListItemText
+    ListItemText,
+    type TextFieldProps
 } from "@mui/material"
 
 import UniDataGrid from "../table/UniDataGrid"
@@ -32,6 +33,9 @@ import { type Preset } from "../../store/dataset.store"
 import ExplainDetailDialog from "./ExplainDetailDialog"
 import ExplainPanel from "../explain/ExplainPanel"
 
+type CustomTextFieldProps = TextFieldProps & {
+  InputProps?: TextFieldProps;
+};
 //
 // ✅ FormRow
 //
@@ -54,7 +58,7 @@ function FormRow({
 }
 
 export type BacktestDataEditPanelRef = {
-    getValue: () => BacktestDataSourceDef
+    getValue: () => BacktestDataSourceDef | null
     isValid: () => boolean
 }
 
@@ -94,6 +98,11 @@ export const BacktestDataEditPanel = forwardRef<BacktestDataEditPanelRef, Backte
 
         const [explainDetailOpen, setExplainDetailOpen] = useState(false)
 
+        const inputProps: CustomTextFieldProps = {
+            multiline: true,
+            rows: undefined,
+        };
+
         // =========================
         // 同步 initialValue
         // =========================
@@ -104,12 +113,13 @@ export const BacktestDataEditPanel = forwardRef<BacktestDataEditPanelRef, Backte
                 setSql(dataset?.sourceDef?.sql || "")
                 setTab(1)
             } else {
-                setMarkets(dataset?.sourceDef?.markets || [])
-                setSymbols(dataset?.sourceDef?.symbols?.join(",") || "")
-                setSectors(dataset?.sourceDef?.sectors || [])
-                setUniverse(dataset?.sourceDef?.universe || "")
-                setStart(dataset?.sourceDef?.start || "")
-                setEnd(dataset?.sourceDef?.end || "")
+                const sourcedef = dataset?.sourceDef as Preset | undefined
+                setMarkets(sourcedef?.markets || [])
+                setSymbols(sourcedef?.symbols?.join(",") || "")
+                setSectors(sourcedef?.sectors || [])
+                setUniverse(sourcedef?.universe || "")
+                setStart(sourcedef?.start || "")
+                setEnd(sourcedef?.end || "")
                 setTab(0)
             }
 
@@ -136,7 +146,7 @@ export const BacktestDataEditPanel = forwardRef<BacktestDataEditPanelRef, Backte
         }, [markets, symbols, sectors, universe, start, end, tab])
 
         useImperativeHandle(ref, () => ({
-            getValue: () => {
+            getValue: (): BacktestDataSourceDef | null => {
                 if (tab === 1) {
                     if (!valid) return null
 
@@ -558,10 +568,13 @@ export const BacktestDataEditPanel = forwardRef<BacktestDataEditPanelRef, Backte
                                 }}
                                 InputProps={{
                                     disableUnderline: true,
-                                    // 用原生 textarea 而非 autosize
-                                    multiline: true,
-                                    rows: undefined,
+                                    inputProps: {
+                                        // use the original props here
+                                        multiline: true,
+                                        rows: undefined,
+                                    },
                                 }}
+                                {...(inputProps as CustomTextFieldProps)}
                             />
 
                             <Button

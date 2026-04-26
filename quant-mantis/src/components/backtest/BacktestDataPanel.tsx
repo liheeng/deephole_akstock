@@ -1,12 +1,12 @@
 import { useState } from "react"
-import { Box, Typography, Button, Tooltip, Stack, TextField, Popover, List, ListItemButton, ListItemText } from "@mui/material"
+import { Box, Typography, Button, Tooltip, Stack, TextField, Popover, List, ListItemButton } from "@mui/material"
 import IconButton from "@mui/material/IconButton"
 import StorageIcon from "@mui/icons-material/Storage"
 import MainCard from "../visual/MainCard"
 import KeyValueRow from "../misc/KeyValueRow"
 
 import { useDialogStore } from "../../store/dialog.store"
-import { useDatasetStore, type Dataset } from "../../store/dataset.store"
+import { useDatasetStore, type Dataset, type Preset } from "../../store/dataset.store"
 import { useMessageStore } from "../../store/message.store"
 
 import { updateDataset as apiUpdateDataset, fetchDatasets } from "../../api/Client"
@@ -60,7 +60,7 @@ export default function BacktestDataPanel() {
         const result = validateDataset(currentDatasetId)
 
         if (!result.isValid()) {
-            addMessage("error", result.message || "Validation current portfolio config failed")
+            addMessage("error", result.errors.join(", ") || "Validation current portfolio config failed")
             return
         }
 
@@ -78,6 +78,9 @@ export default function BacktestDataPanel() {
             addMessage("error", `Save dataset config "${datasetName}" failed`)
         }
     }
+
+    const sourceDef = dataset?.sourceDef || {type: "preset"}
+
     return (
         <MainCard
             title={
@@ -91,8 +94,8 @@ export default function BacktestDataPanel() {
                     component="div"
                     direction="row"
                     spacing={1}
-                    alignItems="center"   // ⭐ 必须有
-                    alignContent="left"
+                    // alignItems="center"   // ⭐ 必须有
+                    // alignContent="left"
                 >
                     <Tooltip title="Edit dataset name">
                         <TextField
@@ -151,35 +154,40 @@ export default function BacktestDataPanel() {
                 </Stack>
 
             }
-        >
+        >   
 
-            {dataset?.sourceDef?.type === "sql" ? (
-                <Typography
+            {
+                sourceDef.type === "sql" ? (
+                    <Typography
                     sx={{ fontFamily: "Monaco, monospace", fontSize: 12 }}
-                >
-                    {dataset?.sourceDef?.sql.slice(0, 120)}...
-                </Typography>
-            ) : (
-                <Box>
-
+                    >
+                    {sourceDef.sql?.slice(0, 120)}...
+                    </Typography>
+                ) : (
+                    <Box>
                     <KeyValueRow
                         label="Markets"
-                        value={dataset?.sourceDef?.markets?.join(", ") || "None"}
+                        value={(sourceDef as Preset).markets?.join(", ") || "None"}
                     />
-                    <KeyValueRow label="Symbols" value={dataset?.sourceDef?.symbols?.join(", ") || "None"} />
+                    <KeyValueRow 
+                        label="Symbols" 
+                        value={(sourceDef as Preset).symbols?.join(", ") || "None"} 
+                    />
                     <KeyValueRow
                         label="Sectors"
-                        value={dataset?.sourceDef?.sectors?.join(", ") || "None"}
+                        value={(sourceDef as Preset).sectors?.join(", ") || "None"}
                     />
-
                     <KeyValueRow
                         label="Universe"
-                        value={dataset?.sourceDef?.universe || "None"}
+                        value={(sourceDef as Preset).universe || "None"}
                     />
-                    <KeyValueRow label="Range" value={`${dataset?.sourceDef?.start} ~ ${dataset?.sourceDef?.end}`} />
-
-                </Box>
-            )}
+                    <KeyValueRow 
+                        label="Range" 
+                        value={`${(sourceDef as Preset).start} ~ ${(sourceDef as Preset).end}`} 
+                    />
+                    </Box>
+                )
+            }
 
             <Popover
                 open={Boolean(anchorEl)}

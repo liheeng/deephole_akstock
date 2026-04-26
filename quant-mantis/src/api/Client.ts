@@ -158,7 +158,7 @@ export async function updateBacktestConfig(config: BacktestState) {
         // ==============================================
         // 🔥 关键：从 strategy / factor / signal store 取数据
         // ==============================================
-        const { strategyIds, strategies } = useStrategyStore.getState();
+        const { strategies } = useStrategyStore.getState();
         const { factors } = useFactorStore.getState();
         const { signals } = useSignalStore.getState();
 

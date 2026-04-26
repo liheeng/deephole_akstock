@@ -1,4 +1,4 @@
-import { Card, Button, Box } from "@mui/material"
+import { Card, Box } from "@mui/material"
 import ReactECharts from "echarts-for-react"
 import TradesTable from "./TradesTable"
 import { useBacktestResultStore } from "../../store/backtest/backtestresult.store"
@@ -8,7 +8,7 @@ import type { GridColDef } from '@mui/x-data-grid'
 import { Tabs, Tab } from "@mui/material"
 import { FullScreenBox } from "../misc//FullScreenBox"
 
-export default function BacktestResult({ runBacktest }: any) {
+export default function BacktestResult({ }: any) {
     const selectedSymbol = useBacktestResultStore(s => s.selectedSymbol)
     const setSelectedSymbol = useBacktestResultStore(s => s.setSelectedSymbol)
     const statTab = selectedSymbol ?? "average"
@@ -385,9 +385,6 @@ export default function BacktestResult({ runBacktest }: any) {
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
         >
-            {/* <Button variant="contained" onClick={runBacktest} sx={{ mb: 2 }}>
-                Run Backtest
-            </Button> */}
 
             {/* 上半 */}
             <Box sx={{

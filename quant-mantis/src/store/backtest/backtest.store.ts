@@ -106,13 +106,14 @@ export const useBacktestStore = create<BacktestState>((set, get) => ({
     },
 
     applyBacktestConfig(_config: BacktestConfig | undefined) {
-        let config: BacktestConfig | undefined = _config
-        if (!config && get().id !== "") {
+        if (!_config && get().id !== "") {
             // Do not apply if id is not null and config is null
             return
         }
 
-        if (!config) {
+        let config: BacktestConfig
+        
+        if (!_config) {
             // Create default config
             get().setOriginalSnapshot()
             const strategyId = "strategy-" + nanoid()
@@ -160,8 +161,12 @@ export const useBacktestStore = create<BacktestState>((set, get) => ({
                         expr: "(MA(5) - MA(20)) / MA(20)"
                     }
                 },
-                signals: {}
+                signals: {},
+                created_at: new Date().toISOString(), // Add created_at property
+                updated_at: new Date().toISOString(), // Add updated_at property
             }
+        } else {
+            config = _config
         }
 
         // 初始化子 store（注意格式转换）
@@ -303,6 +308,13 @@ export const useBacktestStore = create<BacktestState>((set, get) => ({
                 errors.push(`策略【${strategy.name}】必须至少选择一个因子`)
             }
 
+            strategy.factorIds.forEach(factorId => {
+                const factor = factors[factorId]
+                if (!factor) {
+                    errors.push(`因子【${factorId}】不存在`)
+                }
+            })
+
             if (currentState.portfolio_mode === "signal_strategy") {
                 if (strategy.signalId) {
                     const signal = signals[strategy.signalId]
@@ -321,7 +333,7 @@ export const useBacktestStore = create<BacktestState>((set, get) => ({
     // =========================
     buildPayload: () => {
         const s = get()
-        const { strategies, strategyIds } = useStrategyStore.getState()
+        const { strategies } = useStrategyStore.getState()
         const { factors } = useFactorStore.getState()
         const { signals } = useSignalStore.getState()
 

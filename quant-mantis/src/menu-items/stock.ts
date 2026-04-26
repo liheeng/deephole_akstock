@@ -3,9 +3,7 @@ import {
   AssignmentOutlined, 
   SyncAltOutlined, 
   CloudDownloadOutlined, 
-  StorageOutlined, 
-  TerminalOutlined,
-  AssessmentOutlined 
+  StorageOutlined
 } from '@mui/icons-material';
 
 const stockMenu = {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Box,
   Typography,
@@ -87,7 +87,7 @@ export const TasksMonitorPage = () => {
                   {task.description}
                 </Typography>
               </Stack> */}
-              <Stack direction="row" spacing={2} alignItems="center">
+              <Stack component="div" direction="row" spacing={2}>
                 <Chip size="small" label={config.label} color={config.color as any} />
                 <Typography variant="subtitle1" sx={{ fontSize: 16 }}>
                     任务ID: {task.id}
@@ -134,7 +134,7 @@ export const TasksMonitorPage = () => {
                     return (
                       <TableRow key={job.id}>
                         <TableCell>{job.id}</TableCell>
-                        <TableCell>{jobTypeMap[job.type] || job.type}</TableCell>
+                        <TableCell>{(jobTypeMap as any)[job.type] || job.type}</TableCell>
 
                         <TableCell>
                           <Chip
