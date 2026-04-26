@@ -883,6 +883,8 @@ def update_backtest_config(config: BacktestConfig):
     if not config.id:
         raise HTTPException(status_code=400, detail="Backtest(Portfolio) id 不能为空")
 
+    logger.info(f"update backtest config: {config}")
+    
     backtest_id = config.id
 
     try:
@@ -937,8 +939,8 @@ def update_backtest_config(config: BacktestConfig):
                     strategy.get("id"),
                     backtest_id,
                     strategy.get("name"),
-                    json.dumps(strategy.get("factor_ids", [])),
-                    strategy.get("signal_id"),
+                    json.dumps(strategy.get("factorIds", [])),
+                    strategy.get("signalId"),
                     json.dumps(strategy.get("config", {}))
                 ])
 
