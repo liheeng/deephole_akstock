@@ -136,7 +136,7 @@ export default function PortfolioPanel() {
 
                     <Divider sx={{ mb: 1 }} />
                     <Typography variant="subtitle1" sx={{ textAlign: "left", maxWidth: "50%", width: "200", mb: 1 }}>
-                        📂 Portfolio Name:
+                        📂 Portfolio: 
                     </Typography>
                     <Stack
                         component="div"
@@ -148,7 +148,7 @@ export default function PortfolioPanel() {
                             <TextField
                                 size="small"
                                 value={portfolioName}
-                                sx={{ flex: 1, width: 400, maxWidth: 600, height: 40, paddingLeft: 2 }}
+                                sx={{ flex: 1, minWidth: 0, height: 40, paddingLeft: 2 }}
                                 onChange={(e) => {
                                     if (e.target.value && e.target.value.trim() == portfolioName) {
                                         return

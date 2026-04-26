@@ -85,7 +85,7 @@ export default function BacktestDataPanel() {
         <MainCard
             title={
                 <Typography sx={{ textAlign: "left", minWidth: 0, mb: 1 }}>
-                    📊 Backtest Data
+                    📊 Backtest Data: 
                 </Typography>
             }
 
@@ -101,7 +101,7 @@ export default function BacktestDataPanel() {
                         <TextField
                             size="small"
                             value={datasetName}
-                            sx={{ flex: 1, width: 400, maxWidth: 600, height: 40, paddingLeft: 2 }}
+                            sx={{ flex: 1, width: 150, maxWidth: 600, height: 40, paddingLeft: 2 }}
                             onChange={(e) => {
                                 if (e.target.value && e.target.value.trim() == datasetName) {
                                     return
