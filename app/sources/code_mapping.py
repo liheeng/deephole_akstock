@@ -3,9 +3,9 @@ import re
 from sources.data_source import DataSourceType, DataSourceApiName
 from markets.market import Region, ExchangeType
 from utils.common import safe_format
-from utils.log_manager import get_logger
+from loguru import logger
 
-logger = get_logger(__name__)
+
 
 # 数据源格式定义（已修复缩进 + 结构）
 DATA_SOURCE_FORMAT = {

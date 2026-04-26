@@ -5,11 +5,11 @@ from sources.data_source import DataSource, DataSourceApiName
 from sources.us_datasource import USStockSource
 from markets.market import SymbolType
 from markets.market import Region, Market
-from utils.log_manager import get_logger
+from loguru import logger
 import akshare as ak
 from db.duckdb import DuckDBController
 
-logger = get_logger(__name__)
+
 
 NYSE_LIST_FILE = "https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/nyse/nyse_full_tickers.json"
 NASDAQ_LIST_URL = "https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/nasdaq/nasdaq_full_tickers.json"

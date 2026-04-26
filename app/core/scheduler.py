@@ -4,10 +4,8 @@ from core.queue import job_queue
 from core.task import Task, TaskStatus
 from core.job import JobStatus
 from core.task_manager import task_is_allowed, task_can_run, task_manager
-from utils.log_manager import get_logger
+from loguru import logger
 from core.error import TaskError, ERROR_CODE
-
-logger = get_logger(__name__)
 
 
 def run_task(task: Task) -> bool:

@@ -1,7 +1,7 @@
 # app/core/task_manager.py
 
 from datetime import datetime
-from utils.log_manager import get_logger
+from loguru import logger
 from core.task import Task, TaskMode, TaskStatus
 from core.job import JOB_DEFINITIONS, Job, JobStatus, JobType, JobDefinition
 from db.db_common import DB, safe_time
@@ -10,7 +10,7 @@ from db.duckdb import DuckDBController
 
 dbc = DuckDBController(DB)
 
-logger = get_logger(__name__)
+
 
 
 def job_dag_ok(job: Job) -> bool:

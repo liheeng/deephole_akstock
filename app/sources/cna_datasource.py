@@ -2,9 +2,9 @@ from typing import List
 from sources.data_source import DataSource, AbstractDataSourceAPI, FetchResult, QueryOptions, DataSourceApiName
 from sources.akshare.akshare_api_a_hist_sina import AKshareApiAHistoricSina
 from sources.ifind.ifind_api_all_hist import IFindAHistoric
-from utils.log_manager import get_logger
+from loguru import logger
 
-logger = get_logger(__name__)
+
 
 
 class CNAStockSource(DataSource):

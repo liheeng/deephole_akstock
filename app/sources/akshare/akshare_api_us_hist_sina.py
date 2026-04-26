@@ -1,6 +1,6 @@
 import akshare as ak
 import pandas as pd
-from utils.log_manager import get_logger
+from loguru import logger
 from utils.common import ResultStatus
 from markets.market import Region
 from sources.data_source import DataSourceType, DataSourceApiName, AbstractDataSourceAPI, FetchResult, QueryOptions
@@ -11,7 +11,7 @@ from core.process_pool.process_pool import ExProcessExecutorPool
 from core.process_pool.executor_task import ExectuorTaskCfg
 from sources.parallel_hist_fetcher import ParallelHistFetcher
 
-logger = get_logger(__name__)
+
 
 
 def clean_us_sina_symbol(code: str) -> str:

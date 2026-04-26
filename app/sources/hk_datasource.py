@@ -2,9 +2,9 @@ from typing import List
 from sources.ifind.ifind_api_all_hist import IFindHKHistoric
 from sources.data_source import DataSource, AbstractDataSourceAPI, DataSourceApiName, FetchResult, QueryOptions
 from sources.akshare.akshare_api_hk_hist_sina import AKshareApiHKHistricSina
-from utils.log_manager import get_logger
+from loguru import logger
 
-logger = get_logger(__name__)
+
 
 
 class HKStockSource(DataSource):

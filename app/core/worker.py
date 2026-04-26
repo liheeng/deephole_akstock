@@ -7,9 +7,9 @@ from core.task_manager import job_can_run, task_manager
 from core.queue import job_queue
 from executors.base import get_executor
 from core.result_store import result_store
-from utils.log_manager import get_logger
+from loguru import logger
 
-logger = get_logger(__name__)
+
 
 
 def worker_loop():

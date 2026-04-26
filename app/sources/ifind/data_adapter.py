@@ -1,11 +1,11 @@
 import json
 from typing import Tuple, Dict
 import pandas as pd
-from utils.log_manager import get_logger
+from loguru import logger
 # 你的原始数据（已转字符串）
 # data_json = '''{"errorcode":0,"errmsg":"","tables":[{"thscode":"300033.SZ",...}''' # 粘贴你完整数据
 
-logger = get_logger(__name__)
+
 
 
 def convert_to_df(data_json) -> Tuple[bool, Dict[str, pd.DataFrame]|None]:

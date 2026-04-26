@@ -9,9 +9,9 @@ from vectorbt_test.core.node_builder import NodeBuilder
 import vectorbt as vbt
 import numpy as np
 import json
-from utils.log_manager import get_logger
+from loguru import logger
 
-logger = get_logger(__name__)
+
 
 
 class PortfolioType(enum.Enum):

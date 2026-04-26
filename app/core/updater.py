@@ -5,13 +5,13 @@ from core.job import Job
 from core.normalizer import normalize
 from utils.retry import retry
 from utils.time import random_sleep
-from utils.log_manager import get_logger
+from loguru import logger
 from db.duckdb import DuckDBController
 from markets.market import Market
 from sources.data_source import DataSourceApiName, QueryOptions, StartPriority, FetchResult, DataSource, HIS_BATCH_SIZE_LIMIT, HIS_BATCH_SYMBOLS_LIMIT
 from utils.common import ResultStatus
 
-logger = get_logger(__name__)
+
 
 
 class Updater:

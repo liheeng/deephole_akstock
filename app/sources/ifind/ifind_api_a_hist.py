@@ -2,14 +2,14 @@
 import os
 from typing import Dict
 import pandas as pd
-from utils.log_manager import get_logger
+from loguru import logger
 from utils.common import ResultStatus
 from markets.market import Region
 from sources.data_source import DataSourceType, DataSourceApiName, AbstractDataSourceAPI, FetchResult, QueryOptions
 from sources.datasource_adapter import SymbolConverter
 from sources.ifind.ifind_api import IFinDApi, convert_function_params
 
-logger = get_logger(__name__)
+
 
 
 class IFinDApiAHistoric(AbstractDataSourceAPI):

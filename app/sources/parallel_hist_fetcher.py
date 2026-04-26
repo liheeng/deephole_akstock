@@ -1,5 +1,5 @@
 import pandas as pd
-from utils.log_manager import get_logger
+from loguru import logger
 from markets.market import Region
 from sources.data_source import DataSourceType, DataSourceApiName, StartPriority
 from sources.datasource_adapter import SymbolConverter
@@ -8,7 +8,7 @@ from core.paraller_job_executor import ParallelJobExecutor, ParallelJob
 from utils.task_util import TaskResult
 from typing import Dict, Callable, List
 
-logger = get_logger(__name__)
+
 
 
 class ParallelHistFetcher():

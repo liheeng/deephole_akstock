@@ -8,11 +8,11 @@ from abc import ABC, abstractmethod
 from concurrent.futures import ProcessPoolExecutor
 from typing import Optional
 
-from utils.log_manager import get_logger
+from loguru import logger
 from core.process_pool.executor_task import ExectuorTaskCfg
 from utils.task_util import TaskResult
 
-logger = get_logger(__name__)
+
 
 
 # ========================

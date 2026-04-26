@@ -1,13 +1,13 @@
 from core.process_pool.executor_task import AbstractExectuorTask
 import akshare as ak
 from typing import Dict, Any
-from utils.log_manager import get_logger
+from loguru import logger
 import pandas as pd
 from datetime import datetime
 from utils.http import patch_requests
 from timeout_decorator import timeout  # 导入超时装饰器
 
-logger = get_logger(__name__)
+
 
 
 class WorkerAkshareAHistSinaFetcher(AbstractExectuorTask):

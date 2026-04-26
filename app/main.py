@@ -1,6 +1,6 @@
 # from utils.task_db import generate_job_id, generate_task_id, insert_task
 # from utils.http import patch_requests
-# from utils.log_manager import get_logger   
+# from loguru import logger   
 # from core.updater import Updater
 # from core.registry import MARKETS
 # from core.job import JobType, JobStatus, JobDefinition, JOB_DEFINITIONS, Job

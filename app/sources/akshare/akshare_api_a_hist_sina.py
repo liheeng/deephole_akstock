@@ -1,7 +1,7 @@
 
 import akshare as ak
 import pandas as pd
-from utils.log_manager import get_logger
+from loguru import logger
 from utils.common import ResultStatus
 from markets.market import Region
 from sources.data_source import DataSourceType, DataSourceApiName, AbstractDataSourceAPI, FetchResult, QueryOptions, StartPriority
@@ -14,7 +14,7 @@ from sources.parallel_hist_fetcher import ParallelHistFetcher
 import db.stock_daily_util as stock_daily
 from db.duckdb import DuckDBController
 
-logger = get_logger(__name__)
+
 
 db = DuckDBController()
 

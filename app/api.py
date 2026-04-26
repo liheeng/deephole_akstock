@@ -21,10 +21,11 @@ import nanoid
 from fastapi.middleware.cors import CORSMiddleware
 from app.api_config import CORS_CONFIG
 
+from utils.log_manager import init_logger
 from core.task_manager import task_manager
 from db.db_common import DB
 from utils.common import is_running_in_docker
-from utils.log_manager import get_logger
+from loguru import logger
 from utils.task_util import create_sync_daily_task
 from core.scheduler import run_task
 from core.worker import start_workers
@@ -47,7 +48,9 @@ import executors.cn_daily_sync_executor    # noqa
 import executors.hk_daily_sync_executor    # noqa
 import executors.us_daily_sync_exectuor    # noqa
 
-logger = get_logger(__name__)
+
+# Init logger
+init_logger()
 
 # Init DuckDB 
 db_controller = DuckDBController(db_path=DB)

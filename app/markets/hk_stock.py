@@ -3,9 +3,9 @@ from typing import List
 from sources.data_source import DataSource, DataSourceApiName
 from sources.hk_datasource import HKStockSource
 from markets.market import Region, Market
-from utils.log_manager import get_logger
+from loguru import logger
 
-logger = get_logger(__name__)
+
 
 
 class HongKongStockMarket(Market):

@@ -2,13 +2,13 @@ import time
 from dataclasses import dataclass
 from concurrent.futures import ThreadPoolExecutor, Future
 from typing import List, Dict, Any, Generic, TypeVar, Callable, Optional
-from utils.log_manager import get_logger
+from loguru import logger
 import threading
 
 T = TypeVar("T")
 R = TypeVar("R")
 
-logger = get_logger(__name__)
+
 
 
 # =============================================================================

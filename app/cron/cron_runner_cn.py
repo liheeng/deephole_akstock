@@ -3,12 +3,12 @@ import os
 
 import requests
 from core.job import JobType
-from utils.log_manager import get_logger
+from loguru import logger
 from datetime import datetime
 from utils.common import is_running_in_docker
 from sources.data_source import DataSourceApiName
 
-logger = get_logger(__name__)
+
 
 API_SERVICE_NAME = os.getenv("API_SERVICE_NAME", "akstock_api_service")
 API_PORT = os.getenv("API_PORT", "8000")
