@@ -27,7 +27,7 @@ export default function ExplainPanel({
     }
 
     const tree = parseDuckDBExplain(text);
-    const hints = analyzeExplain(tree);
+    const hints = analyzeExplain(tree as any);
 
     return (
         <Box

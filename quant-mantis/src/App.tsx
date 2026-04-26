@@ -21,8 +21,6 @@ import { SqlExecutor } from "./pages/stock/SqlExecutor";
 import { TasksMonitorPage } from "./pages/stock/TasksMonitor";
 import { SyncStockDailyPage } from "./pages/stock/SyncStockDailyPage";
 
-import { initMonacoEnv } from "./monacoEnv";
-
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { initRegisteredNodes } from "./api/Client";
 import MenuOpenIcon from "@mui/icons-material/MenuOpen";
@@ -141,7 +139,6 @@ export default function App() {
         const initAll = async () => {
             try {
                 await initRegisteredNodes();
-                initMonacoEnv();
             } catch (err) {
                 console.error("初始化失败", err);
             } finally {

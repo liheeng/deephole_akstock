@@ -9,7 +9,7 @@ import { format } from "sql-formatter"
 import ExplainViewer from "../explain/ExplainViewer"
 import ExplainDetailDialog from "./ExplainDetailDialog"
 
-export default function StepPreview({ ds, ...props }: { ds: any }) {
+export default function StepPreview({ ds, sx, ...props }: { ds: any, sx: any, props?: any }) {
     const [sql, setSql] = useState("")
     const [explain, setExplain] = useState("")
     const [count, setCount] = useState<number | null>(null)
@@ -19,8 +19,10 @@ export default function StepPreview({ ds, ...props }: { ds: any }) {
     useEffect(() => {
         if (!ds) return
         const s = buildBacktestSQL_v2(ds)
+        if (!s) return
         setSql(s)
     }, [ds])
+
 
     const runExplain = async () => {
         // setLoading(true)
@@ -34,14 +36,14 @@ export default function StepPreview({ ds, ...props }: { ds: any }) {
     }
 
     const runCount = async () => {
-        setLoading(true)
+        // setLoading(true)
         const res = await apiClient.post("/execute_sql", {
             sql: buildCountSQL_v2(ds)
         })
         if (res.data.status === "success") {
             setCount(res.data.data?.[0]?.cnt ?? null)
         }
-        setLoading(false)
+        // setLoading(false)
     }
 
     return (
@@ -49,6 +51,7 @@ export default function StepPreview({ ds, ...props }: { ds: any }) {
             spacing={2}
             {...props}
             sx={{
+                ...sx,
                 height: "100%",
                 flex: 1,
                 minHeight: 0,       // 🔥 必须

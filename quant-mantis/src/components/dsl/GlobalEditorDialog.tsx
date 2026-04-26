@@ -8,7 +8,7 @@ import { useStrategyStore } from "../../store/backtest/strategy.store"
 import { useBacktestStore } from "../../store/backtest/backtest.store"
 
 import BacktestDataDialog from "../backtest/BacktestDataDialog"
-import { useDatasetStore, type Dataset,type BacktestDataSourceDef } from "../../store/dataset.store"
+import { useDatasetStore, type Dataset } from "../../store/dataset.store"
 
 export default function GlobalDialogs({ nodes }: any) {
 

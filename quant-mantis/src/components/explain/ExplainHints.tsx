@@ -1,4 +1,4 @@
-import { Box, Typography, Chip, Stack, type TypographyProps } from "@mui/material"
+import { Box, Typography, Chip, Stack } from "@mui/material"
 
 type Hint = {
     level: "info" | "warning" | "error"

@@ -3,7 +3,6 @@ import {
     Button, Tabs, Tab, Box
 } from "@mui/material"
 import { useRef, useState } from "react"
-
 import StepPreview from "./StepPreview"
 import { BacktestDataEditPanel, type BacktestDataEditPanelRef } from "./BacktestDataEditPanel"
 import { useDatasetStore } from "../../store/dataset.store"

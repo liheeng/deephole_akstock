@@ -314,7 +314,7 @@ export function ExportDataPage() {
                                         }))
                                         : []
                                 }
-                                pagination={false}
+                                pagination={true}
                                 disableColumnMenu
                                 disableColumnSorting
                             />

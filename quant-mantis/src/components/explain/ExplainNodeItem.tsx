@@ -31,12 +31,12 @@ function matchNode(node: PlanNode, keyword: string): boolean {
 
     if (node.name.toLowerCase().includes(k)) return true
     if (node.rows?.toString().includes(k)) return true   // ✅ 修复
-    if (node.extra.some(e => e.toLowerCase().includes(k))) return true
+    if (node.extra?.some(e => e.toLowerCase().includes(k))) return true
 
-    return node.children.some(c => matchNode(c, keyword))
+    return node.children?.some(c => matchNode(c, keyword)) ?? false
 }
 
-export default function ExplainNode({
+export default function ExplainNodeItem({
     node,
     keyword,
     nodeFontSize,
@@ -104,7 +104,7 @@ export default function ExplainNode({
                 <Box sx={{ mt: 0.5 }}>
 
                     {/* extra */}
-                    {node.extra.map((e, i) => (
+                    {node.extra?.map((e, i) => (
                         <Typography
                             key={i}
                             sx={{
@@ -119,8 +119,8 @@ export default function ExplainNode({
                     ))}
 
                     {/* children */}
-                    {node.children.map((c, i) => (
-                        <ExplainNode
+                    {node.children?.map((c, i) => (
+                        <ExplainNodeItem
                             key={i}
                             node={c}
                             keyword={keyword}

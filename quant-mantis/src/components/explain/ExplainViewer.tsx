@@ -5,7 +5,7 @@ import {
 } from "@mui/material"
 
 import { parseDuckDBExplain } from "../../utils/parseDuckDBExplain"
-import ExplainNode from "./ExplainNode"
+import ExplainNodeItem from "./ExplainNodeItem"
 import { analyzeExplain } from "../../utils/explainAnalyzer"
 import ExplainHints from "./ExplainHints"
 
@@ -26,7 +26,7 @@ export default function ExplainViewer({
     const [keyword, setKeyword] = useState("")
 
     const tree = useMemo(() => parseDuckDBExplain(text), [text])
-    const hints = analyzeExplain(tree)
+    const hints = analyzeExplain(tree as any)
 
     return (
         <Box sx={{ display: "flex", overflow: "auto", flex:1, maxHeight: "100%", flexDirection: "column", height: "100%" }}>
@@ -56,7 +56,7 @@ export default function ExplainViewer({
                 }}
             >
                 {tree.map((n, i) => (
-                    <ExplainNode
+                    <ExplainNodeItem
                         key={i}
                         node={n}
                         keyword={keyword}

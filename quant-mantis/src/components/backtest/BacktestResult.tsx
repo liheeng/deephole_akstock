@@ -181,8 +181,8 @@ export default function BacktestResult({ }: any) {
             times = [],
             average = [],
             details = {},
-            best_sharpe,
-            best_return,
+            // best_sharpe,
+            // best_return,
             meta
         } = equity
 

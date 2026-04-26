@@ -1,6 +1,7 @@
 import { Box, Typography, Chip } from "@mui/material"
 import type { PlanNode } from "../../utils/parseDuckDBExplain"
 import { getNodeStyle } from "./Explain"
+import { asNumber } from "../../utils/Strings"
 
 export default function ExplainTree({
     node,
@@ -11,7 +12,7 @@ export default function ExplainTree({
     nodeFontSize?: number
     detailFontSize?: number
 }) {
-    const style = getNodeStyle(node.name, node.rows)
+    const style = getNodeStyle(node.name, asNumber(node.rows) || 0)
     
     return (
         <Box sx={{ ml: 1.5, pl: 2, borderLeft: "1px dashed rgba(255,255,255,0.2)" }}>
@@ -49,7 +50,7 @@ export default function ExplainTree({
             </Box>
 
             {/* ===== Extra Info ===== */}
-            {node.extra.length > 0 && (
+            {node.extra && node.extra.length && node.extra.length > 0 && (
                 <Box sx={{ mb: 1 }}>
                     {node.extra.slice(0, 5).map((e, i) => (
                         <Typography
@@ -69,7 +70,7 @@ export default function ExplainTree({
             )}
 
             {/* ===== Children ===== */}
-            {node.children.map((c, i) => (
+            {node.children?.map((c, i) => (
                 <ExplainTree
                     key={i}
                     node={c}
