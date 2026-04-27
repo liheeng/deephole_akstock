@@ -22,8 +22,8 @@ import { apiClient } from "../../api/Client";
 
 
 const jobTypeMap = {
-    cn_daily_sync: "美股日线同步",
-    hk_daily_sync: "美股日线同步",
+    cn_daily_sync: "A股日线同步",
+    hk_daily_sync: "港股日线同步",
     us_daily_sync: "美股日线同步",
 };
 

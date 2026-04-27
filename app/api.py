@@ -278,7 +278,7 @@ def export_preview(req: dict):
     sql = build_sql(_req)
     validate_sql(sql)
 
-    with closing(db_controller._get_connection(read_only=True)) as con:
+    with closing(db_controller._get_connection()) as con:
         # 查询数据
         
         cursor = con.execute(sql)
