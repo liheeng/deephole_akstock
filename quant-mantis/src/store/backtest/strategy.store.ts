@@ -50,54 +50,42 @@ export const useStrategyStore = create<StrategyState>((set, get) => ({
     strategies: {},
     strategyIds: [],
 
-    // initialized: false,
-
-    // init: (strategies: Strategy[] = []) => {
-
-    //     if (!Array.isArray(strategies)) {
-    //         console.warn("init strategies is not array", strategies)
-    //         return
-    //     }
-
-    //     const valid = strategies.filter(s => {
-    //         if (!s?.id) {
-    //             console.warn("invalid strategy", s)
-    //             return false
-    //         }
-    //         return true
-    //     })
-
-    //     set(() => ({
-    //         strategies: Object.fromEntries(
-    //             valid.map(s => [s.id, { ...s }])
-    //         ),
-    //         // strategies: Object.fromEntries(
-    //         //     valid.map(s => [s.id, JSON.parse(JSON.stringify(s))])
-    //         // ),
-    //         strategyIds: valid.map(s => s.id)
-    //     }))
-    // },
-
     init: (strategies: Strategy[] = []) => {
-
-        // const state = get()
-
-        // if (state.initialized) return
 
         if (!Array.isArray(strategies)) {
             console.warn("init strategies is not array", strategies)
             return
         }
 
+        const safeParseArray = (val: any) => {
+            try {
+                const parsed = typeof val === "string" ? JSON.parse(val) : val
+                return Array.isArray(parsed) ? parsed : []
+            } catch (e) {
+                console.warn("invalid factor_ids:", val)
+                return []
+            }
+        }
+
         const valid = strategies.filter(s => s?.id)
-        
 
         set(() => ({
             strategies: Object.fromEntries(
-                valid.map(s => [s.id, { ...s, factorIds: JSON.parse(s.factor_ids || "[]") || [] , signalId: s.signal_id }])
+                valid.map(s => [
+                    s.id,
+                    {
+                        ...s,
+
+                        // ✅ 安全转换
+                        factorIds: s.factorIds ? s.factorIds : safeParseArray(s.factor_ids),
+
+                        // ✅ snake_case → camelCase
+                        signalId: s.signalId ?? s.signal_id ?? undefined,
+                    }
+                ])
             ),
+
             strategyIds: valid.map(s => s.id),
-            // initialized: true
         }))
     },
     createStrategy: (mode: StrategyMode = "ts") => {

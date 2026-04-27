@@ -151,6 +151,7 @@ export const useBacktestStore = create<BacktestState>((set, get) => ({
                             threshold: 0.5
                         },
                         factorIds: [factorId],
+                        // factor_ids: JSON.stringify([factorId]),
                         signalId: undefined, 
                     }
                 },
