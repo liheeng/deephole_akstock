@@ -8,7 +8,7 @@ from tqdm import tqdm
 from datetime import datetime, timedelta
 
 # ====================== 核心配置 ======================
-DB_PATH = "baostock_data.duckdb"
+DB_PATH = "./data/baostock_data.duckdb"
 START_DATE = "2000-01-01"
 END_DATE = "2026-04-24"
 SLEEP_MIN = 2 
