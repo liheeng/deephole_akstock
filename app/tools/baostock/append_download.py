@@ -11,15 +11,14 @@ from datetime import datetime, timedelta
 DB_PATH = "baostock_data.duckdb"
 START_DATE = "2000-01-01"
 END_DATE = "2026-04-24"
-SLEEP_MIN = 1
-SLEEP_MAX = 2.5
+SLEEP_MIN = 2 
+SLEEP_MAX = 4
 
 # 日志
 logger.add("baostock_download.log", rotation="100 MB", encoding="utf-8", enqueue=True)
-
-
 # ====================== 数据库初始化 ======================
 def init_database():
+    
     con = duckdb.connect(DB_PATH)
     # 日K表
     con.execute("""
@@ -42,39 +41,96 @@ def init_database():
     con.close()
 
 
+def get_max_dates(con, code):
+    # kline 最大日期
+    kline_max = con.execute(
+        "SELECT MAX(date) FROM kline_day WHERE code = ?",
+        [code]
+    ).fetchone()[0]
+
+    # 复权因子最大日期
+    factor_max = con.execute(
+        "SELECT MAX(dividOperateDate) FROM adjust_factor WHERE code = ?",
+        [code]
+    ).fetchone()[0]
+
+    return kline_max, factor_max
+
+
 # ====================== 核心处理（复权因子优先） ======================
 def process_stock(code, con):
+    kline_max, factor_max = get_max_dates(con, code)
     # -------- 1. 优先处理：复权因子（严格按列名插入，杜绝顺序错误） --------
     try:
-        con.execute("DELETE FROM adjust_factor WHERE code = ?", [code])
+        # ✅ 如果已有数据
+        if factor_max:
+            if factor_max >= END_DATE:
+                # ✅ 已经是最新 → 直接跳过（不要重刷！）
+                logger.info(f"⏭️ {code} | 复权因子已最新，跳过")
+                return
+            else:
+                # ❗ 不是最新 → 必须全量更新（不能增量）
+                logger.info(f"♻️ {code} | 复权因子全量更新（因子可能变动）")
+                con.execute("DELETE FROM adjust_factor WHERE code = ?", [code])
+
+        # ✅ 全量拉取
         rs = bs.query_adjust_factor(code, START_DATE, END_DATE)
         df = rs.get_data()
+
         if not df.empty:
             df["code"] = code
             con.register("tmp", df)
-            # ✅ 修复：指定列名插入，不依赖顺序
+
             con.execute("""
-                INSERT INTO adjust_factor (code, dividOperateDate, foreAdjustFactor, backAdjustFactor, adjustFactor)
-                SELECT code, dividOperateDate, foreAdjustFactor, backAdjustFactor, adjustFactor FROM tmp
+                INSERT INTO adjust_factor
+                (code, dividOperateDate, foreAdjustFactor, backAdjustFactor, adjustFactor)
+                SELECT code, dividOperateDate, foreAdjustFactor, backAdjustFactor, adjustFactor
+                FROM tmp
             """)
+
             con.unregister("tmp")
-            logger.info(f"📊 {code} | 复权因子保存成功: {len(df)}条")
+
+            logger.info(f"📊 {code} | 复权因子全量更新: {len(df)}条")
+
         else:
-            logger.info(f"📊 {code} | 复权因子：无数据")
+            logger.info(f"📊 {code} | 复权因子无数据")
+
     except Exception as e:
         logger.error(f"❌ {code} | 复权因子失败：{str(e)}")
 
     # -------- 2. 处理：日K数据（指定列名插入，核心修复！） --------
     try:
-        con.execute("DELETE FROM kline_day WHERE code = ?", [code])
+        kline_start = START_DATE
+
+        if kline_max:
+            next_day = (
+                datetime.strptime(kline_max, "%Y-%m-%d") + timedelta(days=1)
+            ).strftime("%Y-%m-%d")
+
+            kline_start = next_day
+
+            # ✅ 核心新增判断（推荐 >=）
+            if kline_start >= END_DATE:
+                logger.info(f"⏭️ {code} | 日K已最新，跳过 | max={kline_max}")
+                return
+
         fields = "date,open,high,low,close,preclose,volume,amount,adjustflag,turn,tradestatus,pctChg,peTTM,pbMRQ,psTTM,pcfNcfTTM"
-        rs = bs.query_history_k_data_plus(code, fields, START_DATE, END_DATE, "d", "3")
+
+        rs = bs.query_history_k_data_plus(
+            code,
+            fields,
+            kline_start,
+            END_DATE,
+            "d",
+            "3"
+        )
+
         df = rs.get_data()
+
         if df.empty:
             return
 
-        # 清洗空值
-        # ✅ 一步到位清洗
+        # 数据清洗（保持你原逻辑）
         df = df.replace("", None)
 
         numeric_cols = [
@@ -85,19 +141,27 @@ def process_stock(code, con):
 
         for col in numeric_cols:
             df[col] = pd.to_numeric(df[col], errors="coerce")
-        
+
         df["tradestatus"] = df["tradestatus"].replace("", None)
         df["code"] = code
 
         con.register("tmp", df)
-        # ✅ 终极修复：严格指定列名插入，彻底解决类型转换错误
+
         con.execute("""
-            INSERT INTO kline_day 
-            (code, date, open, high, low, close, preclose, volume, amount, adjustflag, turn, tradestatus, pctChg, peTTM, pbMRQ, psTTM, pcfNcfTTM)
-            SELECT code, date, open, high, low, close, preclose, volume, amount, adjustflag, turn, tradestatus, pctChg, peTTM, pbMRQ, psTTM, pcfNcfTTM FROM tmp
+            INSERT INTO kline_day
+            (code, date, open, high, low, close, preclose,
+            volume, amount, adjustflag, turn, tradestatus,
+            pctChg, peTTM, pbMRQ, psTTM, pcfNcfTTM)
+            SELECT code, date, open, high, low, close, preclose,
+                volume, amount, adjustflag, turn, tradestatus,
+                pctChg, peTTM, pbMRQ, psTTM, pcfNcfTTM
+            FROM tmp
         """)
+
         con.unregister("tmp")
-        logger.success(f"✅ {code} | 日K保存成功：{len(df)} 条")
+
+        logger.success(f"✅ {code} | 日K增量更新：{len(df)} 条 | 起始={kline_start}")
+
     except Exception as e:
         logger.error(f"❌ {code} | 日K失败：{str(e)}")
 

@@ -13,7 +13,10 @@ export default function FactorList({ strategyId }: any) {
     )
 
     // ✅ 避免每次 render 生成新数组引用（可选优化
-    const ids = useMemo(() => factorIds || [], [factorIds])
+    const ids = useMemo(() => {
+        if (Array.isArray(factorIds)) return factorIds
+        return []
+    }, [factorIds])
 
     return (
         <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>

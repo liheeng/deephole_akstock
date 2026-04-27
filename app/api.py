@@ -19,7 +19,7 @@ from datetime import datetime, date
 import nanoid
 
 from fastapi.middleware.cors import CORSMiddleware
-from app.api_config import CORS_CONFIG
+from api_config import CORS_CONFIG
 
 from utils.log_manager import init_logger
 from core.task_manager import task_manager
@@ -40,7 +40,7 @@ from vectorbt_test.engine.data_provider import DataProvider
 from vectorbt_test.engine.portfolio_builder import PortfolioBuilder
 from vectorbt_test.engine.init import load_register_nodes
 from vectorbt_test.portfolios.signal_strategy_portfolio import StrategyOp
-from app.numba_settings import allocate_cpu_to_numba_vbt
+from numba_settings import allocate_cpu_to_numba_vbt
 # !!! Register executors, any new executor needs to be import here,
 # it is very important,otherwise the API won't know how to handle
 # the incoming jobs!!!

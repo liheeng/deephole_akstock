@@ -4,7 +4,7 @@ FROM node:20 AS frontend-builder
 WORKDIR /frontend
 
 COPY quant-mantis/package.json quant-mantis/package-lock.json ./
-RUN npm install
+RUN npm install --registry=https://mirrors.cloud.tencent.com/npm/
 
 COPY quant-mantis/ .
 
@@ -26,7 +26,8 @@ RUN curl -L https://github.com/aptible/supercronic/releases/latest/download/supe
     chmod +x /usr/local/bin/supercronic
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# RUN pip install --no-cache-dir -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn
+RUN pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn
 
 COPY app/ /app/
 

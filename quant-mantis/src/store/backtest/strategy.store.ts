@@ -9,7 +9,9 @@ export interface Strategy {
     name: string
 
     factorIds: string[]
+    factor_ids?: string
     signalId?: string
+    signal_id?: string
 
     config: {
         mode: StrategyMode
@@ -24,7 +26,7 @@ interface StrategyState {
     strategies: Record<string, Strategy>
     strategyIds: string[]
 
-    initialized: boolean
+    // initialized: boolean
 
     init: (strategies: Strategy[]) => void
 
@@ -48,7 +50,7 @@ export const useStrategyStore = create<StrategyState>((set, get) => ({
     strategies: {},
     strategyIds: [],
 
-    initialized: false,
+    // initialized: false,
 
     // init: (strategies: Strategy[] = []) => {
 
@@ -78,9 +80,9 @@ export const useStrategyStore = create<StrategyState>((set, get) => ({
 
     init: (strategies: Strategy[] = []) => {
 
-        const state = get()
+        // const state = get()
 
-        if (state.initialized) return
+        // if (state.initialized) return
 
         if (!Array.isArray(strategies)) {
             console.warn("init strategies is not array", strategies)
@@ -88,13 +90,14 @@ export const useStrategyStore = create<StrategyState>((set, get) => ({
         }
 
         const valid = strategies.filter(s => s?.id)
+        
 
         set(() => ({
             strategies: Object.fromEntries(
-                valid.map(s => [s.id, { ...s }])
+                valid.map(s => [s.id, { ...s, factorIds: JSON.parse(s.factor_ids || "[]") || [] , signalId: s.signal_id }])
             ),
             strategyIds: valid.map(s => s.id),
-            initialized: true
+            // initialized: true
         }))
     },
     createStrategy: (mode: StrategyMode = "ts") => {

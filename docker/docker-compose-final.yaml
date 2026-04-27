@@ -12,6 +12,7 @@ services:
       - ${LOG_VOLUME}:/logs
     restart: "no"
     environment:
+      - PYTHONPATH=/app 
       - ENABLE_CRON=false
 
   deephole_stock_api_service:
@@ -23,6 +24,7 @@ services:
       - ${DATA_VOLUME}:/data
       - ${LOG_VOLUME}:/logs
     environment:
+      - PYTHONPATH=/app 
       - TZ=${TIME_ZONE}
       - API_SERVICE_NAME=deephole_stock_api_service
       - ENABLE_CRON=false
@@ -44,6 +46,7 @@ services:
       - ${DATA_VOLUME}:/data
       - ${LOG_VOLUME}:/logs
     environment:
+      - PYTHONPATH=/app 
       - TZ=${TIME_ZONE}
       - API_SERVICE_NAME=deephole_stock_api_service
       - API_PORT=${API_PORT}
