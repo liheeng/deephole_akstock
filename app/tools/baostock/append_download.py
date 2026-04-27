@@ -5,17 +5,18 @@ import time
 import random
 from loguru import logger
 from tqdm import tqdm
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 # ====================== 核心配置 ======================
 DB_PATH = "./data/baostock_data.duckdb"
 START_DATE = "2000-01-01"
 END_DATE = "2026-04-24"
-SLEEP_MIN = 2 
-SLEEP_MAX = 4
+SLEEP_MIN = 1.5
+SLEEP_MAX = 3
 
 # 日志
-logger.add("baostock_download.log", rotation="100 MB", encoding="utf-8", enqueue=True)
+logger.add("./logs/baostock_download.log", rotation="100 MB", encoding="utf-8", enqueue=True)
+
 # ====================== 数据库初始化 ======================
 def init_database():
     
@@ -39,6 +40,26 @@ def init_database():
         )
     """)
     con.close()
+
+
+def is_today_trading_day():
+    # 今天日期字符串，格式 YYYY-MM-DD
+    today = date.today().strftime("%Y-%m-%d")
+
+    # 登录（不用注册）
+    # 查询单天交易日历
+    rs = bs.query_trade_dates(start_date=today, end_date=today)
+    if rs.error_code != '0':
+        print("query_trade_dates 失败：", rs.error_msg)
+        bs.logout()
+        return False
+
+    df = rs.get_data()
+    # is_trading_day 是 '1' 表示交易日
+    if not df.empty and df.iloc[0]['is_trading_day'] == '1':
+        return True
+    else:
+        return False
 
 
 def get_max_dates(con, code):
@@ -167,7 +188,7 @@ def process_stock(code, con):
 
 
 # ====================== 自动获取有效交易日 ======================
-def get_recent_trade_day():
+def get_recent_trade_day(_date=None):
     today = datetime.now()
     for i in range(1, 30):
         day = (today - timedelta(days=i)).strftime("%Y-%m-%d")
@@ -175,16 +196,25 @@ def get_recent_trade_day():
         df = rs.get_data()
         if not df.empty and df.iloc[0]["is_trading_day"] == "1":
             return day
-    return "2026-04-24"
+    return _date
 
 
 # ====================== 主程序（反序下载） ======================
 def main():
     init_database()
     bs.login()
-    END_DATE = get_recent_trade_day()
-    # 获取股票列表 + 反序（你的要求）
+    if not is_today_trading_day():
+        logger.info("⏭️ 今日无交易日，跳过")
+        return
+    
+    logger.info("✅ 今日交易日，开始下载")
+    
+    # 获取最近交易日
+    END_DATE = get_recent_trade_day(datetime.now().strftime("%Y-%m-%d"))
+
+    # 获取股票列表
     stock_df = bs.query_all_stock(day=END_DATE).get_data()
+    # revert stock_df
     # codes = stock_df["code"].tolist()[::-1]
     codes = stock_df["code"].tolist()
     # logger.info(f"📈 总股票数：{len(codes)} | 已反序")
@@ -201,6 +231,7 @@ def main():
     con.close()
     bs.logout()
     logger.info("🎉 全部完成！")
+
 
 if __name__ == "__main__":
     main()
