@@ -136,3 +136,7 @@ code {
 .gutter:hover {
   background-color: #555;
 }
+
+.xterm {
+  text-align: left !important;
+}

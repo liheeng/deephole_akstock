@@ -1,22 +1,26 @@
 # app/api.py
 
 import os
+import pty
+import asyncio
+import json
 import time
+import paramiko
+import docker
 from typing import Optional, List, Any, Dict
 from contextlib import asynccontextmanager, closing
 from fastapi import FastAPI, HTTPException, WebSocket, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse
-import subprocess
-import asyncio
 from pydantic import BaseModel
 import pandas as pd
 import numpy as np
 import traceback
 import re
-import json
 from datetime import datetime, date
 import nanoid
+from starlette.websockets import WebSocketDisconnect
+import fcntl
 
 from fastapi.middleware.cors import CORSMiddleware
 from api_config import CORS_CONFIG
@@ -77,6 +81,7 @@ def init():
         allocate_cpu_to_numba_vbt()
     except Exception as e:
         logger.error(f"allocate numba and vbt cpu cores is failed, error: str({e})")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -991,35 +996,242 @@ def update_backtest_config(config: BacktestConfig):
             detail=f"错误: {str(e)}\n{traceback.format_exc()}"
         )
 
-@app.websocket("/ws/terminal/{container}")
-async def terminal_ws(websocket: WebSocket, container: str):
 
-    await websocket.accept()
+async def handle_docker(ws, container_name):
+    client = docker.from_env()
+    container = client.containers.get(container_name)
 
-    # 启动 docker shell
-    process = subprocess.Popen(
-        ["docker", "exec", "-i", container, "/bin/sh"],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        bufsize=1
+    exec_id = client.api.exec_create(
+        container.id,
+        cmd="/bin/bash",
+        tty=True,
+        stdin=True
     )
 
-    async def read_output():
-        while True:
-            line = process.stdout.readline()
-            if line:
-                await websocket.send_text(line)
-            await asyncio.sleep(0.01)
+    sock = client.api.exec_start(exec_id, tty=True, socket=True)
 
-    asyncio.create_task(read_output())
+    async def read():
+        while True:
+            data = sock.recv(1024)
+            if not data:
+                break
+            await ws.send_text(data.decode(errors="ignore"))
+
+    async def write():
+        while True:
+            msg = await ws.receive_text()
+
+            if msg.startswith("{"):
+                data = json.loads(msg)
+                if data.get("type") == "resize":
+                    client.api.exec_resize(exec_id, data["rows"], data["cols"])
+                continue
+
+            sock.send(msg.encode())
+
+    await asyncio.gather(read(), write())
+
+
+TERMINAL_TARGETS = [
+    {
+        "id": "local",
+        "name": "Local Host",
+        "type": "host",
+        "mode": "pty",   # pty / ssh
+    },
+    {
+        "id": "server1",
+        "name": "Remote Server",
+        "type": "host",
+        "mode": "ssh",
+        "host": "127.0.0.1",
+        "username": "your_user",
+        "password": "your_pass",
+    },
+]
+
+
+@app.get("/terminal/targets")
+def get_targets():
+    import docker
+
+    result = TERMINAL_TARGETS.copy()
 
     try:
-        while True:
-            cmd = await websocket.receive_text()
-            process.stdin.write(cmd + "\n")
-            process.stdin.flush()
+        client = docker.from_env()
+        containers = client.containers.list()
 
-    except Exception:
-        process.kill()
+        for c in containers:
+            result.append({
+                "id": f"docker:{c.name}",
+                "name": f"🐳 {c.name}",
+                "type": "docker",
+                "container": c.name,
+            })
+    except Exception as e:
+        print("docker not available", e)
+
+    return result
+
+
+async def resolve_target(target_id):
+    # 1️⃣ 静态 host
+    for t in TERMINAL_TARGETS:
+        if t["id"] == target_id:
+            return t
+
+    # 2️⃣ docker
+    if target_id.startswith("docker:"):
+        name = target_id.split(":", 1)[1]
+        return {
+            "type": "docker",
+            "container": name
+        }
+
+    return None
+
+
+async def handle_pty(ws: WebSocket):
+    pid, fd = pty.fork()
+
+    if pid == 0:
+        # 子进程：启动 shell
+        os.execvp("bash", ["bash"])
+
+    else:
+        # 👉 设置非阻塞（关键！！）
+        flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+        fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+
+        async def read():
+            try:
+                while True:
+                    await asyncio.sleep(0.01)  # 👉 防止CPU爆炸
+
+                    try:
+                        data = os.read(fd, 1024)
+                        if data:
+                            await ws.send_text(data.decode(errors="ignore"))
+                    except BlockingIOError:
+                        continue
+                    except OSError:
+                        break
+            except Exception as e:
+                print("read error:", e)
+
+        async def write():
+            try:
+                while True:
+                    msg = await ws.receive_text()
+
+                    # 👉 resize 支持
+                    if msg.startswith("{"):
+                        try:
+                            data = json.loads(msg)
+                            if data.get("type") == "resize":
+                                import termios, struct
+                                fcntl.ioctl(
+                                    fd,
+                                    termios.TIOCSWINSZ,
+                                    struct.pack("HHHH", data["rows"], data["cols"], 0, 0)
+                                )
+                                continue
+                        except:
+                            pass
+
+                    os.write(fd, msg.encode())
+
+            except WebSocketDisconnect:
+                print("client disconnected")
+            except Exception as e:
+                print("write error:", e)
+
+        await asyncio.gather(read(), write())
+
+        # 👉 清理
+        try:
+            os.close(fd)
+        except:
+            pass
+
+
+async def handle_ssh(ws, target):
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    client.connect(
+        hostname=target["host"],
+        username=target["username"],
+        password=target["password"],
+    )
+
+    channel = client.invoke_shell()
+
+    async def read():
+        while True:
+            if channel.recv_ready():
+                data = channel.recv(1024)
+                await ws.send_text(data.decode(errors="ignore"))
+            await asyncio.sleep(0.01)
+
+    async def write():
+        while True:
+            msg = await ws.receive_text()
+
+            # resize（简单版）
+            if msg.startswith("{"):
+                continue
+
+            channel.send(msg)
+
+    await asyncio.gather(read(), write())
+
+
+async def handle_host(ws, target):
+    mode = target.get("mode", "pty")
+
+    if mode == "ssh":
+        await handle_ssh(ws, target)
+    else:
+        await handle_pty(ws)
+
+
+# @app.websocket("/ws/terminal")
+# async def terminal(ws: WebSocket):
+#     origin = ws.headers.get("origin")
+#     print(origin)
+
+#     await ws.accept()
+
+#     target_id = ws.query_params.get("target")
+
+#     target = await resolve_target(target_id)
+
+#     if not target:
+#         await ws.send_text("Invalid target")
+#         await ws.close()
+#         return
+
+#     if target["type"] == "docker":
+#         await handle_docker(ws, target["container"])
+#     else:
+#         await handle_host(ws, target)
+
+@app.websocket("/ws/terminal")
+async def terminal(ws: WebSocket):
+    origin = ws.headers.get("origin")
+    print(origin)
+
+    await ws.accept()  # 👈 只在这里调用一次
+
+    # target = ws.query_params.get("target")
+    target_id = ws.query_params.get("target")
+    target = await resolve_target(target_id)
+
+    if target and (target.get("type") == "local" or target.get("type") == "host"):
+        await handle_host(ws, target)
+    elif target and target.get("type") == "docker":
+        await handle_docker(ws, target)
+    else:
+        await ws.send_text("invalid target")
+        await ws.close()

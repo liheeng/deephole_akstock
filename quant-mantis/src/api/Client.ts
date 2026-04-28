@@ -209,3 +209,13 @@ export async function fetchBacktestResults(
         return null;
     }
 }
+
+export async function fetchTerminalTargets(): Promise<any | null> {
+    try {
+        const res = await apiClient.get("/terminal/targets");
+        return res.data
+    } catch (err) {
+        console.error("获取terminal targets失败", err);
+        return null;
+    }
+}

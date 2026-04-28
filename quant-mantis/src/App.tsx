@@ -25,6 +25,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { initRegisteredNodes } from "./api/Client";
 import MenuOpenIcon from "@mui/icons-material/MenuOpen";
 import MenuIcon from "@mui/icons-material/Menu";
+import TerminalIcon from "@mui/icons-material/Terminal";
+import TerminalPage from "./pages/TerminalPage";
 
 
 const theme = createTheme({
@@ -41,6 +43,8 @@ const menuItems = [
     { text: 'SQL执行器', icon: <StorageOutlined />, path: '/sql_executor' },
     { text: '任务监视', icon: <AssignmentOutlined />, path: '/tasks_monitor' },
     { text: '导出数据', icon: <StorageOutlined />, path: '/export_data' },
+// ✅ 新增
+    { text: 'Web终端', icon: <TerminalIcon />, path: '/terminal' },
 ];
 
 function MainLayout({ children }: { children: React.ReactNode }) {
@@ -179,6 +183,7 @@ export default function App() {
                                 <Route path="/sql_executor" element={<SqlExecutor />} />
                                 <Route path="/tasks_monitor" element={<TasksMonitorPage />} />
                                 <Route path="/export_data" element={<ExportDataPage />} />
+                                <Route path="/terminal" element={<TerminalPage />} />
                             </Routes>
                         </MainLayout>
                     </BrowserRouter>
