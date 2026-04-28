@@ -3,7 +3,7 @@ import axios from 'axios';
 // Init nodes
 import { NodeRegistry } from "../model/dsl_node/node_registry";
 import { useNodes } from "../hooks/useNodes"
-import { API_BASE, CONTENT_TYPE, CORS_CONFIG } from "../configs/apiConfig"
+import { API_URL_BASE, CONTENT_TYPE, CORS_CONFIG } from "../configs/apiConfig"
 import { type Dataset } from "../store/dataset.store";
 import { type BacktestState } from "../store/backtest/backtest.store";
 import { type BacktestResultState } from "../store/backtest/backtestresult.store";
@@ -12,7 +12,7 @@ import { useFactorStore, type Factor } from '../store/backtest/factor.store';
 import { useSignalStore, type Signal } from '../store/backtest/signal.store';
 
 export const apiClient = axios.create({
-    baseURL: API_BASE,
+    baseURL: API_URL_BASE + "/api",
 });
 // 2. 跨域关键：允许携带 cookie / token 凭证
 apiClient.defaults.withCredentials = CORS_CONFIG.allow_credentials || false;

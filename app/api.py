@@ -100,7 +100,14 @@ if is_running_in_docker():
     app.mount("/terminal", StaticFiles(directory="terminal", html=True), name="terminal")
 
 
-@app.get("/sync_daily/{sync_type}")
+@app.on_event("startup")
+def debug_routes():
+    logger.info("\n===== ROUTES =====")
+    for r in app.routes:
+        logger.info(r.path)
+
+
+@app.get("/api/sync_daily/{sync_type}")
 def call_task(
     sync_type: str,
     # ✅ 正确：GET 请求用 Query 参数接收
@@ -120,7 +127,7 @@ def call_task(
         raise HTTPException(status_code=500, detail=f"错误: {str(e)}")
 
 
-@app.get("/tasks")
+@app.get("/api/tasks")
 def list_tasks(limit: int = 20):
     try:
         tasks = task_manager.list_tasks(limit)
@@ -133,12 +140,12 @@ def list_tasks(limit: int = 20):
         )
 
 
-@app.get("/tasks/{task_id}")
+@app.get("/api/tasks/{task_id}")
 def get_task(task_id: str):
     return task_manager.load_task(task_id)
 
 
-@app.get("/logs/tail")
+@app.get("/api/logs/tail")
 def tail_logs(n: int = 50):
 
     path = "/logs/default.log" if is_running_in_docker() else "./logs/default.log"
@@ -156,7 +163,7 @@ class SQLQuery(BaseModel):
     sql: str
 
 
-@app.post("/execute_sql")
+@app.post("/api/execute_sql")
 def execute_sql(query: SQLQuery):
     try:
         logger.info("received request for executing sql: %s", query.sql)
@@ -274,7 +281,7 @@ def validate_req(req: dict):
             raise ValueError("limit过大")
         
 
-@app.post("/export/preview")
+@app.post("/api/export/preview")
 def export_preview(req: dict):
     validate_req(req)
     _req = {**req}
@@ -303,7 +310,7 @@ def export_preview(req: dict):
         }
 
 
-@app.post("/export/stream")
+@app.post("/api/export/stream")
 async def export_stream(req):
     validate_req(req)
     cols = req["columns"]
@@ -350,7 +357,7 @@ async def export_stream(req):
         return {"status": "error", "message": str(e)}
 
 
-@app.get("/nodes")
+@app.get("/api/nodes")
 def get_nodes():
     nodes = NodeRegistry.to_dict()
     # logger.info(f"nodes: {nodes}")
@@ -449,7 +456,7 @@ def save_backtest_result(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/backtest")
+@app.post("/api/backtest")
 def run_backtest(req: ApiBacktestRequest):
     try:
         # 1. 构建 Portfolio
@@ -545,7 +552,7 @@ def run_backtest(req: ApiBacktestRequest):
         raise HTTPException(status_code=500, detail=f"错误: {str(e)}\n{traceback.format_exc()}")
 
 
-@app.get("/backtest/results", response_model=List[BacktestResultRow])
+@app.get("/api/backtest/results", response_model=List[BacktestResultRow])
 def query_backtest_results(
     dataset_config_id: Optional[str] = None,
     portfolio_name: Optional[str] = None
@@ -651,7 +658,7 @@ class DatasetCreateRequest(BaseModel):
 # ==============================
 # 自动创建 or 更新 dataset
 # ==============================
-@app.get("/backtest/datasets", response_model=List[Any])
+@app.get("/api/backtest/datasets", response_model=List[Any])
 def backtest_fetch_datasets():
     try:
         with DuckDBTransaction(db_controller) as tx:
@@ -703,7 +710,7 @@ def backtest_fetch_datasets():
             detail=f"错误: {str(e)}\n{traceback.format_exc()}"
         )
     
-@app.post("/backtest/dataset")
+@app.post("/api/backtest/dataset")
 def backtest_update_dataset(req: DatasetCreateRequest):
 
     now = datetime.now()
@@ -772,7 +779,7 @@ class BacktestConfig(BaseModel):
 # ==============================
 # 1. 获取所有回测配置 + 关联3张表数据
 # ==============================
-@app.get("/backtest/configs", response_model=List[BacktestConfig])
+@app.get("/api/backtest/configs", response_model=List[BacktestConfig])
 def get_all_backtest_configs():
     conn = db_controller
     try:
@@ -886,7 +893,7 @@ def get_all_backtest_configs():
 # ==============================
 # 2. 自动创建或更新 backtest config（含子表保存）
 # ==============================
-@app.post("/backtest/config")
+@app.post("/api/backtest/config")
 def update_backtest_config(config: BacktestConfig):
     if not config.id:
         raise HTTPException(status_code=400, detail="Backtest(Portfolio) id 不能为空")
@@ -1051,10 +1058,8 @@ TERMINAL_TARGETS = [
 ]
 
 
-@app.get("/terminal/targets")
-def get_targets():
-    import docker
-
+@app.get("/api/terminal/targets")
+def get_total_targets():
     result = TERMINAL_TARGETS.copy()
 
     try:
@@ -1196,29 +1201,7 @@ async def handle_host(ws, target):
         await handle_pty(ws)
 
 
-# @app.websocket("/ws/terminal")
-# async def terminal(ws: WebSocket):
-#     origin = ws.headers.get("origin")
-#     print(origin)
-
-#     await ws.accept()
-
-#     target_id = ws.query_params.get("target")
-
-#     target = await resolve_target(target_id)
-
-#     if not target:
-#         await ws.send_text("Invalid target")
-#         await ws.close()
-#         return
-
-#     if target["type"] == "docker":
-#         await handle_docker(ws, target["container"])
-#     else:
-#         await handle_host(ws, target)
-
-
-@app.websocket("/ws/terminal")
+@app.websocket("/api/ws/terminal")
 async def terminal(ws: WebSocket):
     origin = ws.headers.get("origin")
     print(origin)
@@ -1249,3 +1232,16 @@ async def terminal(ws: WebSocket):
     else:
         await ws.send_text("invalid target")
         await ws.close()
+
+
+@app.get("/api/debug/routes")
+def routes():
+    return [r.path for r in app.routes]
+
+@app.get("/api/whoami")
+def whoami():
+    import os, socket
+    return {
+        "pid": os.getpid(),
+        "host": socket.gethostname()
+    }

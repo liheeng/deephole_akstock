@@ -51,7 +51,7 @@ export default function WebTerminal({ target }: { target: any[] }) {
         termRef.current = term;
 
         const ws = new WebSocket(
-            `ws://localhost:8000/ws/terminal`
+            `ws://localhost:8000/api/ws/terminal`
         );
 
         wsRef.current = ws;
