@@ -38,9 +38,16 @@ export default function TerminalPage() {
     useEffect(() => {
         fetchTerminalTargets().then(res => {
             setTargets(res);
-            if (res.length) setSelectedId(res[0].id);
         });
     }, []);
+
+    useEffect(() => {
+        if (!targets.length) return;
+
+        const first = targets[0].id;
+        setSelectedId(first);
+        handleSelect(first);
+    }, [targets]);
 
     const handleSelect = (id: string) => {
         setSelectedId(id);
@@ -88,11 +95,11 @@ export default function TerminalPage() {
                     </MenuItem>
                 ))}
             </Select>
-            
-            
+
+
             {/* ✅ terminal */}
             {activeTarget && (
-                <WebTerminal target={activeTarget}/>
+                <WebTerminal target={activeTarget} />
             )}
 
             {/* ✅ SSH launcher */}
