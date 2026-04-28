@@ -10,12 +10,13 @@ from datetime import datetime, timedelta, date
 # ====================== 核心配置 ======================
 DB_PATH = "./data/baostock_data.duckdb"
 START_DATE = "2000-01-01"
-END_DATE = "2026-04-24"
+# END_DATE = "2026-04-24"
 SLEEP_MIN = 1.5
 SLEEP_MAX = 3
 
 # 日志
 logger.add("./logs/baostock_download.log", rotation="100 MB", encoding="utf-8", enqueue=True)
+
 
 # ====================== 数据库初始化 ======================
 def init_database():
@@ -62,7 +63,7 @@ def is_today_trading_day():
         return False
 
 
-def get_max_dates(con, code):
+def get_last_download_dates(con, code):
     # kline 最大日期
     kline_max = con.execute(
         "SELECT MAX(date) FROM kline_day WHERE code = ?",
@@ -78,24 +79,21 @@ def get_max_dates(con, code):
     return kline_max, factor_max
 
 
-# ====================== 核心处理（复权因子优先） ======================
-def process_stock(code, con):
-    kline_max, factor_max = get_max_dates(con, code)
-    # -------- 1. 优先处理：复权因子（严格按列名插入，杜绝顺序错误） --------
+def downlaod_factor(code, start, end, con, factor_max=None):
     try:
         # ✅ 如果已有数据
         if factor_max:
-            if factor_max >= END_DATE:
+            if factor_max >= end:
                 # ✅ 已经是最新 → 直接跳过（不要重刷！）
                 logger.info(f"⏭️ {code} | 复权因子已最新，跳过")
-                return
+                return False
             else:
                 # ❗ 不是最新 → 必须全量更新（不能增量）
                 logger.info(f"♻️ {code} | 复权因子全量更新（因子可能变动）")
                 con.execute("DELETE FROM adjust_factor WHERE code = ?", [code])
 
         # ✅ 全量拉取
-        rs = bs.query_adjust_factor(code, START_DATE, END_DATE)
+        rs = bs.query_adjust_factor(code, start, end)
         df = rs.get_data()
 
         if not df.empty:
@@ -111,17 +109,19 @@ def process_stock(code, con):
 
             con.unregister("tmp")
 
-            logger.info(f"📊 {code} | 复权因子全量更新: {len(df)}条")
+            logger.info(f"📊 {code} | 复权因子全量更新: {len(df)}条 | 开始日期: {start} | 结束日期: {end}")
 
+            return True
         else:
             logger.info(f"📊 {code} | 复权因子无数据")
-
+            return False
     except Exception as e:
         logger.error(f"❌ {code} | 复权因子失败：{str(e)}")
 
-    # -------- 2. 处理：日K数据（指定列名插入，核心修复！） --------
+
+def download_daily(code, start, end, con, kline_max=None):
     try:
-        kline_start = START_DATE
+        kline_start = start
 
         if kline_max:
             next_day = (
@@ -131,9 +131,9 @@ def process_stock(code, con):
             kline_start = next_day
 
             # ✅ 核心新增判断（推荐 >=）
-            if kline_start >= END_DATE:
+            if kline_start >= end:
                 logger.info(f"⏭️ {code} | 日K已最新，跳过 | max={kline_max}")
-                return
+                return False
 
         fields = "date,open,high,low,close,preclose,volume,amount,adjustflag,turn,tradestatus,pctChg,peTTM,pbMRQ,psTTM,pcfNcfTTM"
 
@@ -141,15 +141,20 @@ def process_stock(code, con):
             code,
             fields,
             kline_start,
-            END_DATE,
+            end,
             "d",
             "3"
         )
 
-        df = rs.get_data()
+        if rs is not None:
+            df = rs.get_data()
+        else:
+            logger.info(f"⏭️ {code} | 日K无数据，跳过")
+            return False
 
         if df.empty:
-            return
+            logger.info(f"⏭️ {code} | 日K无数据，跳过")
+            return False
 
         # 数据清洗（保持你原逻辑）
         df = df.replace("", None)
@@ -181,10 +186,24 @@ def process_stock(code, con):
 
         con.unregister("tmp")
 
-        logger.success(f"✅ {code} | 日K增量更新：{len(df)} 条 | 起始={kline_start}")
+        logger.success(f"✅ {code} | 日K增量更新：{len(df)} 条 | 起始={kline_start} | 结束={end}")
+
+        return True
 
     except Exception as e:
         logger.error(f"❌ {code} | 日K失败：{str(e)}")
+
+
+# ====================== 核心处理（复权因子优先） ======================
+def handle_download(code, start, end, con):
+    kline_max, factor_max = get_last_download_dates(con, code)
+
+    # -------- 1. 处理：日K数据（指定列名插入，核心修复！） --------
+    if not download_daily(code, start, end, con, kline_max):
+        return False
+
+    # -------- 2. 优先处理：复权因子（严格按列名插入，杜绝顺序错误） --------
+    downlaod_factor(code, start, end, con, factor_max)
 
 
 # ====================== 自动获取有效交易日 ======================
@@ -210,10 +229,10 @@ def main():
     logger.info("✅ 今日交易日，开始下载")
     
     # 获取最近交易日
-    END_DATE = get_recent_trade_day(datetime.now().strftime("%Y-%m-%d"))
+    last_trade_date = get_recent_trade_day(datetime.now().strftime("%Y-%m-%d"))
 
     # 获取股票列表
-    stock_df = bs.query_all_stock(day=END_DATE).get_data()
+    stock_df = bs.query_all_stock(day=last_trade_date).get_data()
     # revert stock_df
     # codes = stock_df["code"].tolist()[::-1]
     codes = stock_df["code"].tolist()
@@ -222,11 +241,14 @@ def main():
 
     con = duckdb.connect(DB_PATH)
     for code in tqdm(codes, desc="下载进度"):
-        # if code.startswith("sh.6") or code.startswith("sz.0"):
-        process_stock(code, con)
-        time.sleep(random.uniform(SLEEP_MIN, SLEEP_MAX))
-        # else:
-        #     continue
+        try:
+            # if code.startswith("sh.6") or code.startswith("sz.0"):
+            handle_download(code, START_DATE, last_trade_date, con)
+            time.sleep(random.uniform(SLEEP_MIN, SLEEP_MAX))
+            # else:
+            #     continue
+        except Exception as e:
+            logger.error(f"❌ {code} | 失败：{str(e)}")
 
     con.close()
     bs.logout()
