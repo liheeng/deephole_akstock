@@ -4,7 +4,7 @@ import { Terminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
 
-export default function WebTerminal({ target }: { target: string }) {
+export default function WebTerminal({ target }: { target: any[] }) {
     const containerRef = useRef<HTMLDivElement>(null);
     const termRef = useRef<Terminal | null>(null);
     const wsRef = useRef<WebSocket | null>(null);
@@ -51,7 +51,7 @@ export default function WebTerminal({ target }: { target: string }) {
         termRef.current = term;
 
         const ws = new WebSocket(
-            `ws://localhost:8000/ws/terminal?target=${target}`
+            `ws://localhost:8000/ws/terminal`
         );
 
         wsRef.current = ws;
@@ -72,6 +72,12 @@ export default function WebTerminal({ target }: { target: string }) {
 
         ws.onopen = () => {
             term.write("\r\n[Connected]\r\n");
+
+            // 🔥 关键：发送 target
+            ws.send(JSON.stringify({
+                type: "init",
+                target
+            }));
 
             sendResize();
 

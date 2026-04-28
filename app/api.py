@@ -1217,6 +1217,7 @@ async def handle_host(ws, target):
 #     else:
 #         await handle_host(ws, target)
 
+
 @app.websocket("/ws/terminal")
 async def terminal(ws: WebSocket):
     origin = ws.headers.get("origin")
@@ -1224,9 +1225,22 @@ async def terminal(ws: WebSocket):
 
     await ws.accept()  # 👈 只在这里调用一次
 
+# 🔥 接收初始化参数
+    init_msg = await ws.receive_text()
+    data = json.loads(init_msg)
+
+    target = data.get("target")
+    print(target)
+
     # target = ws.query_params.get("target")
-    target_id = ws.query_params.get("target")
-    target = await resolve_target(target_id)
+    # target_id = ws.query_params.get("target")
+    # target = await resolve_target(target_id)
+    if target and target.get("id").startswith("docker:"):
+        name = target.id.split(":", 1)[1]
+        target = {
+            "type": "docker",
+            "container": name
+        }
 
     if target and (target.get("type") == "local" or target.get("type") == "host"):
         await handle_host(ws, target)
