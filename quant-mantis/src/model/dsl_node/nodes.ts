@@ -1,35 +1,5 @@
 import { NodeType, NodeDType, Scope, PortfolioContext } from "./types";
 
-// 核心枚举和基础类型
-// export enum NodeType {
-//   Factor = "Factor",
-//   Data = "Data",
-//   Indicator = "Indicator",
-//   Signal = "Signal",
-//   Function = "Function"
-// }
-
-// export enum NodeDType {
-//   NUMERIC = "NUMERIC",
-//   BOOL = "BOOL",
-//   SIGNAL = "SIGNAL",
-//   ANY = "ANY",
-//   FRAME = "FRAME",
-//   NULL = "NULL"
-// }
-
-// export enum Scope {
-//   TS = "TS",  // Time Series
-//   CS = "CS"   // Cross Section
-// }
-
-// // ==========================
-// // 上下文（仅占位，不实现）
-// // ==========================
-// export class PortfolioContext { }
-// export class ExecutionEngine { }
-// export class DataProvider { }
-
 // ==========================
 // Node 基类
 // ==========================

@@ -27,6 +27,7 @@ import MenuOpenIcon from "@mui/icons-material/MenuOpen";
 import MenuIcon from "@mui/icons-material/Menu";
 import TerminalIcon from "@mui/icons-material/Terminal";
 import TerminalPage from "./pages/TerminalPage";
+import PortfolioEasyRunnerPage from "./pages/PortfolioEasyRunnerPage"
 
 
 const theme = createTheme({
@@ -45,6 +46,7 @@ const menuItems = [
     { text: '导出数据', icon: <StorageOutlined />, path: '/export_data' },
 // ✅ 新增
     { text: 'Web终端', icon: <TerminalIcon />, path: '/terminal' },
+    { text: 'Portfolio Visual', icon: <TerminalIcon />, path: '/portfolio_easy_runner' },
 ];
 
 function MainLayout({ children }: { children: React.ReactNode }) {
@@ -184,6 +186,7 @@ export default function App() {
                                 <Route path="/tasks_monitor" element={<TasksMonitorPage />} />
                                 <Route path="/export_data" element={<ExportDataPage />} />
                                 <Route path="/terminal" element={<TerminalPage />} />
+                                <Route path="/portfolio_easy_runner" element={<PortfolioEasyRunnerPage />} />
                             </Routes>
                         </MainLayout>
                     </BrowserRouter>
