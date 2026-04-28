@@ -76,11 +76,11 @@ def init():
     start_workers(n=4)   # 👈 在这里启动
     logger.info("Worker threads started")
 
-    logger.info("try to allocate numba and vbt cpu cores")
-    try:
-        allocate_cpu_to_numba_vbt()
-    except Exception as e:
-        logger.error(f"allocate numba and vbt cpu cores is failed, error: str({e})")
+    # logger.info("try to allocate numba and vbt cpu cores")
+    # try:
+    #     allocate_cpu_to_numba_vbt()
+    # except Exception as e:
+    #     logger.error(f"allocate numba and vbt cpu cores is failed, error: str({e})")
 
 
 @asynccontextmanager

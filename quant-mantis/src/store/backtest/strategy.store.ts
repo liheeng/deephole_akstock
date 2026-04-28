@@ -67,6 +67,34 @@ export const useStrategyStore = create<StrategyState>((set, get) => ({
             }
         }
 
+        // 安全解析字典：自动处理单层/双层字符串，直到变成对象
+        const safeParseDict = (val: any) => {
+            try {
+                // 空值直接返回空对象
+                if (val === null || val === undefined || val === '') {
+                    return {};
+                }
+
+                let parsed = val;
+
+                // 关键：只要是字符串，就一直解析（解决双层字符串问题）
+                while (typeof parsed === 'string') {
+                    parsed = JSON.parse(parsed);
+                }
+
+                // 最终必须是对象，不是数组，不是 null
+                if (typeof parsed === 'object' && !Array.isArray(parsed) && parsed !== null) {
+                    return parsed;
+                }
+
+                // 不符合就返回空对象
+                return {};
+            } catch (e) {
+                console.warn('safeParseDict 解析失败:', val, e);
+                return {};
+            }
+        };
+
         const valid = strategies.filter(s => s?.id)
 
         set(() => ({
@@ -81,6 +109,8 @@ export const useStrategyStore = create<StrategyState>((set, get) => ({
 
                         // ✅ snake_case → camelCase
                         signalId: s.signalId ?? s.signal_id ?? undefined,
+                        // string to map
+                        config: safeParseDict(s.config),
                     }
                 ])
             ),

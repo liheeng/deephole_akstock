@@ -16,6 +16,7 @@ import { callBacktest } from "../api/Client";
 import { useDialogStore } from "../store/dialog.store"
 import { useDatasetStore } from "../store/dataset.store";
 import WindowWrapper from "../components/misc/WindowWrapper"
+import BacktestResult_V2 from "../components/backtest-result/BacktestResult-v2";
 
 export default function BacktestPage() {
     const buildPortfolioPayload = useBacktestStore((state) => state.buildPayload)
@@ -134,7 +135,8 @@ export default function BacktestPage() {
                             minHeight: 0   // 🔥 必加（你之前没加）
                         }}
                     >
-                        <BacktestResult runBacktest={runBacktest} />
+                        {/* <BacktestResult runBacktest={runBacktest} /> */}
+                        <BacktestResult_V2 />
                     </Box>
 
                 </Split>
