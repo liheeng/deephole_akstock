@@ -113,17 +113,17 @@ export default function WebTerminal({ target }: { target: any[] }) {
         });
 
         const resizeObserver = new ResizeObserver(() => {
-            requestAnimationFrame(() => {
-                if (!termRef.current) return;
-
-                try {
-                    fitAddon.fit();
-                    sendResize();
-                } catch {
-                    // 忽略已销毁情况
-                }
-            });
+    // Only fit if the element is actually visible
+    if (container.offsetWidth > 0 && container.offsetHeight > 0) {
+        requestAnimationFrame(() => {
+            if (!termRef.current) return;
+            try {
+                fitAddon.fit();
+                sendResize();
+            } catch (e) {}
         });
+    }
+});
 
         resizeObserver.observe(container);
 
