@@ -32,54 +32,22 @@ export const EquityChartPanel = ({ fullSection, setFullSection, viewMode }: any)
 
     // 💡 监听 activeTradeId 变化并触发 ECharts 动作
     // 💡 监听 activeTradeId 变化
+    // 💡 监听 activeTradeId 变化
     useEffect(() => {
+        // 如果没有选中项，不做任何事（或者可以发送 downplay 取消 Tooltip）
         if (!activeTradeId || !chartRef.current) return;
 
         const echartsInstance = chartRef.current.getEchartsInstance();
 
-        // 1. 取消旧高亮
-        echartsInstance.dispatchAction({
-            type: 'downplay',
-            seriesIndex: 0
-        });
-
-        // 2. 触发新高亮 (入场和出场同时)
-        const targetNames = [`${activeTradeId}_entry`, `${activeTradeId}_exit`];
-
-        echartsInstance.dispatchAction({
-            type: 'highlight',
-            seriesIndex: 0,
-            name: targetNames
-        });
-
-        // 3. 自动定位视图 (DataZoom)
-        // 找到对应的交易数据
-        const targetTrade = trades.find(t => t['Exit Trade Id'] === activeTradeId);
-        if (targetTrade) {
-            const entryDate = targetTrade['Entry Timestamp'].slice(0, 10);
-            const option = echartsInstance.getOption();
-            const dates = option.xAxis[0].data;
-            const entryIdx = dates.indexOf(entryDate);
-
-            if (entryIdx !== -1) {
-                // 将视图中心移动到该点，显示前后 30 根蜡烛
-                echartsInstance.dispatchAction({
-                    type: 'dataZoom',
-                    startValue: Math.max(0, entryIdx - 30),
-                    endValue: Math.min(dates.length - 1, entryIdx + 30)
-                });
-            }
-        }
-
-        // 4. 弹出 Tooltip
-        // 注意：showTip 最好针对具体的 markPoint 坐标触发
+        // 💡 这里我们只负责弹出 Tooltip，样式的改变通过 useMemo 的 Update 实现
+        // 弹出 Tooltip 时，默认点到入场点
         echartsInstance.dispatchAction({
             type: 'showTip',
             seriesIndex: 0,
-            name: `${activeTradeId}_entry` // 默认弹入场点的提示
+            name: [`${activeTradeId}_entry`, `${activeTradeId}_exit`]
         });
 
-    }, [activeTradeId, trades]);
+    }, [activeTradeId]);
 
     const renderMarkPointTooltip = (d: any) => {
         // 根据类型（入场/出场）决定标题颜色
@@ -160,6 +128,10 @@ export const EquityChartPanel = ({ fullSection, setFullSection, viewMode }: any)
                     const pnl = t['PnL'] ? t['PnL'].toFixed(2) : '--';
                     const returnRate = t['Return'] ? (t['Return'] * 100).toFixed(2) + '%' : '--';
 
+                    const tradeId = t['Exit Trade Id']; // 确保这里有 ID
+                    // 💡 关键 1: 判断此交易是否被选中
+                    const isSelected = activeTradeId === tradeId;
+
                     // ================== 1. 处理入场点 (Entry) ==================
                     const entryTime = t['Entry Timestamp'];
                     if (entryTime) {
@@ -168,7 +140,7 @@ export const EquityChartPanel = ({ fullSection, setFullSection, viewMode }: any)
 
                         if (entryIdx !== undefined) {
                             const isBuyEntry = t['Direction'] === 'Long';
-                            const tradeId = t['Exit Trade Id']; // 确保这里有 ID
+
                             points.push({
                                 // ECharts 原生属性
                                 // name: isBuyEntry ? '买入开仓' : '卖出开仓',
@@ -176,9 +148,16 @@ export const EquityChartPanel = ({ fullSection, setFullSection, viewMode }: any)
                                 coord: [entryIdx, t['Avg Entry Price']],
                                 value: isBuyEntry ? 'B' : 'S',
                                 symbol: 'pin',
-                                symbolSize: 20,
-                                itemStyle: { color: isBuyEntry ? '#ef5350' : '#26a69a' },
-                                label: { show: true, formatter: isBuyEntry ? 'B' : 'S', color: '#fff', fontWeight: 'bold' },
+                                symbolSize: isSelected ? 28 : 18,
+                                itemStyle: {
+                                    color: isSelected ? '#f8f894' : (isBuyEntry ? '#ef5350' : '#26a69a')
+                                },
+                                label: {
+                                    show: true,
+                                    formatter: isBuyEntry ? 'B' : 'S',
+                                    color: isSelected ? '#000' : '#fff',
+                                    fontWeight: 'bold'
+                                },
 
                                 emphasis: {
                                     itemStyle: {
@@ -217,16 +196,24 @@ export const EquityChartPanel = ({ fullSection, setFullSection, viewMode }: any)
 
                         if (exitIdx !== undefined) {
                             const isSellExit = t['Direction'] === 'Long';
-                            const tradeId = t['Exit Trade Id']; // 确保这里有 ID
                             points.push({
                                 // name: isSellExit ? '卖出平仓' : '买入平仓',
                                 name: `${tradeId}_exit`,
                                 coord: [exitIdx, t['Avg Exit Price']],
                                 value: isSellExit ? 'S' : 'B',
                                 symbol: 'diamond',
-                                symbolSize: 18,
-                                itemStyle: { color: isSellExit ? '#26a69a' : '#ef5350', borderColor: '#fff', borderWidth: 1 },
-                                label: { show: true, formatter: isSellExit ? 'S' : 'B', color: '#fff', fontSize: 10 },
+                                symbolSize: isSelected ? 22 : 16,
+                                itemStyle: {
+                                    color: isSelected ? '#9bfa9b' : (isSellExit ? '#26a69a' : '#ef5350'),
+                                    borderColor: '#fff',
+                                    borderWidth: 1
+                                },
+                                label: {
+                                    show: true,
+                                    formatter: isSellExit ? 'S' : 'B',
+                                    color: isSelected ? '#000' : '#fff',
+                                    fontSize: 10
+                                },
 
                                 emphasis: {
                                     itemStyle: {
@@ -237,6 +224,7 @@ export const EquityChartPanel = ({ fullSection, setFullSection, viewMode }: any)
                                         symbolSize: 35
                                     },
                                     label: {
+                                        color: isSelected ? '#000' : '#fff', // 变黑底白字
                                         fontSize: 14,
                                         fontWeight: 'bold'
                                     },
@@ -261,6 +249,23 @@ export const EquityChartPanel = ({ fullSection, setFullSection, viewMode }: any)
 
             // 调试打印：看看生成的点对不对
             console.log("MarkPoints:", markPoints);
+
+            // 💡 关键 3: 计算 DataZoom 自动跳转位置
+            // 如果有选中交易，计算它的入场索引
+            let zoomConfig: any[] = [{ type: 'inside' }, { type: 'slider', bottom: 5 }];
+            if (activeTradeId) {
+                const selectedTrade = trades.find(t => t['Exit Trade Id'] === activeTradeId);
+                if (selectedTrade) {
+                    const entryDate = selectedTrade['Entry Timestamp'].slice(0, 10);
+                    const entryIdx = dateToIndexMap.get(entryDate);
+                    if (entryIdx !== undefined) {
+                        zoomConfig = [
+                            { type: 'inside', startValue: Math.max(0, entryIdx - 30), endValue: Math.min(dates.length - 1, entryIdx + 30) },
+                            { type: 'slider', bottom: 5, startValue: Math.max(0, entryIdx - 30), endValue: Math.min(dates.length - 1, entryIdx + 30) }
+                        ];
+                    }
+                }
+            }
 
             return {
                 backgroundColor: '#141414',
@@ -323,7 +328,8 @@ export const EquityChartPanel = ({ fullSection, setFullSection, viewMode }: any)
                 grid: { top: 40, bottom: 60, left: 50, right: 20 },
                 xAxis: { type: 'category', data: dates, scale: true },
                 yAxis: { type: 'value', scale: true },
-                dataZoom: [{ type: 'inside' }, { type: 'slider', bottom: 5 }],
+                // dataZoom: [{ type: 'inside' }, { type: 'slider', bottom: 5 }],
+                dataZoom: zoomConfig,
                 series: [{
                     name: selectedSymbol,
                     type: 'candlestick',
@@ -341,7 +347,10 @@ export const EquityChartPanel = ({ fullSection, setFullSection, viewMode }: any)
                         tooltip: {
                             trigger: 'item',
                             formatter: (p: any) => renderMarkPointTooltip(p.data.detail)
-                        }
+                        },
+                        // 🚨 这一步很关键：为了配合React重绘，关掉 emphasis 的自动缩放，
+                        // 因为我们已经在上面直接修改 symbolSize 了。
+                        emphasis: { scale: false }
                     }
                 }]
             };
@@ -369,7 +378,7 @@ export const EquityChartPanel = ({ fullSection, setFullSection, viewMode }: any)
             yAxis: { type: "value", scale: true },
             series
         };
-    }, [equity, trades, selectedSymbol, viewMode, kLineData]);
+    }, [equity, trades, selectedSymbol, viewMode, kLineData, activeTradeId]);
 
     return (
         <Box
