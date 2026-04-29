@@ -29,6 +29,56 @@ export const EquityChartPanel = ({ fullSection, setFullSection, viewMode }: any)
         }
     }, [viewMode, selectedSymbol, equity?.times]);
 
+    // EquityChartPanel.tsx 文件顶部，组件外部
+
+    const renderMarkPointTooltip = (d: any) => {
+        // 根据类型（入场/出场）决定标题颜色
+        const titleColor = d.type === 'Entry' ? (d.action.includes('买入') ? '#ef5350' : '#26a69a') : '#fff';
+
+        let html = `
+        <div style="padding: 3px 6px;">
+            <div style="color: ${titleColor}; font-weight: bold; font-size: 14px; border-bottom: 1px solid #555; padding-bottom: 4px; margin-bottom: 6px;">
+                ${d.action} (${d.direction})
+            </div>
+            <div style="display: flex; justify-content: space-between; gap: 15px; margin-bottom: 3px;">
+                <span style="color: #aaa;">价格:</span>
+                <span style="color: #fff; font-weight: bold;">${d.price}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; gap: 15px; margin-bottom: 3px;">
+                <span style="color: #aaa;">数量:</span>
+                <span style="color: #fff;">${d.quantity}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; gap: 15px; margin-bottom: 3px;">
+                <span style="color: #aaa;">时间:</span>
+                <span style="color: #fff;">${d.time.slice(0, 16)}</span>
+            </div>
+    `;
+
+        // 如果是出场点，增加 PnL 显示
+        if (d.type === 'Exit') {
+            const pnlColor = parseFloat(d.pnl) >= 0 ? '#ef5350' : '#26a69a';
+            html += `
+            <div style="border-top: 1px solid #555; margin-top: 6px; padding-top: 4px;">
+                <div style="display: flex; justify-content: space-between; gap: 15px; margin-bottom: 3px;">
+                    <span style="color: #aaa;">PnL:</span>
+                    <span style="color: ${pnlColor}; font-weight: bold;">${d.pnl} (${d.return})</span>
+                </div>
+            </div>
+        `;
+        } else {
+            // 入场点显示 Status
+            html += `
+            <div style="display: flex; justify-content: space-between; gap: 15px; margin-bottom: 3px;">
+                <span style="color: #aaa;">状态:</span>
+                <span style="color: #eee;">${d.status}</span>
+            </div>
+        `;
+        }
+
+        html += '</div>';
+        return html;
+    };
+
     // 格式化 Option (保持之前的索引对齐逻辑)
     const chartOption = useMemo(() => {
         if (!equity?.times) return {};
@@ -50,63 +100,80 @@ export const EquityChartPanel = ({ fullSection, setFullSection, viewMode }: any)
             });
 
             // 使用 reduce 将每笔交易扁平化为 1个或2个 标注点
+            // 使用 reduce 将每笔交易扁平化为 1个或2个 标注点
             const markPoints = trades
                 .filter(t => t.Column === selectedSymbol)
                 .reduce((points: any[], t) => {
-                    
+                    // 定义一些通用数据，用于 Tooltip 显示
+                    const directionStr = t['Direction'] === 'Long' ? '做多' : '做空';
+                    const size = Math.abs(t['Size']);
+                    const pnl = t['PnL'] ? t['PnL'].toFixed(2) : '--';
+                    const returnRate = t['Return'] ? (t['Return'] * 100).toFixed(2) + '%' : '--';
+
                     // ================== 1. 处理入场点 (Entry) ==================
                     const entryTime = t['Entry Timestamp'];
                     if (entryTime) {
-                        const entryDate = typeof entryTime === 'string' ? entryTime.slice(0, 10) : String(entryTime).slice(0, 10);
+                        const entryDate = entryTime.slice(0, 10);
                         const entryIdx = dateToIndexMap.get(entryDate);
-                        
-                        if (entryIdx !== undefined) {
-                            const direction = t['Direction']; // 假设取值为 'Long' 或 'Short'
-                            // 做多入场是买(B)，做空入场是卖(S)
-                            const isBuyEntry = direction === 'Long'; 
 
+                        if (entryIdx !== undefined) {
+                            const isBuyEntry = t['Direction'] === 'Long';
                             points.push({
-                                name: isBuyEntry ? 'Buy Entry' : 'Sell Entry',
+                                // ECharts 原生属性
+                                name: isBuyEntry ? '买入开仓' : '卖出开仓',
                                 coord: [entryIdx, t['Avg Entry Price']],
                                 value: isBuyEntry ? 'B' : 'S',
                                 symbol: 'pin',
-                                symbolSize: 18,
-                                itemStyle: { color: isBuyEntry ? '#ef5350' : '#26a69a' }, // 红买绿卖
-                                label: { show: true, formatter: isBuyEntry ? 'B' : 'S', color: '#fff', fontSize: 10, fontWeight: 'bold' }
+                                symbolSize: 20,
+                                itemStyle: { color: isBuyEntry ? '#ef5350' : '#26a69a' },
+                                label: { show: true, formatter: isBuyEntry ? 'B' : 'S', color: '#fff', fontWeight: 'bold' },
+
+                                // 💡 关键 1: 注入自定义 Detail 数据供 Tooltip 使用
+                                // 这些属性会被 ECharts 放在 params.data 内部
+                                detail: {
+                                    type: 'Entry',
+                                    action: isBuyEntry ? '买入 B' : '卖出 S',
+                                    time: entryTime,
+                                    price: t['Avg Entry Price'].toFixed(3),
+                                    direction: directionStr,
+                                    quantity: size,
+                                    status: t['Status']
+                                }
                             });
                         }
                     }
 
                     // ================== 2. 处理出场点 (Exit) ==================
-                    // 只有当交易已完成 (可能有 Status 字段判断)，且有出场时间时才标注
                     const exitTime = t['Exit Timestamp'];
-                    // 💡 修正：判断 Status 是否为 'Closed' (根据你提供的 fields，有 Status 和 PnL，说明有出场)
-                    if (exitTime && t['Status'] !== 'Open') { 
-                        const exitDate = typeof exitTime === 'string' ? exitTime.slice(0, 10) : String(exitTime).slice(0, 10);
+                    if (exitTime && t['Status'] !== 'Open') {
+                        const exitDate = exitTime.slice(0, 10);
                         const exitIdx = dateToIndexMap.get(exitDate);
 
                         if (exitIdx !== undefined) {
-                            const direction = t['Direction'];
-                            // 做多出场是卖(S)，做空出场是买(B)
-                            const isSellExit = direction === 'Long'; 
-
+                            const isSellExit = t['Direction'] === 'Long';
                             points.push({
-                                name: isSellExit ? 'Sell Exit' : 'Buy Exit',
-                                // 💡 关键：出场点使用出场价格
-                                coord: [exitIdx, t['Avg Exit Price']], 
+                                name: isSellExit ? '卖出平仓' : '买入平仓',
+                                coord: [exitIdx, t['Avg Exit Price']],
                                 value: isSellExit ? 'S' : 'B',
-                                symbol: 'diamond', // 💡 用不同形状区分入场和出场，或者都用 'pin'
+                                symbol: 'diamond',
                                 symbolSize: 18,
-                                itemStyle: { 
-                                    color: isSellExit ? '#26a69a' : '#ef5350', // 做多出场是平仓卖出，绿色
-                                    borderColor: '#fff',
-                                    borderWidth: 1
-                                },
-                                label: { show: true, formatter: isSellExit ? 'S' : 'B', color: '#fff', fontSize: 10 }
+                                itemStyle: { color: isSellExit ? '#26a69a' : '#ef5350', borderColor: '#fff', borderWidth: 1 },
+                                label: { show: true, formatter: isSellExit ? 'S' : 'B', color: '#fff', fontSize: 10 },
+
+                                // 💡 关键 2: 注入出场 Detail 数据
+                                detail: {
+                                    type: 'Exit',
+                                    action: isSellExit ? '卖出 S' : '买入 B',
+                                    time: exitTime,
+                                    price: t['Avg Exit Price'].toFixed(3),
+                                    direction: directionStr,
+                                    quantity: size,
+                                    pnl: pnl,
+                                    return: returnRate
+                                }
                             });
                         }
                     }
-
                     return points;
                 }, []);
 
@@ -115,7 +182,55 @@ export const EquityChartPanel = ({ fullSection, setFullSection, viewMode }: any)
 
             return {
                 backgroundColor: '#141414',
-                tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+                // 💡 关键 3: Tooltip 配置
+                tooltip: {
+                    // 允许坐标轴(蜡烛)和项目(散点)同时触发 tooltip
+                    trigger: 'axis',
+                    axisPointer: { type: 'cross' },
+                    backgroundColor: 'rgba(30, 30, 30, 0.9)', // 深色背景
+                    borderColor: '#555',
+                    textStyle: { color: '#eee', fontSize: 12 },
+                    confine: true, // 将 tooltip 限制在图表区域内
+
+                    // 💡 关键 4: 编写 formatter 渲染 HTML
+                    formatter: function (params: any) {
+                        // ECharts 的 trigger: 'axis' 返回的是一个数组
+                        // 我们需要遍历查找是否有 markPoint 被命中
+
+                        let html = '';
+                        let hasMarkPoint = false;
+
+                        // 1. 优先检查 markPoint (item) 触发的数据
+                        // 当 trigger 为 axis 时，params 数组里通常包含 series 数据
+                        // 但如果鼠标精确悬停在散点上，ECharts 内部有时会切换触发模式，
+                        // 或者在 params[i].data 里携带 markPoint 原始数据。
+
+                        // 稳妥方案：检查 params[0].data 是否是我们注入的 detail 结构
+                        // 注意：由于 trigger 是 axis，如果鼠标在蜡烛上但不在点上，data 是一个数组[idx, open, close...]
+                        // 如果鼠标在点上，data 是一个对象 { coord, detail... }
+
+                        // 统一处理方案：由于 params 结构复杂，我们通过 componentType 判断
+
+                        // 如果是 trigger: item 模式，params 是单个对象
+                        if (!Array.isArray(params)) {
+                            if (params.componentType === 'markPoint' && params.data?.detail) {
+                                return renderMarkPointTooltip(params.data.detail);
+                            }
+                            return ''; // 其他 item 不显示
+                        }
+
+                        // 如果是 trigger: axis 模式 (默认)，params 是数组
+                        // 此时 params 包含的是这根轴上的 Candlestick 数据
+                        // ECharts 在 axis 模式下不会把 markPoint 的 params 放在这里。
+
+                        // 🚨 如果你想要既能看蜡烛数据，又能看 MarkPoint 详情，
+                        // 必须在 individual 模式下把 trigger 改为 'item'，
+                        // 或者在这里只返回蜡烛数据，另写一套逻辑。
+
+                        // 考虑到查看买卖详情更重要，我们将 grid 内部的 trigger 改为 item。
+                        return '';
+                    }
+                },
                 grid: { top: 40, bottom: 60, left: 50, right: 20 },
                 xAxis: { type: 'category', data: dates, scale: true },
                 yAxis: { type: 'value', scale: true },
@@ -125,22 +240,42 @@ export const EquityChartPanel = ({ fullSection, setFullSection, viewMode }: any)
                     type: 'candlestick',
                     data: candleValues,
                     itemStyle: { color: '#ef5350', color0: '#26a69a', borderColor: '#ef5350', borderColor0: '#26a69a' },
-                    markPoint: { z: 10, data: markPoints }
+                    // 🚨 强制 K线 series 不触发 axis tooltip，
+                    // 这样鼠标移到 pin 上时，'item' 触发器才能起作用
+                    // tooltip: { trigger: 'item' },
+
+                    // --- 2. 这里的 tooltip 配置只影响 markPoint ---
+                    markPoint: {
+                        z: 10,
+                        data: markPoints,
+                        // 💡 关键：为 markPoint 覆盖单独的 tooltip 配置
+                        tooltip: {
+                            trigger: 'item', // 强制 item 触发
+                            // 💡 关键：这里 params 此时就是散点的数据了
+                            formatter: function (params: any) {
+                                if (params.data?.detail) {
+                                    // 调用上面的辅助函数渲染 HTML
+                                    return renderMarkPointTooltip(params.data.detail);
+                                }
+                                return params.name; // 保底
+                            }
+                        }
+                    }
                 }]
             };
         }
 
         // --- 组合模式 (高亮对比) ---
-        const newEquity = { "average": equity.average, ...equity.details,  };
+        const newEquity = { "average": equity.average, ...equity.details, };
         const series = Object.entries(newEquity).map(([symbol, arr]: any) => ({
             name: symbol,
             type: "line",
             smooth: true,
             showSymbol: false,
             emphasis: { focus: 'series' },
-            lineStyle: { 
-                width: selectedSymbol === symbol ? 2 : 1, 
-                opacity: selectedSymbol === symbol ? 1 : (selectedSymbol ? 0.05 : 0.4) 
+            lineStyle: {
+                width: selectedSymbol === symbol ? 2 : 1,
+                opacity: selectedSymbol === symbol ? 1 : (selectedSymbol ? 0.05 : 0.4)
             },
             data: equity.times.map((t: any, i: number) => [t, arr[i]])
         }));
@@ -156,10 +291,10 @@ export const EquityChartPanel = ({ fullSection, setFullSection, viewMode }: any)
 
     return (
         <Box
-            sx={{ 
-                height: "100%", 
-                width: "100%", 
-                position: 'relative', 
+            sx={{
+                height: "100%",
+                width: "100%",
+                position: 'relative',
                 bgcolor: viewMode === 'individual' ? '#141414' : 'inherit',
                 overflow: 'hidden'
             }}
@@ -169,10 +304,10 @@ export const EquityChartPanel = ({ fullSection, setFullSection, viewMode }: any)
                     <CircularProgress size={30} />
                 </Box>
             )}
-            
+
             <ReactECharts
                 // 💡 只有 viewMode 变化时才销毁实例，防止点击全屏按钮时 Chart 消失
-                key={viewMode} 
+                key={viewMode}
                 option={chartOption}
                 style={{ height: "100%", width: "100%" }}
                 notMerge={true}
