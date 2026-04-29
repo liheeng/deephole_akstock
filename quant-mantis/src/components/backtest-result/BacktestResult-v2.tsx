@@ -61,8 +61,6 @@ export default function BacktestResult_V2() {
                         sx={{ height: "100%" }}
                     >
                         <EquityChartPanel
-                            fullSection={fullSection}
-                            setFullSection={setFullSection}
                             viewMode={viewMode}
                         />
                     </FullScreenBox>

@@ -4,8 +4,8 @@ import { Box, CircularProgress } from "@mui/material"; // 引入 IconButton
 import { useBacktestResultStore } from "../../store/backtest/backtestresult.store";
 import { fetchStockDaily } from "../../api/Client";
 
-export const EquityChartPanel = ({ fullSection, setFullSection, viewMode }: any) => {
-    const { equity, trades, selectedSymbol, setSelectedSymbol, activeTradeId } = useBacktestResultStore();
+export const EquityChartPanel = ({ viewMode }: any) => {
+    const { equity, trades, selectedSymbol, activeTradeId } = useBacktestResultStore();
     const chartRef = useRef<any>(null);
     const [kLineData, setKLineData] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -31,8 +31,6 @@ export const EquityChartPanel = ({ fullSection, setFullSection, viewMode }: any)
     }, [viewMode, selectedSymbol, equity?.times]);
 
     // 💡 监听 activeTradeId 变化并触发 ECharts 动作
-    // 💡 监听 activeTradeId 变化
-    // 💡 监听 activeTradeId 变化
     useEffect(() => {
         // 如果没有选中项，不做任何事（或者可以发送 downplay 取消 Tooltip）
         if (!activeTradeId || !chartRef.current) return;
@@ -117,7 +115,6 @@ export const EquityChartPanel = ({ fullSection, setFullSection, viewMode }: any)
                 }
             });
 
-            // 使用 reduce 将每笔交易扁平化为 1个或2个 标注点
             // 使用 reduce 将每笔交易扁平化为 1个或2个 标注点
             const markPoints = trades
                 .filter(t => t.Column === selectedSymbol)
