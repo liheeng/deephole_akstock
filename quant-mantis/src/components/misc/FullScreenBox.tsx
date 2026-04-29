@@ -69,7 +69,13 @@ export const FullScreenBox = ({ children, isFull=false, onToggle, sx }: any) => 
                 {isFull ? <FullscreenExit /> : <Fullscreen />}
             </IconButton>
             
-            <Box sx={{ flex: 1, minHeight: 0, width: "100%" }}>
+            <Box sx={{ 
+                    flex: 1, 
+                    minHeight: 0, 
+                    width: "100%",
+                    display: "flex",       // 💡 必须：让 children (StatsPanel) 能够填满高度
+                    flexDirection: "column" // 💡 必须
+                }}>
                 {children}
             </Box>
         </Box>

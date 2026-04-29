@@ -70,7 +70,15 @@ export default function BacktestResult_V2() {
 
                 <HorizontalSplitter onMouseDown={() => { isDraggingHoriz.current = true; document.body.style.cursor = "col-resize"; }} />
 
-                <Box sx={{ flex: 1, height: "100%", minWidth: 0 }}>
+                <Box sx={{ 
+                        flex: 1, 
+                        height: "100%", 
+                        minWidth: 0, 
+                        overflow: 'hidden', 
+                        minHeight: 0, 
+                        display: 'flex',      // 💡 必须加上这一行
+                        flexDirection: 'column' // 💡 必须加上这一行 
+                    }}>
                     {/* StatsPanel 同理，如果它也需要全屏 */}
                     <StatsPanel
                         fullSection={fullSection}
@@ -84,13 +92,23 @@ export default function BacktestResult_V2() {
             <VerticalSplitter onMouseDown={() => { isDraggingVert.current = true; document.body.style.cursor = "row-resize"; }} />
 
             {/* 下半部分 */}
-            <Box sx={{ flex: 1, minHeight: 0 }}>
+            {/* 下半部分：Trades 区域 */}
+            <Box sx={{ flex: 1, minHeight: 0, width: "100%" }}>
                 <FullScreenBox
                     isFull={fullSection === 'trades'}
                     onToggle={() => setFullSection(fullSection === 'trades' ? null : 'trades')}
                     sx={{ height: "100%" }}
                 >
-                    <TradesTable trades={filteredTrades} />
+                    {/* 💡 增加一层包裹，强制 TradesTable 在此处截断并滚动 */}
+                    <Box sx={{ 
+                        height: "100%", 
+                        width: "100%", 
+                        overflow: "hidden", // 💡 关键：禁止外层滚动，迫使内部 DataGrid 滚动
+                        display: "flex",
+                        flexDirection: "column"
+                    }}>
+                        <TradesTable trades={filteredTrades} />
+                    </Box>
                 </FullScreenBox>
             </Box>
         </Card>

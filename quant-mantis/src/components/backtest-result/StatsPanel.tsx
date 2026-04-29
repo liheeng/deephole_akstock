@@ -30,7 +30,7 @@ export const StatsPanel = ({ fullSection, setFullSection, viewMode, setViewMode 
         <FullScreenBox
             isFull={fullSection === 'stats'}
             onToggle={() => setFullSection(fullSection === 'stats' ? null : 'stats')}
-            sx={{ display: "flex", flexDirection: "column", height: "100%" }}
+            sx={{ display: "flex", flexDirection: "column", height: "100%", overflow: 'hidden', minHeight: 0 }}
         >
             <Box sx={{ p: 1, display: "flex", alignItems: "center", gap: 2, borderBottom: 1, borderColor: 'divider' }}>
                 <FormControlLabel
@@ -60,11 +60,28 @@ export const StatsPanel = ({ fullSection, setFullSection, viewMode, setViewMode 
                 </Tabs>
             )}
 
-            <Box sx={{ flex: 1, minHeight: 0 }}>
+            <Box sx={{ 
+                    flex: 1, 
+                    minHeight: 0, // 💡 必须：防止 flex 子元素溢出父级
+                    width: '100%',
+                    overflow: 'hidden', // 💡 关键：强制内部形成视口
+                    position: 'relative',
+                    display: 'flex',       // 💡 新增：让这个 Box 也变成 flex 容器
+                    flexDirection: 'column', // 💡 新增
+                }}>
                 <UniDataGrid
                     rows={rows}
-                    columns={[{ field: "name", headerName: "Indicator", flex: 1 }, { field: "value", headerName: "Value", flex: 1 }]}
+                    columns={[
+                        { field: "name", headerName: "Indicator", flex: 1 },
+                        { field: "value", headerName: "Value", flex: 1 }
+                    ]}
                     hideFooter
+                    // 💡 强制 DataGrid 占据父级 Flex 的所有剩余空间
+                    sx={{ 
+                        flex: 1, 
+                        width: '100%',
+                        '& .MuiDataGrid-main': { overflow: 'auto' } // 💡 强制触发 DataGrid 内部滚动
+                    }}
                 />
             </Box>
         </FullScreenBox>

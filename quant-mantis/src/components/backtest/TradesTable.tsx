@@ -41,7 +41,7 @@ export default function TradesTable({ trades = [] }: any) {
     }))
 
     return (
-        <Card sx={{ mt: 2, flex: 1, minHeight: 0 }}>
+        <Card sx={{ mt: 2, flex: 1, minHeight: 0, height: '100%', width: '100%' }}>
             <UniDataGrid
                 rows={rows}
                 columns={columns}
