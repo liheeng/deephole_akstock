@@ -25,6 +25,7 @@ websockets
 docker
 paramiko
 uvicorn[standard]
+paramiko
 
 # ===== 工具 =====
 requests==2.33.1
