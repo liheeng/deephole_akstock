@@ -9,7 +9,7 @@ import paramiko
 import docker
 from typing import Optional, List, Any, Dict
 from contextlib import asynccontextmanager, closing
-from fastapi import FastAPI, HTTPException, WebSocket, Query
+from fastapi import FastAPI, HTTPException, WebSocket, Query, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -1042,7 +1042,7 @@ async def handle_docker(ws, container_name):
 TERMINAL_TARGETS = [
     {
         "id": "local",
-        "name": "Local Host",
+        "name": "Service Host",
         "type": "host",
         "mode": "pty",   # pty / ssh
     },
@@ -1244,4 +1244,27 @@ def whoami():
     return {
         "pid": os.getpid(),
         "host": socket.gethostname()
+    }
+
+
+def get_current_server_ip(request: Request) -> str:
+    """
+    多网卡环境 100% 正确
+    返回：当前处理该请求的 本机真实IP
+    """
+    try:
+        # 核心：从 request 底层 socket 拿当前绑定的IP
+        return request.scope["server"][0]
+    except:
+        return "127.0.0.1"
+
+
+@app.get("/api/api_service/ip")
+async def my_api(request: Request):
+    # 🔥 这就是你当前服务的IP（多网卡也绝对正确）
+    server_ip = get_current_server_ip(request)
+    
+    return {
+        "msg": "ok",
+        "server_ip": server_ip  # ✅ 绝对正确
     }

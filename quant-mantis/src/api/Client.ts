@@ -210,6 +210,17 @@ export async function fetchBacktestResults(
     }
 }
 
+export async function fetchAPIServiceIp(): Promise<any | null> {
+    try {
+        const res = await apiClient.get("/api_service/ip");
+        return res.data
+    } catch (err) {
+        console.error("获取api_service/ip失败", err);
+        return null;
+    }
+}
+
+
 export async function fetchTerminalTargets(): Promise<any | null> {
     try {
         const res = await apiClient.get("/terminal/targets");

@@ -1,8 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Box } from "@mui/material";
 import { Terminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
+import { fetchAPIServiceIp } from "../../api/Client"
 
 export default function WebTerminal({ target }: { target: any[] }) {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -10,6 +11,15 @@ export default function WebTerminal({ target }: { target: any[] }) {
     const wsRef = useRef<WebSocket | null>(null);
     const sendQueue = useRef<string[]>([]);
     const mountedRef = useRef(false); // 🔥 关键
+    const [apiServiceIp, setApiServiceIp] = useState<any>(null);
+
+    console.log("api_service: ", apiServiceIp)
+    
+    useEffect(() => {
+            fetchAPIServiceIp().then(res => {
+                setApiServiceIp(res.server_ip);
+            });
+        }, []);
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -51,7 +61,7 @@ export default function WebTerminal({ target }: { target: any[] }) {
         termRef.current = term;
 
         const ws = new WebSocket(
-            `ws://localhost:8000/api/ws/terminal`
+            `ws://${apiServiceIp}:8000/api/ws/terminal`
         );
 
         wsRef.current = ws;
@@ -132,7 +142,7 @@ export default function WebTerminal({ target }: { target: any[] }) {
                 termRef.current = null;
             }
         };
-    }, [target]);
+    }, [target, apiServiceIp]);
 
     return (
         <Box

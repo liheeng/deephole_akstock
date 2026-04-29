@@ -24,7 +24,6 @@ type Target = {
 export default function TerminalPage() {
     const [targets, setTargets] = useState<Target[]>([]);
     const [selectedId, setSelectedId] = useState("");
-
     const [activeTarget, setActiveTarget] = useState<any>(null);
 
     // 👇 launcher form
