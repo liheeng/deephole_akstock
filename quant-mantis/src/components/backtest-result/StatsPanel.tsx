@@ -10,8 +10,18 @@ export const StatsPanel = ({ fullSection, setFullSection, viewMode, setViewMode 
     const statTabs = useMemo(() => ["average", ...Object.keys(stats?.details || {}).sort()], [stats]);
     
     const currentStats = useMemo(() => {
-        if (viewMode === "portfolio") return stats?.average || {};
-        return stats?.details?.[selectedSymbol || ""] || {};
+        // 1. 如果是 Individual Mode，严格根据选中的股票显示
+        if (viewMode === "individual") {
+            return stats?.details?.[selectedSymbol || ""] || {};
+        }
+
+        // 2. 如果是 Portfolio Mode
+        // 💡 修复点：如果 selectedSymbol 存在且不是 "average"，显示个股统计；否则显示平均统计
+        if (selectedSymbol && selectedSymbol !== "average") {
+            return stats?.details?.[selectedSymbol] || {};
+        }
+
+        return stats?.average || {};
     }, [stats, selectedSymbol, viewMode]);
 
     const rows = Object.entries(currentStats).map(([k, v], i) => ({

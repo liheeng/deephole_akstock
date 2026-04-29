@@ -1,11 +1,8 @@
 import { useEffect, useState, useMemo } from "react";
 import ReactECharts from "echarts-for-react";
-import { Box, CircularProgress, IconButton } from "@mui/material"; // 引入 IconButton
+import { Box, CircularProgress } from "@mui/material"; // 引入 IconButton
 import { useBacktestResultStore } from "../../store/backtest/backtestresult.store";
 import { fetchStockDaily } from "../../api/Client";
-import { FullScreenBox } from "../misc/FullScreenBox";
-import FullscreenIcon from '@mui/icons-material/Fullscreen';
-import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 
 export const EquityChartPanel = ({ fullSection, setFullSection, viewMode }: any) => {
     const { equity, trades, selectedSymbol, setSelectedSymbol } = useBacktestResultStore();
@@ -52,20 +49,69 @@ export const EquityChartPanel = ({ fullSection, setFullSection, viewMode }: any)
                 }
             });
 
+            // 使用 reduce 将每笔交易扁平化为 1个或2个 标注点
             const markPoints = trades
                 .filter(t => t.Column === selectedSymbol)
-                .map(t => {
-                    const date = typeof t.EntryTime === 'string' ? t.EntryTime.slice(0, 10) : String(t.EntryTime).slice(0, 10);
-                    const idx = dateToIndexMap.get(date);
-                    if (idx === undefined) return null;
-                    const isBuy = t.Size > 0;
-                    return {
-                        coord: [idx, t.Price],
-                        value: isBuy ? 'B' : 'S',
-                        itemStyle: { color: isBuy ? '#ef5350' : '#26a69a' },
-                        label: { show: true, formatter: isBuy ? 'B' : 'S', color: '#fff' }
-                    };
-                }).filter(Boolean);
+                .reduce((points: any[], t) => {
+                    
+                    // ================== 1. 处理入场点 (Entry) ==================
+                    const entryTime = t['Entry Timestamp'];
+                    if (entryTime) {
+                        const entryDate = typeof entryTime === 'string' ? entryTime.slice(0, 10) : String(entryTime).slice(0, 10);
+                        const entryIdx = dateToIndexMap.get(entryDate);
+                        
+                        if (entryIdx !== undefined) {
+                            const direction = t['Direction']; // 假设取值为 'Long' 或 'Short'
+                            // 做多入场是买(B)，做空入场是卖(S)
+                            const isBuyEntry = direction === 'Long'; 
+
+                            points.push({
+                                name: isBuyEntry ? 'Buy Entry' : 'Sell Entry',
+                                coord: [entryIdx, t['Avg Entry Price']],
+                                value: isBuyEntry ? 'B' : 'S',
+                                symbol: 'pin',
+                                symbolSize: 18,
+                                itemStyle: { color: isBuyEntry ? '#ef5350' : '#26a69a' }, // 红买绿卖
+                                label: { show: true, formatter: isBuyEntry ? 'B' : 'S', color: '#fff', fontSize: 10, fontWeight: 'bold' }
+                            });
+                        }
+                    }
+
+                    // ================== 2. 处理出场点 (Exit) ==================
+                    // 只有当交易已完成 (可能有 Status 字段判断)，且有出场时间时才标注
+                    const exitTime = t['Exit Timestamp'];
+                    // 💡 修正：判断 Status 是否为 'Closed' (根据你提供的 fields，有 Status 和 PnL，说明有出场)
+                    if (exitTime && t['Status'] !== 'Open') { 
+                        const exitDate = typeof exitTime === 'string' ? exitTime.slice(0, 10) : String(exitTime).slice(0, 10);
+                        const exitIdx = dateToIndexMap.get(exitDate);
+
+                        if (exitIdx !== undefined) {
+                            const direction = t['Direction'];
+                            // 做多出场是卖(S)，做空出场是买(B)
+                            const isSellExit = direction === 'Long'; 
+
+                            points.push({
+                                name: isSellExit ? 'Sell Exit' : 'Buy Exit',
+                                // 💡 关键：出场点使用出场价格
+                                coord: [exitIdx, t['Avg Exit Price']], 
+                                value: isSellExit ? 'S' : 'B',
+                                symbol: 'diamond', // 💡 用不同形状区分入场和出场，或者都用 'pin'
+                                symbolSize: 18,
+                                itemStyle: { 
+                                    color: isSellExit ? '#26a69a' : '#ef5350', // 做多出场是平仓卖出，绿色
+                                    borderColor: '#fff',
+                                    borderWidth: 1
+                                },
+                                label: { show: true, formatter: isSellExit ? 'S' : 'B', color: '#fff', fontSize: 10 }
+                            });
+                        }
+                    }
+
+                    return points;
+                }, []);
+
+            // 调试打印：看看生成的点对不对
+            console.log("MarkPoints:", markPoints);
 
             return {
                 backgroundColor: '#141414',
@@ -93,7 +139,7 @@ export const EquityChartPanel = ({ fullSection, setFullSection, viewMode }: any)
             showSymbol: false,
             emphasis: { focus: 'series' },
             lineStyle: { 
-                width: selectedSymbol === symbol ? 4 : 1, 
+                width: selectedSymbol === symbol ? 2 : 1, 
                 opacity: selectedSymbol === symbol ? 1 : (selectedSymbol ? 0.05 : 0.4) 
             },
             data: equity.times.map((t: any, i: number) => [t, arr[i]])
@@ -107,8 +153,6 @@ export const EquityChartPanel = ({ fullSection, setFullSection, viewMode }: any)
             series
         };
     }, [equity, trades, selectedSymbol, viewMode, kLineData]);
-
-    // const isFull = fullSection === 'chart';
 
     return (
         <Box
