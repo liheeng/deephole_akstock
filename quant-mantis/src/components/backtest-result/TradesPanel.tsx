@@ -4,12 +4,13 @@ import { useMemo } from "react";
 import { FullScreenBox } from "../misc/FullScreenBox";
 
 export default function TradesPanel({ fullSection, setFullSection }: any) {
-  const { trades, selectedSymbol } = useBacktestResultStore();
+  const { trades, selectedSymbol, setActiveTradeId } = useBacktestResultStore();
 
   const filteredTrades = useMemo(() => {
     if (!selectedSymbol || selectedSymbol === "average") return trades;
     return trades.filter(t => t.Column === selectedSymbol);
   }, [trades, selectedSymbol]);
+  
 
   return (
     <FullScreenBox
@@ -17,7 +18,12 @@ export default function TradesPanel({ fullSection, setFullSection }: any) {
       onToggle={() => setFullSection(fullSection === "trades" ? null : "trades")}
       sx={{ height: "100%", flex: 1 }}
     >
-       <TradesTable trades={filteredTrades} />
+       <TradesTable 
+            trades={filteredTrades}
+            onRowClick={(params) => {
+                setActiveTradeId(params.row['Exit Trade Id']);
+            }}
+        />
     </FullScreenBox>
   );
 }

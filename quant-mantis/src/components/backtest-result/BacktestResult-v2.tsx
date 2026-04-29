@@ -8,7 +8,7 @@ import { StatsPanel } from "./StatsPanel";
 import { FullScreenBox } from "../misc/FullScreenBox";
 
 export default function BacktestResult_V2() {
-    const { trades, selectedSymbol } = useBacktestResultStore();
+    const { trades, selectedSymbol, setActiveTradeId } = useBacktestResultStore();
 
     // 布局状态
     const [fullSection, setFullSection] = useState<string | null>(null);
@@ -107,7 +107,12 @@ export default function BacktestResult_V2() {
                         display: "flex",
                         flexDirection: "column"
                     }}>
-                        <TradesTable trades={filteredTrades} />
+                        <TradesTable 
+                            trades={filteredTrades}
+                            onRowClick={(params) => {
+                                setActiveTradeId(params.row['Exit Trade Id']);
+                            }}
+                        />
                     </Box>
                 </FullScreenBox>
             </Box>

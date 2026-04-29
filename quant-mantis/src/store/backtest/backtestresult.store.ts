@@ -30,6 +30,10 @@ export interface BacktestResultState {
 
     selectedSymbol: string | null   // ⭐ 新增
 
+    activeTradeId: string | null
+    
+    setActiveTradeId: (id: string | null) => void
+
     setSelectedSymbol: (s: string | null) => void
 
     setBacktestResult: (result: any) => void
@@ -55,6 +59,10 @@ export const useBacktestResultStore = create<BacktestResultState>((set) => ({
     error: null,
 
     selectedSymbol: null,
+
+    activeTradeId: null as string | null,
+    
+    setActiveTradeId: (id: string | null) => set({ activeTradeId: id }),
 
     setSelectedSymbol: (s) => set({ selectedSymbol: s }),
 

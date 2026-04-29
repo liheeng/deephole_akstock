@@ -1,7 +1,13 @@
 import UniDataGrid from "../table/UniDataGrid"
 import { Card, Typography } from "@mui/material"
+import type { GridEventListener } from '@mui/x-data-grid'
 
-export default function TradesTable({ trades = [] }: any) {
+interface TradesTableProps {
+    trades?: any[]
+    onRowClick?: GridEventListener<"rowClick">
+}
+
+export default function TradesTable({ trades = [], onRowClick }: TradesTableProps) {
 
     // 👇 完全按照你后端返回的真实字段定义
     const columns = [
@@ -45,6 +51,10 @@ export default function TradesTable({ trades = [] }: any) {
             <UniDataGrid
                 rows={rows}
                 columns={columns}
+                onRowClick={(...params) => {
+                    // 调用父组件传进来的回调
+                    onRowClick?.(...params);
+                }}
                 // autoHeight // Must remove autoHeight to make data grid scroll in container
                 pageSizeOptions={[10, 20, 50]}
                 disableRowSelectionOnClick

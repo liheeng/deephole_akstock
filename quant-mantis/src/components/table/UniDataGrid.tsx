@@ -1,14 +1,16 @@
 import { DataGrid, GridToolbar } from '@mui/x-data-grid';
-import type { DataGridProps } from '@mui/x-data-grid'
+import type { DataGridProps, GridEventListener } from '@mui/x-data-grid'
 
 // 扩展 Props：完全继承原生 DataGrid 所有属性 + 新增自定义属性
-export interface UniDataGridProps extends DataGridProps {
+export interface UniDataGridProps extends Omit<DataGridProps, 'onRowClick'> {
     /** 单元格基础背景色 */
     cellBgColor?: string;
     /** 斑马条纹背景色 */
     stripeBgColor?: string;
     /** 是否启用斑马条纹 */
     striped?: boolean;
+
+    onRowClick?: GridEventListener<"rowClick">
 }
 
 export default function UniDataGrid({
@@ -16,7 +18,7 @@ export default function UniDataGrid({
     cellBgColor = '#5f5d5d',
     stripeBgColor = 'rgb(71, 70, 70)',
     striped = true,
-
+    onRowClick,
     // 原生所有属性
     slots,
     sx,
@@ -29,6 +31,12 @@ export default function UniDataGrid({
             {...props}
             // ✅ 强制自动生成 ID（永远不报错）
             rows={rows?.map((row, idx) => ({ id: idx, ...row }))}
+            onRowClick={(...params) => {
+                // 你可以在这里加逻辑
+                console.log('点击行:', ...params);
+                // 调用父组件传进来的回调
+                onRowClick?.(...params);
+            }}
             // 合并插槽：保留用户传入的 slots + 默认自带 toolbar
             slots={{
                 toolbar: GridToolbar,
