@@ -2,7 +2,7 @@ import { Box, Tabs, Tab, Switch, FormControlLabel, Select, MenuItem, Typography 
 import { useBacktestResultStore } from "../../store/backtest/backtestresult.store";
 import UniDataGrid from "../table/UniDataGrid";
 import { FullScreenBox } from "../misc/FullScreenBox";
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 
 export const StatsPanel = ({ fullSection, setFullSection, viewMode, setViewMode }: any) => {
     const { stats, selectedSymbol, setSelectedSymbol } = useBacktestResultStore();
@@ -17,6 +17,14 @@ export const StatsPanel = ({ fullSection, setFullSection, viewMode, setViewMode 
     const rows = Object.entries(currentStats).map(([k, v], i) => ({
         id: i, name: k, value: typeof v === "number" ? v.toFixed(2) : String(v)
     }));
+
+    // 在 StatsPanel.tsx 内部增加一个 useEffect
+    useEffect(() => {
+        if (viewMode === "individual" && !selectedSymbol) {
+            const firstSymbol = Object.keys(stats?.details || {})[0];
+            if (firstSymbol) setSelectedSymbol(firstSymbol);
+        }
+    }, [viewMode, stats, selectedSymbol]);
 
     return (
         <FullScreenBox

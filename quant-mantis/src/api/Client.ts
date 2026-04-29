@@ -219,3 +219,31 @@ export async function fetchTerminalTargets(): Promise<any | null> {
         return null;
     }
 }
+
+
+// 建议放在 api 文件夹或 store 中
+export const fetchStockDaily = async (symbol: string, startDate: string, endDate: string) => {
+    // 构造你提到的 SQL 语句
+    const sql = `
+        SELECT date, open, close, high, low, volume 
+        FROM stock_daily 
+        WHERE symbol = '${symbol}' 
+          AND date >= '${startDate}' 
+          AND date <= '${endDate}'
+        ORDER BY date ASC
+    `;
+
+    const res = await apiClient.post("/execute_sql", { sql }, {
+        withCredentials: true,
+    });
+
+    if (res.data.status === 'success') {
+        // ECharts Candlestick 需要的格式通常是: [date, open, close, low, high]
+        return res.data.data.map((item: any) => ({
+            date: item.date,
+            values: [item.open, item.close, item.low, item.high],
+            volume: item.volume
+        }));
+    }
+    return [];
+};

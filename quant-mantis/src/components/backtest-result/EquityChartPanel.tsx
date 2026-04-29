@@ -1,61 +1,159 @@
+import { useEffect, useState, useMemo } from "react";
 import ReactECharts from "echarts-for-react";
+import { Box, CircularProgress, IconButton } from "@mui/material"; // 引入 IconButton
 import { useBacktestResultStore } from "../../store/backtest/backtestresult.store";
-import { useMemo } from "react";
+import { fetchStockDaily } from "../../api/Client";
 import { FullScreenBox } from "../misc/FullScreenBox";
+import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 
 export const EquityChartPanel = ({ fullSection, setFullSection, viewMode }: any) => {
-    const { equity, selectedSymbol, setSelectedSymbol } = useBacktestResultStore();
-    
-    const replaceEmji = (s: string) => s.replace(/⭐|🚀|/g, "").trim();
-    const formatDate = (ts: any) => {
-        const d = new Date(ts); 
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
-    };
+    const { equity, trades, selectedSymbol, setSelectedSymbol } = useBacktestResultStore();
+    const [kLineData, setKLineData] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
 
+    // K线数据加载
+    useEffect(() => {
+        if (viewMode === "individual" && selectedSymbol && selectedSymbol !== "average") {
+            const loadData = async () => {
+                setLoading(true);
+                try {
+                    const start = equity?.times?.[0] || '2000-01-01';
+                    const end = equity?.times?.[equity?.times.length - 1] || new Date().toISOString().split('T')[0];
+                    const data = await fetchStockDaily(selectedSymbol, start, end);
+                    setKLineData(data);
+                } catch (e) {
+                    console.error("Fetch KLine Error:", e);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            loadData();
+        }
+    }, [viewMode, selectedSymbol, equity?.times]);
+
+    // 格式化 Option (保持之前的索引对齐逻辑)
     const chartOption = useMemo(() => {
         if (!equity?.times) return {};
-        
-        // 此处逻辑：如果是 individual 模式，可以展示该股票的 K 线（假设数据源支持）
-        // 这里暂时保留你原有的多曲线逻辑，但根据 selectedSymbol 突出显示
-        const series = (equity.average || []).length > 0 ? [{
-            name: "Portfolio", type: "line", smooth: true, showSymbol: false,
-            data: equity.times.map((t: any, i: number) => [t, equity.average[i]])
-        }] : [];
 
-        // 添加详情曲线
-        Object.entries(equity.details || {}).forEach(([symbol, arr]: any) => {
-            series.push({
-                name: symbol, type: "line", smooth: true, showSymbol: false,
-                lineStyle: { 
-                    width: symbol === selectedSymbol ? 3 : 1,
-                    opacity: selectedSymbol && symbol !== selectedSymbol ? 0.2 : 1 
-                },
-                data: equity.times.map((t: any, i: number) => [t, arr[i]])
+        // --- 个股模式 ---
+        if (viewMode === "individual" && selectedSymbol && kLineData.length > 0) {
+            const dates: string[] = [];
+            const candleValues: number[][] = [];
+            const dateToIndexMap = new Map<string, number>();
+
+            kLineData.forEach((item, idx) => {
+                const vals = item.values.map((v: any) => parseFloat(v));
+                if (!isNaN(vals[0])) {
+                    candleValues.push(vals);
+                    const cleanDate = typeof item.date === 'string' ? item.date.split('T')[0] : String(item.date);
+                    dates.push(cleanDate);
+                    dateToIndexMap.set(cleanDate, idx);
+                }
             });
-        });
+
+            const markPoints = trades
+                .filter(t => t.Column === selectedSymbol)
+                .map(t => {
+                    const date = typeof t.EntryTime === 'string' ? t.EntryTime.slice(0, 10) : String(t.EntryTime).slice(0, 10);
+                    const idx = dateToIndexMap.get(date);
+                    if (idx === undefined) return null;
+                    const isBuy = t.Size > 0;
+                    return {
+                        coord: [idx, t.Price],
+                        value: isBuy ? 'B' : 'S',
+                        itemStyle: { color: isBuy ? '#ef5350' : '#26a69a' },
+                        label: { show: true, formatter: isBuy ? 'B' : 'S', color: '#fff' }
+                    };
+                }).filter(Boolean);
+
+            return {
+                backgroundColor: '#141414',
+                tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+                grid: { top: 40, bottom: 60, left: 50, right: 20 },
+                xAxis: { type: 'category', data: dates, scale: true },
+                yAxis: { type: 'value', scale: true },
+                dataZoom: [{ type: 'inside' }, { type: 'slider', bottom: 5 }],
+                series: [{
+                    name: selectedSymbol,
+                    type: 'candlestick',
+                    data: candleValues,
+                    itemStyle: { color: '#ef5350', color0: '#26a69a', borderColor: '#ef5350', borderColor0: '#26a69a' },
+                    markPoint: { z: 10, data: markPoints }
+                }]
+            };
+        }
+
+        // --- 组合模式 (高亮对比) ---
+        const newEquity = { "average": equity.average, ...equity.details,  };
+        const series = Object.entries(newEquity).map(([symbol, arr]: any) => ({
+            name: symbol,
+            type: "line",
+            smooth: true,
+            showSymbol: false,
+            emphasis: { focus: 'series' },
+            lineStyle: { 
+                width: selectedSymbol === symbol ? 4 : 1, 
+                opacity: selectedSymbol === symbol ? 1 : (selectedSymbol ? 0.05 : 0.4) 
+            },
+            data: equity.times.map((t: any, i: number) => [t, arr[i]])
+        }));
 
         return {
-            tooltip: { trigger: "axis", backgroundColor: "rgba(0,0,0,0.7)", textStyle: { color: "#fff" } },
-            grid: { top: 40, bottom: 60, left: 50, right: 20 },
+            backgroundColor: 'transparent',
+            tooltip: { trigger: "axis" },
             xAxis: { type: "time" },
             yAxis: { type: "value", scale: true },
-            dataZoom: [{ type: "inside" }, { type: "slider" }],
             series
         };
-    }, [equity, selectedSymbol, viewMode]);
+    }, [equity, trades, selectedSymbol, viewMode, kLineData]);
+
+    const isFull = fullSection === 'chart';
 
     return (
         <FullScreenBox
-            isFull={fullSection === 'chart'}
-            onToggle={() => setFullSection(fullSection === 'chart' ? null : 'chart')}
-            sx={{ height: "100%", width: "100%" }}
+            isFull={isFull}
+            onToggle={() => setFullSection(isFull ? null : 'chart')}
+            sx={{ 
+                height: "100%", 
+                width: "100%", 
+                position: 'relative', 
+                bgcolor: viewMode === 'individual' ? '#141414' : 'inherit',
+                zIndex: isFull ? 1500 : 1, // 提高全屏时的层级
+            }}
         >
+            {/* 💡 强制添加一个自定义全屏按钮，避开 ECharts 的事件吞噬 */}
+            <IconButton
+                onClick={(e) => {
+                    e.stopPropagation(); // 阻止冒泡
+                    setFullSection(isFull ? null : 'chart');
+                }}
+                sx={{
+                    position: 'absolute',
+                    right: 8,
+                    top: 8,
+                    zIndex: 2000, // 必须比 ECharts 高
+                    color: '#888',
+                    bgcolor: 'rgba(0,0,0,0.2)',
+                    '&:hover': { bgcolor: 'rgba(0,0,0,0.5)' }
+                }}
+            >
+                {/* {isFull ? <FullscreenExitIcon /> : <FullscreenIcon />} */}
+            </IconButton>
+
+            {loading && (
+                <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 100 }}>
+                    <CircularProgress size={30} />
+                </Box>
+            )}
+            
             <ReactECharts
+                // 💡 彻底移除 key，只用 notMerge 保证更新
+                // 如果还不行，恢复 key={viewMode}
                 option={chartOption}
                 style={{ height: "100%", width: "100%" }}
-                onEvents={{
-                    click: (p: any) => setSelectedSymbol(p.seriesName === "Portfolio" ? null : replaceEmji(p.seriesName))
-                }}
+                notMerge={true}
+                lazyUpdate={true}
             />
         </FullScreenBox>
     );
