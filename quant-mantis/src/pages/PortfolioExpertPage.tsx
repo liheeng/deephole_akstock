@@ -70,11 +70,13 @@ export async function runBacktest(config: any): Promise<BacktestResult> {
   return response.json();
 }
 
-export default function PortfolioEasyRunnerPage() {
+export default function PortfolioExpertPage() {
   const [code, setCode] = useState(defaultCode);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+
+  console.log(results)
 
   // 执行用户代码，提取配置
   const executeCode = async () => {
@@ -109,7 +111,7 @@ export default function PortfolioEasyRunnerPage() {
     <Container maxWidth="xl" sx={{ py: 4 }}>
       <Paper elevation={3} sx={{ p: 2, mb: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <h2>📊 量化回测策略编辑器</h2>
+          <h2>📊 量化回测专家编辑模式</h2>
           <Button 
             variant="contained" 
             onClick={executeCode} 

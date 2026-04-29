@@ -27,7 +27,7 @@ import MenuOpenIcon from "@mui/icons-material/MenuOpen";
 import MenuIcon from "@mui/icons-material/Menu";
 import TerminalIcon from "@mui/icons-material/Terminal";
 import TerminalPage from "./pages/TerminalPage";
-import PortfolioEasyRunnerPage from "./pages/PortfolioEasyRunnerPage"
+import PortfolioExpertPage from "./pages/PortfolioExpertPage"
 
 
 const theme = createTheme({
@@ -39,14 +39,13 @@ const theme = createTheme({
 
 const menuItems = [
     { text: '仪表盘', icon: <DashboardOutlined />, path: '/' },
-    { text: '回测管理', icon: <AnalyticsOutlined />, path: '/backtest' },
-    { text: '同步日线数据', icon: <StorageOutlined />, path: '/sync_daily' },
+    { text: '量化回测', icon: <AnalyticsOutlined />, path: '/backtest' },
+    { text: 'Portfolio Expert', icon: <TerminalIcon />, path: '/portfolio_expert' },
     { text: 'SQL执行器', icon: <StorageOutlined />, path: '/sql_executor' },
+    { text: '同步日线数据', icon: <StorageOutlined />, path: '/sync_daily' },
     { text: '任务监视', icon: <AssignmentOutlined />, path: '/tasks_monitor' },
     { text: '导出数据', icon: <StorageOutlined />, path: '/export_data' },
-// ✅ 新增
     { text: 'Web终端', icon: <TerminalIcon />, path: '/terminal' },
-    { text: 'Portfolio Visual', icon: <TerminalIcon />, path: '/portfolio_easy_runner' },
 ];
 
 function MainLayout({ children }: { children: React.ReactNode }) {
@@ -181,12 +180,12 @@ export default function App() {
                             <Routes>
                                 <Route path="/" element={<Typography variant="h4">欢迎来到DeepHole股票回测系统</Typography>} />
                                 <Route path="/backtest" element={<BacktestPage />} />
-                                <Route path="/sync_daily" element={<SyncStockDailyPage />} />
+                                <Route path="/portfolio_expert" element={<PortfolioExpertPage />} />
                                 <Route path="/sql_executor" element={<SqlExecutor />} />
+                                <Route path="/sync_daily" element={<SyncStockDailyPage />} />
                                 <Route path="/tasks_monitor" element={<TasksMonitorPage />} />
                                 <Route path="/export_data" element={<ExportDataPage />} />
                                 <Route path="/terminal" element={<TerminalPage />} />
-                                <Route path="/portfolio_easy_runner" element={<PortfolioEasyRunnerPage />} />
                             </Routes>
                         </MainLayout>
                     </BrowserRouter>
