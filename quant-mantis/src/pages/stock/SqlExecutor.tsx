@@ -16,6 +16,7 @@ import { GridToolbar } from '@mui/x-data-grid';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import HistoryIcon from '@mui/icons-material/History';
 import DownloadIcon from "@mui/icons-material/Download";
+import { GridOverlay } from '@mui/x-data-grid';
 
 import MainCard from '../../components/visual/MainCard';
 import { apiClient } from "../../api/Client"
@@ -31,6 +32,7 @@ export const SqlExecutor = () => {
     // ✅ SQL 历史
     const [history, setHistory] = useState<string[]>([]);
     const [openHistory, setOpenHistory] = useState(false);
+    const [lastExecutedSql, setLastExecutedSql] = useState<string>('');
 
     // =========================
     // 执行 SQL（核心函数）
@@ -45,6 +47,9 @@ export const SqlExecutor = () => {
             return next.slice(0, 50);
         });
 
+        // 保存最后一次执行的 SQL
+        setLastExecutedSql(finalSql);
+
         const res = await apiClient.post("/execute_sql", { sql: finalSql }, {
             withCredentials: true,
         });
@@ -52,7 +57,7 @@ export const SqlExecutor = () => {
         if (res.data.status === 'success') {
             const rows = res.data.data;
 
-            if (rows.length > 0) {
+            if (rows?.length > 0) {
                 const columns = Object.keys(rows[0]).map(key => ({
                     field: key,
                     headerName: key.toUpperCase(),
@@ -66,6 +71,8 @@ export const SqlExecutor = () => {
             } else {
                 setData({ rows: [], columns: [] });
             }
+        } else {
+            setData({ rows: [], columns: [] });
         }
     };
 
@@ -136,6 +143,25 @@ export const SqlExecutor = () => {
         URL.revokeObjectURL(url);
     };
 
+    function CustomNoRowsOverlay() {
+        return (
+            <GridOverlay>
+                <Box
+                    sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: '100%',
+                        fontSize: 16,
+                        color: 'text.secondary',
+                    }}
+                >
+                    No Rows
+                </Box>
+            </GridOverlay>
+        );
+    }
+
     return (
         <Stack
             sx={{
@@ -196,20 +222,45 @@ export const SqlExecutor = () => {
 
             </MainCard>
 
-            {/* ================= 查询结果 ================= */}
-            {data.rows.length > 0 && (
-                <MainCard content={false} sx={{ flex: 1, minHeight: 0 }}>
-                    <Box sx={{ height: '100%', width: '100%' }}>
-                        <UniDataGrid
-                            sx={{ height: '100%' }}
-                            rows={data.rows}
-                            columns={data.columns}
-                            slots={{ toolbar: GridToolbar }}
-                            density="compact"
-                        />
-                    </Box>
-                </MainCard>
+            {lastExecutedSql && (
+                <Box
+                    sx={{
+                        maxHeight: 80,
+                        overflowY: 'auto',
+                        p: 1,
+                        mt: 1,
+                        mb: 1,
+                        backgroundColor: '#302b2b',
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: 1,
+                        fontFamily: 'Monaco, monospace',
+                        fontSize: 13,
+                        whiteSpace: 'pre-wrap',
+                        textAlign: "left"
+                    }}
+                >
+                    {lastExecutedSql}
+                </Box>
             )}
+            {/* ================= 查询结果 ================= */}
+            {/* {data.rows.length > 0 && ( */}
+
+            <MainCard content={false} sx={{ flex: 1, minHeight: 0 }}>
+                <Box sx={{ height: '100%', width: '100%' }}>
+                    <UniDataGrid
+                        sx={{ height: '100%' }}
+                        rows={data.rows}
+                        columns={data.columns}
+                        slots={{
+                            toolbar: GridToolbar,
+                            noRowsOverlay: CustomNoRowsOverlay, // ✅ 使用自定义 Overlay
+                        }}
+                        density="compact"
+                    />
+                </Box>
+            </MainCard>
+            {/* )} */}
 
             {/* ================= SQL 历史 ================= */}
             <Dialog
@@ -245,11 +296,11 @@ export const SqlExecutor = () => {
                                 >
                                     <ListItemText
                                         primary={item}
-                                        // primaryTypographyProps={{
-                                        //     fontFamily: 'Monaco, monospace',
-                                        //     fontSize: 13,
-                                        //     noWrap: true
-                                        // }}
+                                    // primaryTypographyProps={{
+                                    //     fontFamily: 'Monaco, monospace',
+                                    //     fontSize: 13,
+                                    //     noWrap: true
+                                    // }}
                                     />
                                 </ListItemButton>
 
