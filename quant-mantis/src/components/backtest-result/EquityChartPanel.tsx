@@ -108,39 +108,18 @@ export const EquityChartPanel = ({ fullSection, setFullSection, viewMode }: any)
         };
     }, [equity, trades, selectedSymbol, viewMode, kLineData]);
 
-    const isFull = fullSection === 'chart';
+    // const isFull = fullSection === 'chart';
 
     return (
-        <FullScreenBox
-            isFull={isFull}
-            onToggle={() => setFullSection(isFull ? null : 'chart')}
+        <Box
             sx={{ 
                 height: "100%", 
                 width: "100%", 
                 position: 'relative', 
                 bgcolor: viewMode === 'individual' ? '#141414' : 'inherit',
-                zIndex: isFull ? 1500 : 1, // 提高全屏时的层级
+                overflow: 'hidden'
             }}
         >
-            {/* 💡 强制添加一个自定义全屏按钮，避开 ECharts 的事件吞噬 */}
-            <IconButton
-                onClick={(e) => {
-                    e.stopPropagation(); // 阻止冒泡
-                    setFullSection(isFull ? null : 'chart');
-                }}
-                sx={{
-                    position: 'absolute',
-                    right: 8,
-                    top: 8,
-                    zIndex: 2000, // 必须比 ECharts 高
-                    color: '#888',
-                    bgcolor: 'rgba(0,0,0,0.2)',
-                    '&:hover': { bgcolor: 'rgba(0,0,0,0.5)' }
-                }}
-            >
-                {/* {isFull ? <FullscreenExitIcon /> : <FullscreenIcon />} */}
-            </IconButton>
-
             {loading && (
                 <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 100 }}>
                     <CircularProgress size={30} />
@@ -148,13 +127,17 @@ export const EquityChartPanel = ({ fullSection, setFullSection, viewMode }: any)
             )}
             
             <ReactECharts
-                // 💡 彻底移除 key，只用 notMerge 保证更新
-                // 如果还不行，恢复 key={viewMode}
+                // 💡 只有 viewMode 变化时才销毁实例，防止点击全屏按钮时 Chart 消失
+                key={viewMode} 
                 option={chartOption}
                 style={{ height: "100%", width: "100%" }}
                 notMerge={true}
                 lazyUpdate={true}
+                // 💡 关键：确保在 Resize 时自动调整大小
+                onChartReady={(instance) => {
+                    setTimeout(() => instance.resize(), 0);
+                }}
             />
-        </FullScreenBox>
+        </Box>
     );
 };

@@ -35,7 +35,7 @@ export const FullScreenBox = ({ children, isFull=false, onToggle, sx }: any) => 
                 width: isFull ? "100vw" : "100%",
                 height: isFull ? "100vh" : "100%",
                 zIndex: isFull ? 9999 : 1, 
-                bgcolor: "background.paper",
+                bgcolor: isFull ? "#141414" : "background.paper", // 💡 个股模式下全屏必须是深色
                 display: "flex",
                 flexDirection: "column",
                 boxSizing: "border-box",

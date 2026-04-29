@@ -9,7 +9,7 @@ import { FullScreenBox } from "../misc/FullScreenBox";
 
 export default function BacktestResult_V2() {
     const { trades, selectedSymbol } = useBacktestResultStore();
-    
+
     // 布局状态
     const [fullSection, setFullSection] = useState<string | null>(null);
     const [topHeight, setTopHeight] = useState(50);
@@ -39,8 +39,8 @@ export default function BacktestResult_V2() {
     };
 
     // 过滤交易数据
-    const filteredTrades = selectedSymbol && selectedSymbol !== "average" 
-        ? trades.filter(t => t.Column === selectedSymbol) 
+    const filteredTrades = selectedSymbol && selectedSymbol !== "average"
+        ? trades.filter(t => t.Column === selectedSymbol)
         : trades;
 
     return (
@@ -53,22 +53,30 @@ export default function BacktestResult_V2() {
         >
             {/* 上半部分 */}
             <Box sx={{ display: "flex", height: `${topHeight}%`, minHeight: 0, width: "100%" }}>
-                <Box sx={{ width: `${leftWidth}%`, height: "100%" }}>
-                    <EquityChartPanel 
-                        fullSection={fullSection} 
-                        setFullSection={setFullSection} 
-                        viewMode={viewMode} 
-                    />
+                {/* 💡 关键修改点：确保 FullScreenBox 包裹整个 ChartPanel 容器 */}
+                <Box sx={{ width: `${leftWidth}%`, height: "100%", position: 'relative' }}>
+                    <FullScreenBox
+                        isFull={fullSection === 'chart'}
+                        onToggle={() => setFullSection(fullSection === 'chart' ? null : 'chart')}
+                        sx={{ height: "100%" }}
+                    >
+                        <EquityChartPanel
+                            fullSection={fullSection}
+                            setFullSection={setFullSection}
+                            viewMode={viewMode}
+                        />
+                    </FullScreenBox>
                 </Box>
 
                 <HorizontalSplitter onMouseDown={() => { isDraggingHoriz.current = true; document.body.style.cursor = "col-resize"; }} />
 
                 <Box sx={{ flex: 1, height: "100%", minWidth: 0 }}>
-                    <StatsPanel 
-                        fullSection={fullSection} 
-                        setFullSection={setFullSection} 
-                        viewMode={viewMode} 
-                        setViewMode={setViewMode} 
+                    {/* StatsPanel 同理，如果它也需要全屏 */}
+                    <StatsPanel
+                        fullSection={fullSection}
+                        setFullSection={setFullSection}
+                        viewMode={viewMode}
+                        setViewMode={setViewMode}
                     />
                 </Box>
             </Box>
