@@ -18,7 +18,7 @@ fi
 # 下面只有 ENABLE_CRON=true 的容器才会运行
 # 每个市场独立的 cron 调度规则（默认值可根据需求调整）
 CRON_SCHEDULE_CN=${CRON_SCHEDULE_CN:-"0 18 * * *"}
-CRON_SCHEDULE_HK=${CRON_SCHEDULE_HK:-"0 19 * * *"}
+CRON_SCHEDULE_HK=${CRON_SCHEDULE_HK:-"0 21 * * *"}
 CRON_SCHEDULE_US=${CRON_SCHEDULE_US:-"0 8 * * *"}  
 mkdir -p /logs
 
