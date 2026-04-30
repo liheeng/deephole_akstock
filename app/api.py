@@ -456,6 +456,8 @@ def save_backtest_result(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+
+
 @app.post("/api/backtest")
 def run_backtest(req: ApiBacktestRequest):
     try:
@@ -524,21 +526,20 @@ def run_backtest(req: ApiBacktestRequest):
         pf = portfolio.run(DataProvider(None), df)
         pfwrapper = PortfolioResultWrapper(pf)
 
-        equity_curve = pfwrapper.get_pf_value_dict(as_json=False)
-    
-        _stats = pfwrapper.get_pf_stats(as_json=False)
-        stats = pfwrapper.clean_for_json(_stats)
-        trades = pf.trades.records_readable.to_dict(orient="records")
+        equity_curve: Any = pfwrapper.equity_values()
+        stats: Any = pfwrapper.stats_values()
+        trades: Any = pfwrapper.trades_values()
         
+
         # ==========================
         # ✅ 保存到数据库
         # ==========================
-        equity_curve_dict = json.loads(equity_curve) if isinstance(equity_curve, str) else equity_curve
+        # equity_curve_dict = json.loads(equity_curve) if isinstance(equity_curve, str) else equity_curve
         save_backtest_result(
             dataset_config_id=req.dataset_config.id,
             portfolio_name=portfolio_config.name,
             stats=stats,
-            equity=equity_curve_dict,
+            equity=equity_curve,
             trades=trades
         )
 

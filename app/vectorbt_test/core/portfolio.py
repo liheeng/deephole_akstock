@@ -5,13 +5,33 @@ from abc import ABC, abstractmethod
 import pandas as pd
 from vectorbt_test.core.strategy import Strategy
 from vectorbt_test.core.signals import Signal, SignalGroup
-from vectorbt_test.core.node_builder import NodeBuilder
+# from vectorbt_test.core.node_builder import NodeBuilder
 import vectorbt as vbt
 import numpy as np
 import json
 from loguru import logger
 
 
+def round_floats(obj, ndigits=4):
+    import numpy as np
+
+    # 1. 原生 float
+    if isinstance(obj, float):
+        return round(obj, ndigits)
+
+    # 2. numpy float
+    if isinstance(obj, (np.floating,)):
+        return round(float(obj), ndigits)
+
+    # 3. dict
+    if isinstance(obj, dict):
+        return {k: round_floats(v, ndigits) for k, v in obj.items()}
+
+    # 4. list / tuple
+    if isinstance(obj, (list, tuple)):
+        return [round_floats(v, ndigits) for v in obj]
+
+    return obj
 
 
 class PortfolioType(enum.Enum):
@@ -67,7 +87,7 @@ class PortfolioResultWrapper():
             
         return stats_df
 
-    def get_pf_stats(self, agg_func: Callable = np.mean, as_json=False):
+    def stats_values(self, agg_func: Callable = np.mean, as_json_str=False, round_digits: int = 4):
         pf = self.portfolio
         
         # 使用统一工具获取 stats_df (策略为行，指标为列)
@@ -95,9 +115,10 @@ class PortfolioResultWrapper():
             "details": detailed_stats.replace([np.inf, -np.inf], np.nan).to_dict(orient='index')
         }
 
-        return json.dumps(res, default=str) if as_json else res
+        res = round_floats(res, round_digits)
+        return self.clean_for_json(json.dumps(res, default=str)) if as_json_str else res
 
-    def get_pf_value_dict(self, as_json=False):
+    def equity_values(self, as_json_str=False, round_digits: int = 4):
         pf = self.portfolio
         all_values = pf.value()
         if isinstance(all_values, pd.Series):
@@ -131,11 +152,14 @@ class PortfolioResultWrapper():
                 "count": len(time_index)
             }
         }
+        
+        res = round_floats(res, round_digits)
+        return json.dumps(round_floats(res, round_digits), default=str) if as_json_str else res
 
-        return json.dumps(res, default=str) if as_json else res
-
-    def trades(self):
-        return self.portfolio.trades
+    def trades_values(self, as_json_str=False, round_digits: int = 4):
+        res = self.portfolio.trades.records_readable.to_dict(orient="records")
+        res = round_floats(res, round_digits)
+        return json.dumps(res, default=str) if as_json_str else res
     
     def values(self):
         return self.portfolio.value()

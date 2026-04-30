@@ -49,8 +49,8 @@ if __name__ == "__main__":
     pf = portfolio.run(data_provider, df)
 
     pfwrapper = PortfolioResultWrapper(pf)
-    stats = pfwrapper.get_pf_stats()
-    equity = pfwrapper.get_pf_value_dict()
+    stats = pfwrapper.stats_values()
+    equity = pfwrapper.equity_values()
 
     print("== stats ================================================")
     print(stats)
