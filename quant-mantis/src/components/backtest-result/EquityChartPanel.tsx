@@ -116,7 +116,8 @@ export const EquityChartPanel = ({ viewMode }: any) => {
             });
 
             // 使用 reduce 将每笔交易扁平化为 1个或2个 标注点
-            const markPoints = trades
+            const selectedTrades = trades.filter(t => t.Column === selectedSymbol);
+            const markPoints = selectedTrades
                 .filter(t => t.Column === selectedSymbol)
                 .reduce((points: any[], t) => {
                     // 定义一些通用数据，用于 Tooltip 显示
@@ -250,17 +251,25 @@ export const EquityChartPanel = ({ viewMode }: any) => {
             // 💡 关键 3: 计算 DataZoom 自动跳转位置
             // 如果有选中交易，计算它的入场索引
             let zoomConfig: any[] = [{ type: 'inside' }, { type: 'slider', bottom: 5 }];
+            let firstTrade: any
+            let lastTrade: any
             if (activeTradeId) {
-                const selectedTrade = trades.find(t => t['Exit Trade Id'] === activeTradeId);
-                if (selectedTrade) {
-                    const entryDate = selectedTrade['Entry Timestamp'].slice(0, 10);
-                    const entryIdx = dateToIndexMap.get(entryDate);
-                    if (entryIdx !== undefined) {
-                        zoomConfig = [
-                            { type: 'inside', startValue: Math.max(0, entryIdx - 30), endValue: Math.min(dates.length - 1, entryIdx + 30) },
-                            { type: 'slider', bottom: 5, startValue: Math.max(0, entryIdx - 30), endValue: Math.min(dates.length - 1, entryIdx + 30) }
-                        ];
-                    }
+                firstTrade = selectedTrades.find(t => t['Exit Trade Id'] === activeTradeId);
+                lastTrade = firstTrade
+            } else {
+                firstTrade = selectedTrades.at(0)
+                lastTrade = selectedTrades.at(-1)
+            }
+            if (firstTrade) {
+                const entryDate = firstTrade['Entry Timestamp'].slice(0, 10);
+                const entryIdx = dateToIndexMap.get(entryDate);
+                const exitDate = lastTrade['Exit Timestamp'].slice(0, 10);
+                const exitIdx =  dateToIndexMap.get(exitDate);
+                if (entryIdx !== undefined) {
+                    zoomConfig = [
+                        { type: 'inside', startValue: Math.max(0, entryIdx - 30), endValue: Math.min(dates.length - 1, exitIdx ? (exitIdx + 30) : (entryIdx + 60))},
+                        { type: 'slider', bottom: 5, startValue: Math.max(0, entryIdx - 30), endValue: Math.min(dates.length - 1, exitIdx ? (exitIdx + 30) : (entryIdx + 60))},
+                    ];
                 }
             }
 
