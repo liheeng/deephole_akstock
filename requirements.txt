@@ -23,9 +23,13 @@ python-multipart
 python-dotenv
 websockets
 docker
-paramiko
 uvicorn[standard]
 paramiko
+
+# ===== Jupyter ====-
+jupyterlab==4.0.12
+jupyter-lsp
+python-lsp-server[all]
 
 # ===== 工具 =====
 requests==2.33.1

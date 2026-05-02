@@ -67,7 +67,7 @@ export async function callBacktest(backtest_config: any) {
 // ======================================================
 export async function fetchDatasets(): Promise<Dataset[] | null> {
     try {
-        const res = await apiClient.get<Dataset[]>("/backtest/datasets");
+        const res = await apiClient.get<Dataset[]>("/backtest/datasets", { withCredentials: true });
         return res.data;
     } catch (err) {
         console.error("获取数据集失败", err);
@@ -82,6 +82,7 @@ export async function updateDataset(dataset: Dataset) {
     try {
         // 后端需要：sourceDef / schema / cache → JSON
         const payload = {
+            withCredentials: true,
             id: dataset.id,
             name: dataset.name,
             sourceDef: dataset.sourceDef,
@@ -138,7 +139,7 @@ export const defaultBacktestConfig: BacktestConfig = {
 // ======================================================
 export async function fetchBacktestConfigs(): Promise<BacktestConfig[] | null> {
     try {
-        const res = await apiClient.get<BacktestConfig[]>("/backtest/configs");
+        const res = await apiClient.get<BacktestConfig[]>("/backtest/configs", { withCredentials: true });
         return res.data;
     } catch (err) {
         console.error("获取回测配置失败", err);
@@ -166,6 +167,7 @@ export async function updateBacktestConfig(config: BacktestState) {
         // 🔥 构建完整 payload（包括 strategies！）
         // ==============================================
         const payload = {
+            withCredentials: true,
             id: config.id,
             name: config.name,
             portfolio_mode: config.portfolio_mode,
@@ -198,6 +200,7 @@ export async function fetchBacktestResults(
     try {
         const res = await apiClient.get<BacktestResultState[]>("/backtest/results", {
             params: {
+                withCredentials: true,
                 dataset_config_id,
                 portfolio_name,
             },
@@ -212,7 +215,7 @@ export async function fetchBacktestResults(
 
 export async function fetchAPIServiceIp(): Promise<any | null> {
     try {
-        const res = await apiClient.get("/api_service/ip");
+        const res = await apiClient.get("/api_service/ip", { withCredentials: true });
         return res.data
     } catch (err) {
         console.error("获取api_service/ip失败", err);
@@ -223,7 +226,7 @@ export async function fetchAPIServiceIp(): Promise<any | null> {
 
 export async function fetchTerminalTargets(): Promise<any | null> {
     try {
-        const res = await apiClient.get("/terminal/targets");
+        const res = await apiClient.get("/terminal/targets", { withCredentials: true });
         return res.data
     } catch (err) {
         console.error("获取terminal targets失败", err);
@@ -258,3 +261,24 @@ export const fetchStockDaily = async (symbol: string, startDate: string, endDate
     }
     return [];
 };
+
+export async function startJupyterLab(): Promise<any | null> {
+    try {
+        const res = await apiClient.get("/jupyter/start-jupyter", { withCredentials: true });
+        return res?.data
+    } catch (err) {
+        console.error("Jupyter启动失败!...", err);
+        return null;
+    }
+}
+
+export async function stopJupyterLab(): Promise<any | null> {
+    try {
+        const res = await apiClient.get("/jupyter/stop-jupyter", { withCredentials: true });
+        return res?.data
+    } catch (err) {
+        console.error("Jupyter停止失败...", err);
+        return null;
+    }
+}
+

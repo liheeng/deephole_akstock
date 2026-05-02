@@ -21,6 +21,10 @@ from datetime import datetime, date
 import nanoid
 from starlette.websockets import WebSocketDisconnect
 import fcntl
+import subprocess
+import atexit
+import psutil
+import socket
 
 from fastapi.middleware.cors import CORSMiddleware
 from api_config import CORS_CONFIG
@@ -1235,6 +1239,96 @@ async def terminal(ws: WebSocket):
         await ws.close()
 
 
+# ===== Jupyter APIs
+# 全局保存 Jupyter 子进程
+jupyter_process = None
+JUPYTER_PORT = 8888
+
+
+def is_port_ready(port: int, timeout=30, interval=1):
+    start = time.time()
+    while time.time() - start < timeout:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(0.5)
+        try:
+            sock.connect(("127.0.0.1", port))
+            sock.close()
+            return True
+        except:
+            sock.close()
+            time.sleep(interval)
+    return False
+
+
+# 启动 JupyterLab
+@app.get("/api/jupyter/start-jupyter")
+def start_jupyter():
+    global jupyter_process
+    if jupyter_process is not None and jupyter_process.poll() is None:
+        return {"status": "running", "process_id": f"{jupyter_process}", "url": f"http://localhost:{JUPYTER_PORT}/lab"}
+
+    tornado_settings = '{"headers":{"Content-Security-Policy":"frame-ancestors *"}}' 
+    # 后台启动 jupyter（无浏览器、允许远程、关闭token）
+    jupyter_process = subprocess.Popen([
+        "jupyter", "lab",
+        f"--port={JUPYTER_PORT}",
+        "--no-browser",
+        "--ip=0.0.0.0",
+        "--ServerApp.token=''",
+        "--ServerApp.allow_origin='*'",  
+        "--ServerApp.allow_credentials=True",
+        "--ServerApp.allow_remote_access=True",
+        "--ServerApp.tornado_settings=" + tornado_settings,
+        "--ServerApp.disable_check_xsrf=True"
+    ])
+
+    logger.info(f"jupyter lab is starting, waiting for the port startup, process: {jupyter_process.pid}, url: http://localhost:{JUPYTER_PORT}/lab")
+    
+    # ✅【关键】等待端口真正启动成功，再返回！
+    if not is_port_ready(JUPYTER_PORT):
+        raise Exception("Jupyter 启动超时")
+    
+    logger.info(f"jupyter lab is running, process: {jupyter_process.pid}, url: http://localhost:{JUPYTER_PORT}/lab")
+    return {"status": "running", "process_id": f"{jupyter_process.pid}", "url": f"http://localhost:{JUPYTER_PORT}/lab"}
+
+# 停止 JupyterLab
+@app.get("/api/jupyter/stop-jupyter")
+def stop_jupyter():
+    global jupyter_process
+
+    try:
+        # 1. 先判断进程是否存在
+        if jupyter_process is not None:
+            pid = jupyter_process.pid
+            logger.info(f"🔴 准备杀死 Jupyter 进程：{pid}")
+
+            # 2. 杀死整个进程树（最关键！能杀干净子进程）
+            try:
+                parent = psutil.Process(pid)
+                for child in parent.children(recursive=True):
+                    child.kill()  # 杀子进程
+                parent.kill()      # 杀主进程
+                logger.info(f"✅ 成功杀死 Jupyter 进程树：{pid}")
+            except Exception as e:
+                logger.warning(f"⚠️ 进程可能已退出：{e}")
+
+            jupyter_process = None
+            return {"status": "stopped", "process_id": pid}
+
+        return {"status": "not_running"}
+    
+    except Exception as e:
+        logger.error(f"❌ 停止 Jupyter 失败：{str(e)}")
+        return {"status": "error", "msg": str(e)}
+
+
+# 服务退出时自动杀死 Jupyter
+@atexit.register
+def kill_jupyter_on_exit():
+    stop_jupyter()
+
+
+# ===== MISC APIs
 @app.get("/api/debug/routes")
 def routes():
     return [r.path for r in app.routes]

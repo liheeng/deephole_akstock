@@ -28,7 +28,9 @@ import MenuIcon from "@mui/icons-material/Menu";
 import TerminalIcon from "@mui/icons-material/Terminal";
 import TerminalPage from "./pages/TerminalPage";
 import PortfolioExpertPage from "./pages/PortfolioExpertPage"
-
+import JupyterDebugPage from "./pages/JupyterDebugPage";
+import { useJupyterLabStore } from './store/jupyterlab.store'; 
+import { stopJupyterLab } from './api/Client'
 
 const theme = createTheme({
     palette: {
@@ -41,6 +43,7 @@ const menuItems = [
     { text: '仪表盘', icon: <DashboardOutlined />, path: '/' },
     { text: '量化回测', icon: <AnalyticsOutlined />, path: '/backtest' },
     { text: 'Portfolio Expert', icon: <TerminalIcon />, path: '/portfolio_expert' },
+    { text: 'Jupyter Lab', icon: <TerminalIcon />, path: '/jupyter_lab' },
     { text: 'SQL执行器', icon: <StorageOutlined />, path: '/sql_executor' },
     { text: '同步日线数据', icon: <StorageOutlined />, path: '/sync_daily' },
     { text: '任务监视', icon: <AssignmentOutlined />, path: '/tasks_monitor' },
@@ -139,6 +142,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 export default function App() {
     const queryClient = new QueryClient();
     const [ready, setReady] = useState(false);
+    const updateJupyterStatus = useJupyterLabStore(s => s.updateStatus);
 
     useEffect(() => {
         const initAll = async () => {
@@ -152,6 +156,25 @@ export default function App() {
         };
 
         initAll();
+        
+        const stopJupyter = async () => {
+            try {
+                const data = await stopJupyterLab()
+                updateJupyterStatus(data.process_id, data.status)
+                console.log(`Jupyter stoped, process id: ${data.process_id}`)
+            } catch (err) {
+                console.error('停止失败', err)
+            }
+        }
+
+        // 监听关闭/刷新
+        window.addEventListener('beforeunload', stopJupyter);
+
+        // 组件卸载（路由跳转也会触发）
+        return () => {
+            window.removeEventListener('beforeunload', stopJupyter);
+        };
+
     }, []);
 
     if (!ready) {
@@ -181,6 +204,7 @@ export default function App() {
                                 <Route path="/" element={<Typography variant="h4">欢迎来到DeepHole股票回测系统</Typography>} />
                                 <Route path="/backtest" element={<BacktestPage />} />
                                 <Route path="/portfolio_expert" element={<PortfolioExpertPage />} />
+                                <Route path="/jupyter_lab" element={<JupyterDebugPage />} />
                                 <Route path="/sql_executor" element={<SqlExecutor />} />
                                 <Route path="/sync_daily" element={<SyncStockDailyPage />} />
                                 <Route path="/tasks_monitor" element={<TasksMonitorPage />} />

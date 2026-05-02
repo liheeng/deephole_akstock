@@ -7,7 +7,7 @@ CORS_ORIGINS = [
     "http://192.168.50.11:3000"]
 
 CORS_CONFIG = {
-    "allow_origins": ["*"],
+    "allow_origins": CORS_ORIGINS,
     "allow_credentials": True,
     "allow_methods": ["*"],
     "allow_headers": ["*"]
