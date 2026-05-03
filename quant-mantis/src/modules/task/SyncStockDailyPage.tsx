@@ -27,7 +27,7 @@ const MARKET_CONFIG = {
 
 type Market = keyof typeof MARKET_CONFIG;
 
-export function SyncStockDailyPage() {
+export default function SyncStockDailyPage() {
   const [market, setMarket] = useState<Market>("CN");
   const [dataSource, setDataSource] = useState(DATA_SOURCES[0]);
   const [loading, setLoading] = useState(false);

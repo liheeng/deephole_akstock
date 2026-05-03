@@ -7,7 +7,6 @@ import Split from "react-split"
 import { NodeRegistry } from "../../model/dsl_node/node_registry";
 import TopToolbar from "../../components/layout/TopToolbar"
 import PortfolioPanel from "../../components/portfolio/PortfolioPanel"
-import BacktestResult from "../../components/backtest/BacktestResult"
 import StrategyGraph from "../../components/backtest/StrategyGraph"
 import { useBacktestStore} from "../../store/backtest/backtest.store"
 import { useBacktestResultStore } from "../../store/backtest/backtestresult.store"

@@ -24,7 +24,7 @@ const ALL_COLS = [
     "pct", "turnover", "adjust_mode", "adjust_factor"
 ];
 
-export function ExportDataPage() {
+export default function ExportDataPage() {
     const [selectedCols, setSelectedCols] = useState<string[]>(ALL_COLS);
 
     const [whereSql, setWhereSql] = useState("");

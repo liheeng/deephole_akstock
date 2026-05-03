@@ -3,8 +3,8 @@ import {
     DialogContent, TextField, DialogActions, Button, Tabs, Tab
 } from "@mui/material";
 import { useEffect, useState } from "react";
-import WebTerminal from "../components/terminal/WebTerminal";
-import { fetchTerminalTargets } from "../api/Client";
+import WebTerminal from "../../components/terminal/WebTerminal";
+import { fetchTerminalTargets } from "../../api/Client";
 
 type Target = {
     id: string;

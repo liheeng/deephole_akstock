@@ -21,7 +21,7 @@ import { GridOverlay } from '@mui/x-data-grid';
 import MainCard from '../../components/visual/MainCard';
 import { apiClient } from "../../api/Client"
 
-export const SqlExecutor = () => {
+export default function SqlExecutor() {
 
     const [sql, setSql] = useState('SELECT * FROM stock_daily LIMIT 100');
     const [data, setData] = useState({ rows: [], columns: [] });

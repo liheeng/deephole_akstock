@@ -37,6 +37,7 @@ tqdm==4.67.3
 timeout-decorator==0.5.0
 loguru==0.7.3
 nanoid==2.0.0
+psutil
 
 # ===== 可视化 / UI =====
 streamlit==1.56.0

@@ -1,37 +1,37 @@
 import { useParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { Grid, Typography } from '@mui/material'
-import MainCard from 'components/MainCard'
-import LogPanel from 'sections/task/LogPanel'
-import RunControls from 'sections/task/RunControls'
-import { getTaskDetail } from 'api/task'
+import MainCard from '../../components/visual/MainCard'
+import LogPanel from '../../sections/task/LogPanel'
+import RunControls from '../../sections/task/RunControls'
+import { getTaskDetail } from '../../api/task'
 
 export default function TaskDetail() {
-  const { id } = useParams()
-  const [task, setTask] = useState<any>(null)
+    const { id } = useParams()
+    const [task, setTask] = useState<any>(null)
 
-  const load = async () => {
-    const res = await getTaskDetail(id!)
-    setTask(res)
-  }
+    const load = async () => {
+        const res = await getTaskDetail(id!)
+        setTask(res)
+    }
 
-  useEffect(() => {
-    load()
-  }, [id])
+    useEffect(() => {
+        load()
+    }, [id])
 
-  if (!task) return null
+    if (!task) return null
 
-  return (
-    <MainCard>
-      <Typography variant="h4">Task: {task.id}</Typography>
+    return (
+        <MainCard>
+            <Typography variant="h4">Task: {task.id}</Typography>
 
-      <RunControls taskId={task.id} onRefresh={load} />
+            <RunControls taskId={task.id} onRefresh={load} />
 
-      <Grid container spacing={2}>
-        <Grid item xs={12}>
-          <LogPanel jobId={task.id} />
-        </Grid>
-      </Grid>
-    </MainCard>
-  )
+            <Grid container spacing={2}>
+                <Grid item sx={{xs:12}}>
+                    <LogPanel jobId={task.id} />
+                </Grid>
+            </Grid>
+        </MainCard>
+    )
 }

@@ -1,33 +1,38 @@
-import { ReactNode } from "react"
+import { type ReactNode } from "react"
 
-import { taskModule } from "modules/task"
-import { scriptModule } from "modules/script"
-import { backtestModule } from "modules/backtest"
-import { jupyterModule } from "modules/jupyter"
+
+import { backtestModule } from "../modules/backtest"
+import { JutyperLabModule } from "../modules/jupyter"
+import { sqlExecutorModule } from "../modules/sql"
+import { exportDataModule } from "../modules/exportor"
+import { taskModule } from "../modules/task"
+import { terminalModule } from "../modules/terminal"
 
 export const modules = [
-  taskModule,
-  scriptModule,
-  backtestModule,
-  jupyterModule
+    backtestModule,
+    JutyperLabModule,
+    sqlExecutorModule,
+    exportDataModule,
+    taskModule,
+    terminalModule
 ]
 
 export interface AppModule {
-  name: string
+    name: string
 
-  menu?: MenuItem[]
+    menu?: MenuItem[]
 
-  routes?: RouteItem[]
+    routes?: RouteItem[]
 }
 
 export interface MenuItem {
-  text: string
-  path?: string
-  icon?: ReactNode
-  children?: MenuItem[]
+    text: string
+    path?: string
+    icon?: ReactNode
+    children?: MenuItem[]
 }
 
 export interface RouteItem {
-  path: string
-  element: ReactNode
+    path: string
+    element: ReactNode
 }

@@ -1,34 +1,19 @@
 import { useEffect, useState } from "react";
-import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
+import { BrowserRouter, Link, useLocation } from "react-router-dom";
 import {
     Box, CssBaseline, ThemeProvider, createTheme,
     Drawer, AppBar, Toolbar, List, Typography,
-    ListItem, ListItemButton, ListItemIcon, ListItemText, IconButton,
-    Tooltip  // 👈 导入 Tooltip
+    ListItem, ListItemButton, ListItemIcon, ListItemText, IconButton
 } from "@mui/material";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider"
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs"
-import {
-    DashboardOutlined,
-    AnalyticsOutlined,
-    StorageOutlined,
-    AssignmentOutlined
-} from "@mui/icons-material";
-
-import BacktestPage from "./modules/backtest/BacktestPage";
-import { ExportDataPage } from "./modules/exportor/ExportData";
-import { SqlExecutor } from "./modules/sql/SqlExecutor";
-import { TasksMonitorPage } from "./modules/task/TasksMonitor";
-import { SyncStockDailyPage } from "./modules/task/SyncStockDailyPage";
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { initRegisteredNodes } from "./api/Client";
 import MenuOpenIcon from "@mui/icons-material/MenuOpen";
 import MenuIcon from "@mui/icons-material/Menu";
-import TerminalIcon from "@mui/icons-material/Terminal";
-import TerminalPage from "./pages/TerminalPage";
-import PortfolioExpertPage from "./modules/backtest/PortfolioExpertPage"
-import JupyterDebugPage from "./modules/jupyter/JupyterDebugPage";
 import { useJupyterLabStore } from './store/jupyterlab.store';
 import { stopJupyterLab } from './api/Client'
 
@@ -44,17 +29,17 @@ const theme = createTheme({
     }
 });
 
-const menuItems = [
-    { text: '仪表盘', icon: <DashboardOutlined />, path: '/' },
-    { text: '量化回测', icon: <AnalyticsOutlined />, path: '/backtest' },
-    { text: 'Portfolio Expert', icon: <TerminalIcon />, path: '/portfolio_expert' },
-    { text: 'Jupyter Lab', icon: <TerminalIcon />, path: '/jupyter_lab' },
-    { text: 'SQL执行器', icon: <StorageOutlined />, path: '/sql_executor' },
-    { text: '同步日线数据', icon: <StorageOutlined />, path: '/sync_daily' },
-    { text: '任务监视', icon: <AssignmentOutlined />, path: '/tasks_monitor' },
-    { text: '导出数据', icon: <StorageOutlined />, path: '/export_data' },
-    { text: 'Web终端', icon: <TerminalIcon />, path: '/terminal' },
-];
+// const menuItems = [
+//     { text: '仪表盘', icon: <DashboardOutlined />, path: '/' },
+//     { text: '量化回测', icon: <AnalyticsOutlined />, path: '/backtest' },
+//     { text: 'Portfolio Expert', icon: <TerminalIcon />, path: '/portfolio_expert' },
+//     { text: 'Jupyter Lab', icon: <TerminalIcon />, path: '/jupyter_lab' },
+//     { text: 'SQL执行器', icon: <StorageOutlined />, path: '/sql_executor' },
+//     { text: '同步日线数据', icon: <StorageOutlined />, path: '/sync_daily' },
+//     { text: '任务监视', icon: <AssignmentOutlined />, path: '/tasks_monitor' },
+//     { text: '导出数据', icon: <StorageOutlined />, path: '/export_data' },
+//     { text: 'Web终端', icon: <TerminalIcon />, path: '/terminal' },
+// ];
 
 function MainLayout({ children }: { children: React.ReactNode }) {
     const location = useLocation();
@@ -97,20 +82,34 @@ function MainLayout({ children }: { children: React.ReactNode }) {
                     <List>
                         {menuGroups.map((group) => {
                             const isOpen = openGroup === group.text;
+                            const hasChildren = group.children && group.children.length > 0;
 
                             return (
                                 <>
-                                    {/* 一级 */}
+                                    {/* 一级菜单 */}
                                     <ListItem disablePadding>
                                         <ListItemButton
-                                            onClick={() => setOpenGroup(isOpen ? null : group.text)}
+                                            component={hasChildren ? "div" : Link}
+                                            to={hasChildren ? undefined : group.path}
+                                            onClick={() => {
+                                                if (hasChildren) {
+                                                    setOpenGroup(isOpen ? null : group.text);
+                                                }
+                                            }}
+                                            selected={!hasChildren && location.pathname === group.path}
                                         >
                                             <ListItemIcon>{group.icon}</ListItemIcon>
                                             <ListItemText primary={group.text} />
+
+                                            {/* 👇 这里加展开/收起箭头 */}
+                                            {hasChildren && (
+                                                isOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />
+                                            )}
+
                                         </ListItemButton>
                                     </ListItem>
 
-                                    {/* 二级 */}
+                                    {/* 二级菜单 */}
                                     <Collapse in={isOpen} timeout="auto" unmountOnExit>
                                         <List disablePadding>
                                             {group.children?.map((item) => (
@@ -155,26 +154,6 @@ export default function App() {
     const queryClient = new QueryClient();
     const [ready, setReady] = useState(false);
     const updateJupyterStatus = useJupyterLabStore(s => s.updateStatus);
-
-    // const menuGroups = [
-    //     {
-    //         text: "任务中心",
-    //         children: [
-    //             {
-    //                 text: "任务监视",
-    //                 path: "/tasks_monitor"
-    //             },
-    //             {
-    //                 text: "同步日线数据",
-    //                 path: "/sync_daily"
-    //             },
-    //             {
-    //                 text: "Script Executor",
-    //                 path: "/script_executor"
-    //             }
-    //         ]
-    //     }
-    // ]
 
     useEffect(() => {
         const initAll = async () => {
