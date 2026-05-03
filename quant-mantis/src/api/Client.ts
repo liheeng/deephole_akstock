@@ -282,3 +282,13 @@ export async function stopJupyterLab(): Promise<any | null> {
     }
 }
 
+
+export async function fetchTasks(): Promise<any | null> {
+    try {
+        const res = await apiClient.get('/tasks', { withCredentials: true });
+        return res?.data;
+    } catch (err) {
+        console.error("Jupyter停止失败...", err);
+        return null;
+    }
+}

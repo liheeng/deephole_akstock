@@ -5,6 +5,8 @@ from typing import List
 import enum
 from core.job import JobStatus
 from datetime import datetime
+
+
 class TaskStatus(enum.Enum):
     CREATED = "CREATED" # indicates that the task has been created but not yet started
     SUBMITTED = "SUBMITTED" # indicates that the task has been submitted for execution, usually is in queue waiting for resources or dependencies to be resolved
@@ -14,10 +16,12 @@ class TaskStatus(enum.Enum):
     FAILED = "FAILED" # indicates that the task has completed with a failure
     PARTIAL_SUCCESS = "PARTIAL_SUCCESS" # indicates that some jobs in the task succeeded while others failed
 
+
 class TaskMode(enum.Enum):
     SEQUENTIAL = "sequential" # indicates that the jobs in the task should be executed one after another in a specific order
     PARALLEL = "parallel" # indicates that the jobs in the task can be executed concurrently without any specific order
     DAG = "dag" # indicates that the jobs in the task have dependencies and should be executed according to a directed acyclic graph (DAG) structure, where some jobs may depend on the completion of others before they can start  
+
 
 @dataclass
 class Task:
@@ -33,15 +37,20 @@ class Task:
     message: str = ""
 
     def update_status_based_on_jobs(self) -> bool:
-        status = self.status
-        if all(job.status == JobStatus.SUCCESS for job in self.jobs):
+        statuses = [job.status for job in self.jobs]
+
+        if all(s == JobStatus.SUCCESS for s in statuses):
             self.status = TaskStatus.SUCCESS
-        elif any(job.status == JobStatus.FAILED for job in self.jobs):
-            self.status = TaskStatus.PARTIAL_SUCCESS if any(job.status == JobStatus.SUCCESS for job in self.jobs) else TaskStatus.FAILED
-        elif any(job.status == JobStatus.RUNNING for job in self.jobs):
+        elif any(s == JobStatus.RUNNING for s in statuses):
             self.status = TaskStatus.RUNNING
+        elif any(s == JobStatus.FAILED for s in statuses):
+            self.status = (
+                TaskStatus.PARTIAL_SUCCESS
+                if any(s == JobStatus.SUCCESS for s in statuses)
+                else TaskStatus.FAILED
+            )
         else:
             pass
 
-        return status != self.status
+        return statuses != self.status
 

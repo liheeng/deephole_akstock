@@ -15,11 +15,11 @@ import {
     AssignmentOutlined
 } from "@mui/icons-material";
 
-import BacktestPage from "./pages/BacktestPage";
-import { ExportDataPage } from "./pages/stock/ExportData";
-import { SqlExecutor } from "./pages/stock/SqlExecutor";
-import { TasksMonitorPage } from "./pages/stock/TasksMonitor";
-import { SyncStockDailyPage } from "./pages/stock/SyncStockDailyPage";
+import BacktestPage from "./modules/backtest/BacktestPage";
+import { ExportDataPage } from "./modules/exportor/ExportData";
+import { SqlExecutor } from "./modules/sql/SqlExecutor";
+import { TasksMonitorPage } from "./modules/task/TasksMonitor";
+import { SyncStockDailyPage } from "./modules/task/SyncStockDailyPage";
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { initRegisteredNodes } from "./api/Client";
@@ -27,10 +27,15 @@ import MenuOpenIcon from "@mui/icons-material/MenuOpen";
 import MenuIcon from "@mui/icons-material/Menu";
 import TerminalIcon from "@mui/icons-material/Terminal";
 import TerminalPage from "./pages/TerminalPage";
-import PortfolioExpertPage from "./pages/PortfolioExpertPage"
-import JupyterDebugPage from "./pages/JupyterDebugPage";
-import { useJupyterLabStore } from './store/jupyterlab.store'; 
+import PortfolioExpertPage from "./modules/backtest/PortfolioExpertPage"
+import JupyterDebugPage from "./modules/jupyter/JupyterDebugPage";
+import { useJupyterLabStore } from './store/jupyterlab.store';
 import { stopJupyterLab } from './api/Client'
+
+import { Collapse } from "@mui/material";
+import { buildMenu } from "./core/buildMenu"
+import { BuildRoutes } from "./core/buildRoutes"
+
 
 const theme = createTheme({
     palette: {
@@ -54,8 +59,11 @@ const menuItems = [
 function MainLayout({ children }: { children: React.ReactNode }) {
     const location = useLocation();
     const [drawerCollapsed, setDrawerCollapsed] = useState(false);
-    const drawerWidth = drawerCollapsed ? 64 : 240;
+    const [openGroup, setOpenGroup] = useState<string | null>(null);
 
+    const menuGroups = buildMenu(); // ✅ 用模块系统生成
+
+    const drawerWidth = drawerCollapsed ? 64 : 240;
     return (
         <Box sx={{ display: 'flex' }}>
             <CssBaseline />
@@ -87,54 +95,58 @@ function MainLayout({ children }: { children: React.ReactNode }) {
                 <Toolbar />
                 <Box sx={{ overflow: 'auto' }}>
                     <List>
-                        {menuItems.map((item) => (
-                            <ListItem key={item.text} disablePadding>
-                                <ListItemButton
-                                    component={Link}
-                                    to={item.path}
-                                    selected={location.pathname === item.path}
-                                >
-                                    {/* 🔥 图标 + Tooltip */}
-                                    <Tooltip
-                                        title={item.text}
-                                        placement="right"
-                                        arrow
-                                        disableHoverListener={!drawerCollapsed}
-                                    >
-                                        <ListItemIcon
-                                            sx={{
-                                                color: location.pathname === item.path
-                                                    ? 'primary.main'
-                                                    : 'inherit'
-                                            }}
-                                        >
-                                            {item.icon}
-                                        </ListItemIcon>
-                                    </Tooltip>
+                        {menuGroups.map((group) => {
+                            const isOpen = openGroup === group.text;
 
-                                    <ListItemText
-                                        primary={drawerCollapsed ? "" : item.text}
-                                    />
-                                </ListItemButton>
-                            </ListItem>
-                        ))}
+                            return (
+                                <>
+                                    {/* 一级 */}
+                                    <ListItem disablePadding>
+                                        <ListItemButton
+                                            onClick={() => setOpenGroup(isOpen ? null : group.text)}
+                                        >
+                                            <ListItemIcon>{group.icon}</ListItemIcon>
+                                            <ListItemText primary={group.text} />
+                                        </ListItemButton>
+                                    </ListItem>
+
+                                    {/* 二级 */}
+                                    <Collapse in={isOpen} timeout="auto" unmountOnExit>
+                                        <List disablePadding>
+                                            {group.children?.map((item) => (
+                                                <ListItem key={item.path} disablePadding>
+                                                    <ListItemButton
+                                                        component={Link}
+                                                        to={item.path!}
+                                                        selected={location.pathname === item.path}
+                                                        sx={{ pl: 4 }}
+                                                    >
+                                                        <ListItemText primary={item.text} />
+                                                    </ListItemButton>
+                                                </ListItem>
+                                            ))}
+                                        </List>
+                                    </Collapse>
+                                </>
+                            );
+                        })}
                     </List>
                 </Box>
             </Drawer>
 
-<Box
-  component="main"
-  sx={{
-    flexGrow: 1,
-    p: 3,
-    mt: 8,
-    height: "calc(100vh - 64px)",
-    overflow: "hidden", // ✅ 完全禁止滚动
-    overflowX: "hidden",
-  }}
->
-  {children}
-</Box>
+            <Box
+                component="main"
+                sx={{
+                    flexGrow: 1,
+                    p: 3,
+                    mt: 8,
+                    height: "calc(100vh - 64px)",
+                    overflow: "hidden", // ✅ 完全禁止滚动
+                    overflowX: "hidden",
+                }}
+            >
+                {children}
+            </Box>
         </Box>
     );
 }
@@ -143,6 +155,26 @@ export default function App() {
     const queryClient = new QueryClient();
     const [ready, setReady] = useState(false);
     const updateJupyterStatus = useJupyterLabStore(s => s.updateStatus);
+
+    // const menuGroups = [
+    //     {
+    //         text: "任务中心",
+    //         children: [
+    //             {
+    //                 text: "任务监视",
+    //                 path: "/tasks_monitor"
+    //             },
+    //             {
+    //                 text: "同步日线数据",
+    //                 path: "/sync_daily"
+    //             },
+    //             {
+    //                 text: "Script Executor",
+    //                 path: "/script_executor"
+    //             }
+    //         ]
+    //     }
+    // ]
 
     useEffect(() => {
         const initAll = async () => {
@@ -156,7 +188,7 @@ export default function App() {
         };
 
         initAll();
-        
+
         const stopJupyter = async () => {
             try {
                 const data = await stopJupyterLab()
@@ -200,17 +232,7 @@ export default function App() {
                 <QueryClientProvider client={queryClient}>
                     <BrowserRouter>
                         <MainLayout>
-                            <Routes>
-                                <Route path="/" element={<Typography variant="h4">欢迎来到DeepHole股票回测系统</Typography>} />
-                                <Route path="/backtest" element={<BacktestPage />} />
-                                <Route path="/portfolio_expert" element={<PortfolioExpertPage />} />
-                                <Route path="/jupyter_lab" element={<JupyterDebugPage />} />
-                                <Route path="/sql_executor" element={<SqlExecutor />} />
-                                <Route path="/sync_daily" element={<SyncStockDailyPage />} />
-                                <Route path="/tasks_monitor" element={<TasksMonitorPage />} />
-                                <Route path="/export_data" element={<ExportDataPage />} />
-                                <Route path="/terminal" element={<TerminalPage />} />
-                            </Routes>
+                            <BuildRoutes />
                         </MainLayout>
                     </BrowserRouter>
                 </QueryClientProvider>

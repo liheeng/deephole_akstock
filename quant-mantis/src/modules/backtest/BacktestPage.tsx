@@ -4,19 +4,19 @@ import { Box } from "@mui/material"
 import Split from "react-split"
 
 // import { useNodes } from "../../hooks/useNodes"
-import { NodeRegistry } from "../model/dsl_node/node_registry";
-import TopToolbar from "../components/layout/TopToolbar"
-import PortfolioPanel from "../components/portfolio/PortfolioPanel"
-import BacktestResult from "../components/backtest/BacktestResult"
-import StrategyGraph from "../components/backtest/StrategyGraph"
-import { useBacktestStore} from "../store/backtest/backtest.store"
-import { useBacktestResultStore } from "../store/backtest/backtestresult.store"
-import GlobalDialogs from "../components/dsl/GlobalEditorDialog"
-import { callBacktest } from "../api/Client";
-import { useDialogStore } from "../store/dialog.store"
-import { useDatasetStore } from "../store/dataset.store";
-import WindowWrapper from "../components/misc/WindowWrapper"
-import BacktestResult_V2 from "../components/backtest-result/BacktestResult-v2";
+import { NodeRegistry } from "../../model/dsl_node/node_registry";
+import TopToolbar from "../../components/layout/TopToolbar"
+import PortfolioPanel from "../../components/portfolio/PortfolioPanel"
+import BacktestResult from "../../components/backtest/BacktestResult"
+import StrategyGraph from "../../components/backtest/StrategyGraph"
+import { useBacktestStore} from "../../store/backtest/backtest.store"
+import { useBacktestResultStore } from "../../store/backtest/backtestresult.store"
+import GlobalDialogs from "../../components/dsl/GlobalEditorDialog"
+import { callBacktest } from "../../api/Client";
+import { useDialogStore } from "../../store/dialog.store"
+import { useDatasetStore } from "../../store/dataset.store";
+import WindowWrapper from "../../components/misc/WindowWrapper"
+import BacktestResult_V2 from "../../components/backtest-result/BacktestResult-v2";
 
 export default function BacktestPage() {
     const buildPortfolioPayload = useBacktestStore((state) => state.buildPayload)

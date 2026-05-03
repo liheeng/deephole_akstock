@@ -4,7 +4,7 @@ import { Container, Paper, Box, Button, Alert, Snackbar } from '@mui/material';
 import Editor from '@monaco-editor/react';
 // import BacktestResults from '../components/BacktestResults';
 // import { runBacktest } from './lib/backtestApi';
-import { PortfolioBuilder } from '../components/portfolio/PortfolioBuilder';
+import { PortfolioBuilder } from '../../components/portfolio/PortfolioBuilder';
 
 const defaultCode = `// 回测策略构建示例
 const builder = new PortfolioBuilder("我的策略", "signal_strategy");

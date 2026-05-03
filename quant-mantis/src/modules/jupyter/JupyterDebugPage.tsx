@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Box, CircularProgress, Typography } from '@mui/material'
-import { startJupyterLab } from '../api/Client'
-import { useJupyterLabStore } from '../store/jupyterlab.store'
-import { FullScreenBox } from "../components/misc//FullScreenBox"
+import { startJupyterLab } from '../../api/Client'
+import { useJupyterLabStore } from '../../store/jupyterlab.store'
+import { FullScreenBox } from "../../components/misc/FullScreenBox"
 
 // const JUPYTER_API = 'http://localhost:9000'
 
