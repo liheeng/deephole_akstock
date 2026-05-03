@@ -1,10 +1,10 @@
 import { useParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { Grid, Typography } from '@mui/material'
-import MainCard from '../../components/visual/MainCard'
-import LogPanel from '../../sections/task/LogPanel'
-import RunControls from '../../sections/task/RunControls'
-import { getTaskDetail } from '../../api/task'
+import MainCard from '../../../components/visual/MainCard'
+import { LogPanel } from './LogPanel'
+import RunControls from './RunControls'
+import { getTaskDetail } from '../../../api/task'
 
 export default function TaskDetail() {
     const { id } = useParams()

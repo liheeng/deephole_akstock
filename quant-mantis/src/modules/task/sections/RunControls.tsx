@@ -1,5 +1,5 @@
 import { Button, Stack } from '@mui/material'
-import { runTask, cancelTask } from '../../api/task'
+import { runTask, cancelTask } from '../../../api/task'
 
 export default function RunControls({ taskId, onRefresh }: any) {
     return (

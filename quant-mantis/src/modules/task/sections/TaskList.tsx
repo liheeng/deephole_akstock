@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Stack, Typography } from '@mui/material'
-import MainCard from '../../components/visual/MainCard'
-import TaskTable from '../../sections/task/TaskTable'
-import { getTasks, runTask } from '../../api/task'
+import MainCard from '../../../components/visual/MainCard'
+import TaskTable from './TaskTable'
+import { getTasks, runTask } from '../../../api/task'
 
 export default function TaskList() {
     const [tasks, setTasks] = useState<any[]>([])

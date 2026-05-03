@@ -10,7 +10,7 @@ import { type BacktestResultState } from "../store/backtest/backtestresult.store
 import { useStrategyStore, type Strategy } from '../store/backtest/strategy.store';
 import { useFactorStore, type Factor } from '../store/backtest/factor.store';
 import { useSignalStore, type Signal } from '../store/backtest/signal.store';
-
+import { Job } from '../modules/task/types/job'
 export const apiClient = axios.create({
     baseURL: API_URL_BASE + "/api",
 });
@@ -291,4 +291,66 @@ export async function fetchTasks(): Promise<any | null> {
         console.error("Jupyter停止失败...", err);
         return null;
     }
+}
+
+export async function fetchJobs(taskId: string): Promise<Job[]> {
+    try {
+        const tasks = await fetchTasks();
+        if (!tasks) return [];
+
+        const jobs: Job[] = [];
+        for (const task of tasks) {
+            if (task.jobs && task.jobs.length) {
+                if (task.id === taskId) {
+                    task.jobs.forEach((job: Job) => {
+                        jobs.push(job);
+                    });
+                }
+            }
+        }
+
+        // 按执行时间倒序
+        jobs.sort((a, b) => (b.execute_time || '').localeCompare(a.execute_time || ''));
+
+        return jobs;
+    } catch (err) {
+        console.error('拉取 Script Executor 历史失败', err);
+        return [];
+    }
+}
+
+// api/Client.ts
+export async function fetchScriptExecutorJobs(): Promise<Job[]> {
+    try {
+        // 获取所有 Script Executor 类型的 Task
+        const tasks = await fetchTasks();
+        if (!tasks) return [];
+
+        // 筛选所有 Script Executor 类型 Task 的 Job
+        const jobs: Job[] = [];
+        for (const task of tasks) {
+            if (task.jobs && task.jobs.length) {
+                task.jobs.forEach((job: Job) => {
+                    if (job.type === "python_script") {
+                        jobs.push(job);
+                    }
+                });
+            }
+        }
+
+        // 按执行时间倒序
+        jobs.sort((a, b) => (b.execute_time || '').localeCompare(a.execute_time || ''));
+
+        return jobs;
+    } catch (err) {
+        console.error('拉取 Script Executor 历史失败', err);
+        return [];
+    }
+}
+
+// SSE 日志流
+export function logStream(jobId: string): EventSource {
+    const url = `/jobs/${jobId}/logs/stream`; // 对应你的 FastAPI log_stream 路径
+    const es = new EventSource(url, { withCredentials: true } as any); // axios 不支持 SSE，这里直接用浏览器 API
+    return es;
 }

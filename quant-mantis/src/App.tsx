@@ -29,26 +29,15 @@ const theme = createTheme({
     }
 });
 
-// const menuItems = [
-//     { text: '仪表盘', icon: <DashboardOutlined />, path: '/' },
-//     { text: '量化回测', icon: <AnalyticsOutlined />, path: '/backtest' },
-//     { text: 'Portfolio Expert', icon: <TerminalIcon />, path: '/portfolio_expert' },
-//     { text: 'Jupyter Lab', icon: <TerminalIcon />, path: '/jupyter_lab' },
-//     { text: 'SQL执行器', icon: <StorageOutlined />, path: '/sql_executor' },
-//     { text: '同步日线数据', icon: <StorageOutlined />, path: '/sync_daily' },
-//     { text: '任务监视', icon: <AssignmentOutlined />, path: '/tasks_monitor' },
-//     { text: '导出数据', icon: <StorageOutlined />, path: '/export_data' },
-//     { text: 'Web终端', icon: <TerminalIcon />, path: '/terminal' },
-// ];
-
 function MainLayout({ children }: { children: React.ReactNode }) {
     const location = useLocation();
     const [drawerCollapsed, setDrawerCollapsed] = useState(false);
     const [openGroup, setOpenGroup] = useState<string | null>(null);
 
-    const menuGroups = buildMenu(); // ✅ 用模块系统生成
+    const menuGroups = buildMenu();
 
     const drawerWidth = drawerCollapsed ? 64 : 240;
+
     return (
         <Box sx={{ display: 'flex' }}>
             <CssBaseline />
@@ -98,34 +87,41 @@ function MainLayout({ children }: { children: React.ReactNode }) {
                                             }}
                                             selected={!hasChildren && location.pathname === group.path}
                                         >
-                                            <ListItemIcon>{group.icon}</ListItemIcon>
-                                            <ListItemText primary={group.text} />
+                                            <ListItemIcon sx={{ minWidth: '40px', justifyContent: 'center' }}>
+                                                {group.icon}
+                                            </ListItemIcon>
 
-                                            {/* 👇 这里加展开/收起箭头 */}
-                                            {hasChildren && (
-                                                isOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />
+                                            {/* 最小化时不显示文字 */}
+                                            {!drawerCollapsed && (
+                                                <ListItemText primary={group.text} sx={{ m: 0 }} />
                                             )}
 
+                                            {/* 最小化时不显示箭头 */}
+                                            {!drawerCollapsed && hasChildren && (
+                                                isOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />
+                                            )}
                                         </ListItemButton>
                                     </ListItem>
 
-                                    {/* 二级菜单 */}
-                                    <Collapse in={isOpen} timeout="auto" unmountOnExit>
-                                        <List disablePadding>
-                                            {group.children?.map((item) => (
-                                                <ListItem key={item.path} disablePadding>
-                                                    <ListItemButton
-                                                        component={Link}
-                                                        to={item.path!}
-                                                        selected={location.pathname === item.path}
-                                                        sx={{ pl: 4 }}
-                                                    >
-                                                        <ListItemText primary={item.text} />
-                                                    </ListItemButton>
-                                                </ListItem>
-                                            ))}
-                                        </List>
-                                    </Collapse>
+                                    {/* 二级菜单：最小化时直接隐藏 */}
+                                    {!drawerCollapsed && (
+                                        <Collapse in={isOpen} timeout="auto" unmountOnExit>
+                                            <List disablePadding>
+                                                {group.children?.map((item) => (
+                                                    <ListItem key={item.path} disablePadding>
+                                                        <ListItemButton
+                                                            component={Link}
+                                                            to={item.path!}
+                                                            selected={location.pathname === item.path}
+                                                            sx={{ pl: 4 }}
+                                                        >
+                                                            <ListItemText primary={item.text} />
+                                                        </ListItemButton>
+                                                    </ListItem>
+                                                ))}
+                                            </List>
+                                        </Collapse>
+                                    )}
                                 </>
                             );
                         })}
@@ -140,7 +136,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
                     p: 3,
                     mt: 8,
                     height: "calc(100vh - 64px)",
-                    overflow: "hidden", // ✅ 完全禁止滚动
+                    overflow: "hidden",
                     overflowX: "hidden",
                 }}
             >
@@ -178,10 +174,7 @@ export default function App() {
             }
         }
 
-        // 监听关闭/刷新
         window.addEventListener('beforeunload', stopJupyter);
-
-        // 组件卸载（路由跳转也会触发）
         return () => {
             window.removeEventListener('beforeunload', stopJupyter);
         };
@@ -211,7 +204,8 @@ export default function App() {
                 <QueryClientProvider client={queryClient}>
                     <BrowserRouter>
                         <MainLayout>
-                            <BuildRoutes />
+                            <BuildRoutes>
+                            </BuildRoutes>
                         </MainLayout>
                     </BrowserRouter>
                 </QueryClientProvider>
