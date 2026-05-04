@@ -1,7 +1,7 @@
 
 services:
   deephole_stock_db_init:
-    image: deephole-stock-data:4.1
+    image: deephole-stock-data:6.0
     container_name: deephole_stock_db_init
     build:
       context: ..
@@ -16,7 +16,7 @@ services:
       - ENABLE_CRON=false
 
   deephole_stock_api_service:
-    image: deephole-stock-data:4.1
+    image: deephole-stock-data:6.0
     container_name: deephole_stock_api_service
     depends_on:
       - deephole_stock_db_init
@@ -38,7 +38,7 @@ services:
     restart: unless-stopped
 
   deephole_stock_cron_fetcher:
-    image: deephole-stock-data:4.1
+    image: deephole-stock-data:6.0
     container_name: deephole_stock_cron_fetcher
     depends_on:
       - deephole_stock_db_init
@@ -60,7 +60,7 @@ services:
     restart: unless-stopped
 
   # deephole_stock_dashboard:
-  #   image: deephole-stock-data:4.1
+  #   image: deephole-stock-data:6.0
   #   container_name: deephole_stock_dashboard
   #   depends_on:
   #     - deephole_stock_db_init
@@ -80,7 +80,7 @@ services:
   #   restart: unless-stopped
 
   deephole_stock_dashboard:
-    image: deephole-stock-data:4.1
+    image: deephole-stock-data:6.0
     container_name: deephole_stock_dashboard
 
     depends_on:
