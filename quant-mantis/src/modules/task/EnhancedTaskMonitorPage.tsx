@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react';
 import {
   Box,
 } from '@mui/material';
-// import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-// import { useQuery } from '@tanstack/react-query';
 import { fetchTasks, fetchJobs } from "../../api/Client";
 import { Task } from './types/task'
 import { Job } from './types/job'
@@ -11,10 +9,6 @@ import { LogPanel } from './sections/LogPanel';
 import RunControls from './sections/RunControls';
 import TaskTable from './sections/TaskTable';
 import JobTable from './sections/JobTable';
-
-// import { ExecutionHistory } from '../ExecutionHistory';
-// import { useLogStream, type LogLine } from '../../../hooks/useLogStream';
-
 
 export default function EnhancedTaskMonitorPage() {
     const [tasks, setTasks] = useState<Task[]>([]);
