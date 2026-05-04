@@ -15,6 +15,7 @@ class TaskStatus(enum.Enum):
     SUCCESS = "SUCCESS" # indicates that the task has completed successfully
     FAILED = "FAILED" # indicates that the task has completed with a failure
     PARTIAL_SUCCESS = "PARTIAL_SUCCESS" # indicates that some jobs in the task succeeded while others failed
+    CANCELLED = "CANCELLED"
 
 
 class TaskMode(enum.Enum):

@@ -28,6 +28,7 @@ paramiko
 
 # ===== Jupyter ====-
 jupyterlab==4.0.12
+jupyter-ai
 jupyter-lsp
 python-lsp-server[all]
 

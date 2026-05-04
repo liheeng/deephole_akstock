@@ -34,12 +34,13 @@ from core.task_manager import task_manager
 from db.db_common import DB
 from utils.common import is_running_in_docker
 from loguru import logger
-from utils.task_util import create_sync_daily_task
+from utils.task_util import create_sync_daily_task, create_python_scripts_task
 from core.scheduler import run_task
 from core.worker import start_workers
 from db.duckdb import DuckDBController, DuckDBTransaction
 from sources.ifind.ifind_api import IFinDApi
 from sources.data_source import DataSourceApiName
+from core.log_stream import log_queues
 
 from backtest.backtest_base import ApiDataSetConfig, ApiBacktestRequest
 from vectorbt_test.core.registry import NodeRegistry
@@ -48,13 +49,17 @@ from vectorbt_test.engine.data_provider import DataProvider
 from vectorbt_test.engine.portfolio_builder import PortfolioBuilder
 from vectorbt_test.engine.init import load_register_nodes
 from vectorbt_test.portfolios.signal_strategy_portfolio import StrategyOp
-from numba_settings import allocate_cpu_to_numba_vbt
+from executors.base import ExecutorBase
+from core.job import JobType, Job
+from executors.base import get_executor
+
 # !!! Register executors, any new executor needs to be import here,
 # it is very important,otherwise the API won't know how to handle
 # the incoming jobs!!!
 import executors.cn_daily_sync_executor    # noqa
 import executors.hk_daily_sync_executor    # noqa
 import executors.us_daily_sync_exectuor    # noqa
+import executors.python_script_executor
 
 
 # Init logger
@@ -118,6 +123,7 @@ def call_task(
     data_source: str = Query(DataSourceApiName.AKSHARE_SINA_API.value, description="数据源：ifind/akshare.sina/akshare.eastmoney/akshare.tencent/yfinance")
 ):
     try:
+        logger.info(f"received sync daily request {sync_type}")
         # 传入数据源
         task = create_sync_daily_task(sync_type, data_source=DataSourceApiName(data_source))
         if task:
@@ -128,16 +134,61 @@ def call_task(
         else:
             return {"message": f"无效的同步类型: {sync_type}"}
     except Exception as e:
+        logger.exception(e)
         raise HTTPException(status_code=500, detail=f"错误: {str(e)}")
 
 
+class ScriptRequest(BaseModel):
+    script: str
+
+
+@app.post("/api/task/execute_script_job")
+def execute_script_job(req: ScriptRequest):
+    script = req.script
+    try:
+        logger.info(f"received execute script job request: scripts: {script}")
+        # 传入数据源
+        task = create_python_scripts_task(script)
+        if task:
+            if run_task(task):
+                return {"status": "success", "task_id": f"{task.id}", "job_id": f"{task.jobs[0].id}", "job_type": f"{task.jobs[0].type.value}", "message": f"started script task {task.id}"}
+            else:
+                raise HTTPException(status_code=400, detail="启动任务失败")
+        else:
+            return {"status": "failed", "message": "Failed to create script execute task"}
+    except Exception as e:
+        logger.exception(e)
+        raise HTTPException(status_code=500, detail=f"错误: {str(e)}")
+
+
+class JobMeta(BaseModel):
+    job_id: str
+    job_type: str
+
+
+@app.post("/api/task/cancel_script_job")
+def cancel_script_job(job_meta: JobMeta):
+    try:
+        logger.info(f"received cancel script job request: scripts: {job_meta}")
+        # 传入数据源
+        executor: ExecutorBase = get_executor(JobType(job_meta.job_type))
+        if executor.cancel_job(job_meta.job_id):
+            return {"status": "success", "job_id": f"{job_meta.job_id}", "job_type": f"{job_meta.job_type}", "message": f"cancelled job {job_meta.job_id}"}
+        else:
+            return {"status": "failed", "job_id": f"{job_meta.job_id}", "job_type": f"{job_meta.job_type}", "message": f"Failed to cancel script execute job {job_meta.job_id}"}
+    except Exception as e:
+        logger.exception(e)
+        raise HTTPException(status_code=500, detail=f"错误: {str(e)}")
+    
 @app.get("/api/tasks")
 def list_tasks(limit: int = 20):
     try:
+        logger.info(f"received get tasks request, limit: {limit}")
         tasks = task_manager.list_tasks(limit)
-        logger.info("list tasks: %s", tasks)
+        logger.info(f"list tasks: {tasks}")
         return tasks
     except Exception as e:
+        logger.exception(e)
         raise HTTPException(
             status_code=400,
             detail=f"failed to list tasks, error：{str(e)}"
@@ -146,21 +197,77 @@ def list_tasks(limit: int = 20):
 
 @app.get("/api/tasks/{task_id}")
 def get_task(task_id: str):
+    logger.info(f"received get task request, task id: {task_id}")
     return task_manager.load_task(task_id)
+
+
+LOG_PATH = "/logs/default.log" if is_running_in_docker() else "./logs/default.log"
 
 
 @app.get("/api/logs/tail")
 def tail_logs(n: int = 50):
-
-    path = "/logs/default.log" if is_running_in_docker() else "./logs/default.log"
-
-    if not os.path.exists(path):
+    logger.info(f"received get app log request, line: {n}")
+    if not os.path.exists(LOG_PATH):
         return {"logs": []}
 
-    with open(path) as f:
+    with open(LOG_PATH) as f:
         lines = f.readlines()
 
     return {"logs": lines[-n:]}
+
+
+@app.websocket("/api/ws/logs/default")
+async def default_log_ws(websocket: WebSocket, level: str = "", keyword: str = ""):
+    logger.info(f"received get app log webstock request, webstocket: {websocket}, level: {level}, keyword: {keyword}")
+    await websocket.accept()
+    last_pos = 0
+
+    while True:
+        if not os.path.exists(LOG_PATH):
+            await asyncio.sleep(1)
+            continue
+
+        with open(LOG_PATH, "r", encoding="utf-8") as f:
+            f.seek(last_pos)
+            lines = f.readlines()
+            last_pos = f.tell()
+
+        for line in lines:
+            # ===================== 修复：适配你真实的日志格式 =====================
+            ts = ""
+            lv = "INFO"
+            msg = ""
+
+            try:
+                # 按 | 分割：[时间, 等级, 剩余内容]
+                parts = line.strip().split(" | ", 2)
+                if len(parts) == 3:
+                    ts = parts[0].strip()                     # 时间
+                    lv = parts[1].strip()                      # 等级
+                    msg_part = parts[2].strip()                # 模块:行号 - 消息
+
+                    # 把后面的内容也一起当消息展示（更友好）
+                    msg = msg_part
+            except Exception:
+                # 解析失败就原样输出
+                ts = ""
+                lv = "INFO"
+                msg = line.strip()
+
+            # ===================== 过滤逻辑 =====================
+            if level and lv != level:
+                continue
+            if keyword and keyword.lower() not in msg.lower():
+                continue
+
+            # ===================== 发送（永远不会报错） =====================
+            await websocket.send_json({
+                "timestamp": ts,
+                "level": lv,
+                "message": msg
+            })
+
+        await asyncio.sleep(0.5)
 
 
 class SQLQuery(BaseModel):
@@ -170,7 +277,7 @@ class SQLQuery(BaseModel):
 @app.post("/api/execute_sql")
 def execute_sql(query: SQLQuery):
     try:
-        logger.info("received request for executing sql: %s", query.sql)
+        logger.info(f"received request for executing sql: {query.sql}")
 
         sql = query.sql.strip().lower()
 
@@ -194,7 +301,7 @@ def execute_sql(query: SQLQuery):
         }
 
     except Exception as e:
-        logger.exception(f"failed to execute sql: {query.sql}")
+        logger.exception(f"failed to execute sql: {query.sql}, err: {e}")
         return {"status": "error", "message": str(e)}
 
 
@@ -287,6 +394,7 @@ def validate_req(req: dict):
 
 @app.post("/api/export/preview")
 def export_preview(req: dict):
+    logger.info(f"received export preview request, {req}")
     validate_req(req)
     _req = {**req}
     if _req.get("limit") and int(_req["limit"]) > 50:
@@ -316,6 +424,7 @@ def export_preview(req: dict):
 
 @app.post("/api/export/stream")
 async def export_stream(req):
+    logger.info(f"received export data stream request, {req}")
     validate_req(req)
     cols = req["columns"]
     fmt = req.get("export_format", "csv").lower()
@@ -363,6 +472,7 @@ async def export_stream(req):
 
 @app.get("/api/nodes")
 def get_nodes():
+    logger.info("received get registry nodes request")
     nodes = NodeRegistry.to_dict()
     # logger.info(f"nodes: {nodes}")
     logger.info(f"get all nodes: {nodes.keys()}")
@@ -460,11 +570,10 @@ def save_backtest_result(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-
-
 @app.post("/api/backtest")
 def run_backtest(req: ApiBacktestRequest):
     try:
+        logger.info(f"received run backtest request, {req}")
         # 1. 构建 Portfolio
         portfolio_config = req.portfolio_config
         builder = PortfolioBuilder.new(portfolio_config.name, portfolio_config.portfolio_mode)
@@ -564,6 +673,7 @@ def query_backtest_results(
 ):
     conn = db_controller
     try:
+        logger.info("received get backtest results request, dataset_config_id: {dataset_config_id}, portfolio_name: {portfolio_name} ")
         sql = """
             SELECT id, dataset_config_id, portfolio_name,
                    stats, equity, trades, created_at
@@ -666,6 +776,7 @@ class DatasetCreateRequest(BaseModel):
 @app.get("/api/backtest/datasets", response_model=List[Any])
 def backtest_fetch_datasets():
     try:
+        logger.info("received get backtest datasets request")
         with DuckDBTransaction(db_controller) as tx:
 
             rows = tx.read("""
@@ -709,18 +820,19 @@ def backtest_fetch_datasets():
         return result
 
     except Exception as e:
-        logger.exception("failed to fetch datasets")
+        logger.exception(f"failed to fetch datasets, {e}")
         raise HTTPException(
             status_code=500,
             detail=f"错误: {str(e)}\n{traceback.format_exc()}"
         )
     
+
 @app.post("/api/backtest/dataset")
 def backtest_update_dataset(req: DatasetCreateRequest):
 
     now = datetime.now()
-
     try:
+        logger.info("received update backtest dataset request, {req}")
         with DuckDBTransaction(db_controller) as tx:
 
             sql = """
@@ -756,7 +868,7 @@ def backtest_update_dataset(req: DatasetCreateRequest):
         }
 
     except Exception as e:
-        logger.exception("failed to create/update dataset")
+        logger.exception(f"failed to create/update dataset {e}")
         raise HTTPException(500, str(e))
 
 
@@ -788,6 +900,7 @@ class BacktestConfig(BaseModel):
 def get_all_backtest_configs():
     conn = db_controller
     try:
+        logger.info("received get backtest configs request")
         rows = conn.execute("""
             SELECT 
                 id, name, portfolio_mode, params,
@@ -900,6 +1013,7 @@ def get_all_backtest_configs():
 # ==============================
 @app.post("/api/backtest/config")
 def update_backtest_config(config: BacktestConfig):
+    logger.info(f"received update backtest config request, config: {config}")
     if not config.id:
         raise HTTPException(status_code=400, detail="Backtest(Portfolio) id 不能为空")
 
@@ -1065,8 +1179,9 @@ TERMINAL_TARGETS = [
 
 @app.get("/api/terminal/targets")
 def get_total_targets():
-    result = TERMINAL_TARGETS.copy()
+    logger.info("recevied get total targets/hosts request")
 
+    result = TERMINAL_TARGETS.copy()
     try:
         client = docker.from_env()
         containers = client.containers.list()
@@ -1079,6 +1194,7 @@ def get_total_targets():
                 "container": c.name,
             })
     except Exception as e:
+        logger.exception(e)
         print("docker not available", e)
 
     return result
@@ -1208,6 +1324,8 @@ async def handle_host(ws, target):
 
 @app.websocket("/api/ws/terminal")
 async def terminal(ws: WebSocket):
+    logger.info(f"received create terminal websocket request, ws: {ws}")
+    
     origin = ws.headers.get("origin")
     print(origin)
 
@@ -1243,6 +1361,7 @@ async def terminal(ws: WebSocket):
 # 全局保存 Jupyter 子进程
 jupyter_process = None
 JUPYTER_PORT = 8888
+JUPYTER_NOTEBOOK_DIR = "/.notebooks" if is_running_in_docker() else "./.notebooks"
 
 
 def is_port_ready(port: int, timeout=30, interval=1):
@@ -1262,15 +1381,19 @@ def is_port_ready(port: int, timeout=30, interval=1):
 
 # 启动 JupyterLab
 @app.get("/api/jupyter/start-jupyter")
-def start_jupyter():
+def start_jupyter(request: Request):
+    logger.info("received start jupyter labl request")
+
     global jupyter_process
     if jupyter_process is not None and jupyter_process.poll() is None:
-        return {"status": "running", "process_id": f"{jupyter_process}", "url": f"http://localhost:{JUPYTER_PORT}/lab"}
+        server_ip = get_current_server_ip(request)
+        return {"status": "running", "process_id": f"{jupyter_process}", "url": f"http://{server_ip}:{JUPYTER_PORT}/lab"}
 
     tornado_settings = '{"headers":{"Content-Security-Policy":"frame-ancestors *"}}' 
     # 后台启动 jupyter（无浏览器、允许远程、关闭token）
     jupyter_process = subprocess.Popen([
         "jupyter", "lab",
+        f"--notebook-dir={JUPYTER_NOTEBOOK_DIR}",
         f"--port={JUPYTER_PORT}",
         "--no-browser",
         "--ip=0.0.0.0",
@@ -1291,9 +1414,12 @@ def start_jupyter():
     logger.info(f"jupyter lab is running, process: {jupyter_process.pid}, url: http://localhost:{JUPYTER_PORT}/lab")
     return {"status": "running", "process_id": f"{jupyter_process.pid}", "url": f"http://localhost:{JUPYTER_PORT}/lab"}
 
+
 # 停止 JupyterLab
 @app.get("/api/jupyter/stop-jupyter")
 def stop_jupyter():
+    logger.info("received stop jupyter lab request")
+
     global jupyter_process
 
     try:
@@ -1333,9 +1459,10 @@ def kill_jupyter_on_exit():
 def routes():
     return [r.path for r in app.routes]
 
+
 @app.get("/api/whoami")
 def whoami():
-    import os, socket
+    logger.info("received get whoami request")
     return {
         "pid": os.getpid(),
         "host": socket.gethostname()
@@ -1356,6 +1483,7 @@ def get_current_server_ip(request: Request) -> str:
 
 @app.get("/api/api_service/ip")
 async def my_api(request: Request):
+    logger.info(f"received get api service ip request {request}")
     # 🔥 这就是你当前服务的IP（多网卡也绝对正确）
     server_ip = get_current_server_ip(request)
     
@@ -1363,3 +1491,35 @@ async def my_api(request: Request):
         "msg": "ok",
         "server_ip": server_ip  # ✅ 绝对正确
     }
+
+
+@app.get("/jobs/{job_id}/logs/stream")
+async def log_stream(job_id: str, request: Request):
+    async def event_generator():
+        try:
+            while True:
+                # 客户端断开时退出
+                if await request.is_disconnected():
+                    break
+
+                try:
+                    # 等待日志（带超时，用来发心跳）
+                    log = await asyncio.wait_for(
+                        log_queues[job_id].get(),
+                        timeout=15
+                    )
+
+                    yield f"data: {json.dumps(log)}\n\n"
+
+                except asyncio.TimeoutError:
+                    # 心跳（防止连接被代理断掉）
+                    yield "event: ping\ndata: {}\n\n"
+
+        except asyncio.CancelledError:
+            # 客户端断开会触发
+            pass
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream"
+    )

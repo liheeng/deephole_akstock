@@ -52,3 +52,13 @@ def create_sync_daily_task(sync_type: str, data_source: DataSourceApiName) -> Ta
         return create_sync_us_daily_task(data_source)
     else:
         return None
+    
+
+def create_python_scripts_task(script: str) -> Task:
+    # create sync US daily task
+    task = Task(id=generate_task_id(), jobs=[], description="Python scripts")
+    params = {}
+    params['script'] = script
+    job = Job(id=generate_job_id(), type=JobType.PYTHON_SCRIPT, params=params, task_id=task.id, task=task)
+    task.jobs.append(job)
+    return task

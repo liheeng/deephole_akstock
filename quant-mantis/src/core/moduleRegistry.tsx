@@ -1,12 +1,12 @@
 import { type ReactNode } from "react"
 
-
 import { backtestModule } from "../modules/backtest"
 import { JutyperLabModule } from "../modules/jupyter"
 import { sqlExecutorModule } from "../modules/sql"
 import { exportDataModule } from "../modules/exportor"
 import { taskModule } from "../modules/task"
 import { terminalModule } from "../modules/terminal"
+import { systemModule } from '../modules/system'
 
 export const modules = [
     backtestModule,
@@ -14,7 +14,8 @@ export const modules = [
     sqlExecutorModule,
     exportDataModule,
     taskModule,
-    terminalModule
+    terminalModule,
+    systemModule
 ]
 
 export interface AppModule {

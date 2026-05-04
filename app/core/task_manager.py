@@ -11,8 +11,6 @@ from db.duckdb import DuckDBController
 dbc = DuckDBController(DB)
 
 
-
-
 def job_dag_ok(job: Job) -> bool:
     if not job.depends_on:
         return True
@@ -246,6 +244,28 @@ class TaskManager:
 
         return jobs
     
+    def load_job(self, job_id: str) -> Job:
+        job_row = dbc.read("""
+            SELECT *
+            FROM jobs
+            WHERE id = ?
+        """, [job_id], fetch_mode="one")
+        job = Job(
+            id=job_row[0],
+            type=JobType(job_row[1]),
+            status=JobStatus(job_row[2]),
+            task_id=job_row[3],
+            params=json.loads(job_row[4] or "{}"),
+            depends_on=json.loads(job_row[5] or "[]"),
+            retry_count=job_row[6],
+            retries=job_row[7],
+            execute_time=job_row[8],
+            stop_time=job_row[9],
+            message=job_row[10],
+            error=job_row[11]
+        )
+        return job
+
     def load_task(self, task_id: str):
 
         def callback(con):
@@ -266,7 +286,7 @@ class TaskManager:
 
     def update_job_status_by_id(self, job_id: str, new_status: JobStatus, message="", error="") -> datetime:
         _time = datetime.now()
-        if new_status in [JobStatus.SUCCESS, JobStatus.FAILED]:
+        if new_status in [JobStatus.SUCCESS, JobStatus.FAILED, JobStatus.CANCELLED]:
             dbc.execute("""
                 UPDATE jobs
                 SET status=?, message=?, error=?, stop_time=?, update_time=now()
@@ -313,7 +333,7 @@ class TaskManager:
         status = job.status
         old_job_status = job.update_status(new_status)
         _time = self.update_job_status_by_id(job_id = job.id, new_status=job.status, message=job.message, error=job.error).strftime("%Y-%m-%d %H:%M:%S")
-        if job.status in [JobStatus.SUCCESS, JobStatus.FAILED]:
+        if job.status in [JobStatus.SUCCESS, JobStatus.FAILED, JobStatus.CANCELLED]:
             job.stop_time = _time
         elif job.status == JobStatus.RUNNING:
             job.execute_time = _time
@@ -326,7 +346,7 @@ class TaskManager:
 
     def update_task_status_by_id(self, task_id: str, new_status: TaskStatus, message="") -> datetime:
         _time = datetime.now()
-        if new_status in [TaskStatus.SUCCESS, TaskStatus.FAILED, TaskStatus.PARTIAL_SUCCESS]:
+        if new_status in [TaskStatus.SUCCESS, TaskStatus.FAILED, TaskStatus.PARTIAL_SUCCESS, TaskStatus.CANCELLED]:
             dbc.execute("""
                 UPDATE tasks
                 SET status=?, stop_time=?, message=?, update_time=now()
@@ -370,7 +390,7 @@ class TaskManager:
         status = task.status
         task.status = new_status
         _time = self.update_task_status_by_id(task.id, task.status, message if message else task.message).strftime("%Y-%m-%d %H:%M:%S")
-        if task.status in [TaskStatus.SUCCESS, TaskStatus.FAILED, TaskStatus.PARTIAL_SUCCESS]:
+        if task.status in [TaskStatus.SUCCESS, TaskStatus.FAILED, TaskStatus.PARTIAL_SUCCESS, TaskStatus.CANCELLED]:
             task.stop_time = _time
         elif task.status == TaskStatus.SUBMITTED:
             task.start_time = _time

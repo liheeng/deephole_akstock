@@ -52,3 +52,21 @@ class ResultStatus(enum.Enum):
     PARTIAL_SUCCESS = 1
     FAILED = 2
     CANCELLED = 3
+
+
+def create_file_with_dirs(file_path: str):
+    """
+    创建文件，如果目录不存在，自动递归创建多层目录
+    如果文件已存在，不会覆盖
+    """
+    # 获取文件所在的目录
+    dir_path = os.path.dirname(file_path)
+    
+    # 目录不存在 → 递归创建多层目录
+    if dir_path and not os.path.exists(dir_path):
+        os.makedirs(dir_path, exist_ok=True)  # exist_ok=True 就算存在也不报错
+    
+    # 创建文件（如果不存在）
+    if not os.path.exists(file_path):
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write("")  # 空文件

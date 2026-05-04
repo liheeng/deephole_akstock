@@ -349,8 +349,91 @@ export async function fetchScriptExecutorJobs(): Promise<Job[]> {
 }
 
 // SSE 日志流
-export function logStream(jobId: string): EventSource {
-    const url = `/jobs/${jobId}/logs/stream`; // 对应你的 FastAPI log_stream 路径
-    const es = new EventSource(url, { withCredentials: true } as any); // axios 不支持 SSE，这里直接用浏览器 API
-    return es;
+export async function logStream(jobId: string): Promise<EventSource | null> {
+    const apiInfo = await fetchAPIServiceIp();
+    if (!apiInfo) return null;
+
+    const base = `http://${apiInfo.server_ip}:8000`;
+    const url = `${base}/jobs/${jobId}/logs/stream`;
+
+    return new EventSource(url, { withCredentials: true } as any);
 }
+
+// 获取 default.log 最近 n 行
+export async function fetchDefaultLogs(n: number = 50): Promise<{ timestamp: string, level: string, message: string }[]> {
+    try {
+        const res = await apiClient.get(`/logs/tail?n=${n}`, {
+            withCredentials: true, 
+            headers: {
+                "Content-Type": "application/json",
+            }
+        });
+        const rawLogs: string[] = res.data.logs || [];
+
+        // 解析日志：适配 时间 | 等级 | 内容 格式
+        const parsedLogs = rawLogs.map(line => {
+            // 按 " | " 分割成三部分
+            const parts = line.split(' | ');
+
+            // 正常日志 = 3段
+            if (parts.length >= 3) {
+                return {
+                    timestamp: parts[0].trim(),
+                    level: parts[1].trim(),      // INFO / ERROR
+                    message: parts[2].trim(),    // 完整内容
+                };
+            }
+
+            // 异常行兜底
+            return {
+                timestamp: '',
+                level: 'INFO',
+                message: line.trim(),
+            };
+        });
+
+        return parsedLogs;
+    } catch (err) {
+        console.error("fetchDefaultLogs 失败:", err);
+        return [];
+    }
+}
+
+export async function createSystemLogWebsockChannel(): Promise<WebSocket | null> {
+    try {
+        const res = await fetchAPIServiceIp();
+        return new WebSocket(`ws://${res.server_ip}:8000/api/ws/logs/default`);
+    } catch (err) {
+        console.error("fail to create system log webstock channel...", err);
+        return null;
+    }
+}
+
+
+export async function executeScriptJob(script: string): Promise<any | null> {
+    // 构造你提到的 SQL 语句
+
+    const res = await apiClient.post("/task/execute_script_job", { script }, {
+        withCredentials: true,
+    });
+
+    if (res.data.status === 'success') {
+        // ECharts Candlestick 需要的格式通常是: [date, open, close, low, high]
+        return {taskId: res.data.task_id, jobId: res.data.job_id, jobType: res.data.job_type};
+    }
+    return null;
+};
+
+export async function cancelScriptJob(jobId: string, jobType: string): Promise<any | null> {
+    // 构造你提到的 SQL 语句
+
+    const res = await apiClient.post("/task/cancel_script_job", { job_id: jobId, job_type: jobType }, {
+        withCredentials: true,
+    });
+
+    if (res.data.status === 'success') {
+        // ECharts Candlestick 需要的格式通常是: [date, open, close, low, high]
+        return true;
+    }
+    return false;
+};

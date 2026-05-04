@@ -15,8 +15,7 @@ export const taskModule = {
       text: "任务中心",
       icon: React.createElement(AssignmentOutlined),
       children: [
-        { text: "增强任务监视", path: "/tasks_monitor_v2" },
-        { text: "任务监视", path: "/tasks_monitor" },
+        { text: "任务监视", path: "/tasks_monitor_v2" },
         { text: "同步日线数据", path: "/sync_daily" },
         { text: "Script Executor", path: "/script_executor" }
       ]
@@ -25,7 +24,6 @@ export const taskModule = {
 
   routes: [
     { path: "/tasks_monitor_v2", element: React.createElement(EnhancedTaskMonitorPage) },
-    { path: "/tasks_monitor", element: React.createElement(TasksMonitorPage) },
     { path: "/sync_daily", element: React.createElement(SyncStockDailyPage) },
     { path: "/script_executor", element: React.createElement(ScriptExecutorPage) },
 

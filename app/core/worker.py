@@ -8,8 +8,7 @@ from core.queue import job_queue
 from executors.base import get_executor
 from core.result_store import result_store
 from loguru import logger
-
-
+from executors.base import ExecutorBase
 
 
 def worker_loop():
@@ -24,7 +23,7 @@ def worker_loop():
             time.sleep(1)        # 避免空转
             continue
 
-        executor = get_executor(job.type)
+        executor: ExecutorBase = get_executor(job.type)
 
         defn = JOB_DEFINITIONS[job.type]
         # Step 1: 抢占并发槽位（非常关键）
@@ -37,7 +36,7 @@ def worker_loop():
 
         try:
             # Step 2: execute  job
-            result = executor.execute(job)
+            result = executor.execute_job(job)
             task_manager.update_job_status(job, JobStatus.SUCCESS)
             result_store.set(job.id, result)
         except Exception as e:

@@ -15,6 +15,7 @@ class JobConcurrencyKey(enum.Enum):
     CN_DAILY_SYNC = "cn_daily_sync"
     HK_DAILY_SYNC = "hk_daily_sync"
     US_DAILY_SYNC = "us_daily_sync"
+    PYTHON_SCRIPT = "python_script"
 
 
 @dataclass
@@ -44,6 +45,12 @@ JOB_DEFINITIONS = {
         max_concurrency=1,
         singleton=True
     ),
+    JobType.PYTHON_SCRIPT: JobDefinition(
+        type=JobType.PYTHON_SCRIPT,
+        concurrency_key=JobConcurrencyKey.PYTHON_SCRIPT.value,
+        max_concurrency=10,
+        singleton=False
+    )
 }
 
 
@@ -53,6 +60,7 @@ class JobStatus(enum.Enum):
     RUNNING = "RUNNING"   # indicates that the job is currently being executed
     SUCCESS = "SUCCESS"   # indicates that the job has completed successfully
     FAILED = "FAILED"   # indicates that the job has completed with a failure
+    CANCELLED = "CANCELLED"
 
 
 @dataclass
