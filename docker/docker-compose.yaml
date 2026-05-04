@@ -27,6 +27,7 @@ services:
       - PYTHONPATH=/app 
       - TZ=${TIME_ZONE}
       - API_SERVICE_NAME=_TEMP_DEEPHOLE_API_SERVICE
+      - API_PORT=${API_PORT}
       - ENABLE_CRON=false
       - IFIND_REFRESH_TOKEN=${IFIND_REFRESH_TOKEN}
       - NUMBA_NUM_THREADS=auto

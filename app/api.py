@@ -1481,11 +1481,26 @@ def get_current_server_ip(request: Request) -> str:
         return "127.0.0.1"
 
 
+API_SERVICE_NAME = os.getenv("API_SERVICE_NAME", "akstock_api_service")
+# API_PORT = os.getenv("API_PORT", "8000")
+
+# API = "http://" + API_SERVICE_NAME + ":" + API_PORT if is_running_in_docker() else "http://localhost:" + API_PORT
+
 @app.get("/api/api_service/ip")
 async def my_api(request: Request):
     logger.info(f"received get api service ip request {request}")
     # 🔥 这就是你当前服务的IP（多网卡也绝对正确）
-    server_ip = get_current_server_ip(request)
+    server_ip = ""
+    if is_running_in_docker():
+        try:
+            server_ip = subprocess.check_output(
+                ["ip", "route", "show", "default"]
+            ).decode().split()[2]
+        except Exception as e:
+            logger.exception(f"failed to get api service ip in docker, error: {str(e)}")
+            server_ip = API_SERVICE_NAME
+    else:
+        server_ip = get_current_server_ip(request)
     
     return {
         "msg": "ok",
