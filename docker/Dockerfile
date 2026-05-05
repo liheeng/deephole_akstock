@@ -36,7 +36,7 @@ COPY --from=frontend-builder /frontend/dist /usr/share/nginx/html
 
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 
-RUN mkdir -p /data /logs
+RUN mkdir -p /data /logs /notebooks_runtime
 
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

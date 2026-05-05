@@ -23,6 +23,7 @@ services:
     volumes:
       - ${DATA_VOLUME}:/data
       - ${LOG_VOLUME}:/logs
+      - ${NOTEBOOK_VOLUME}:/notebooks_runtime
       - /var/run/docker.sock:/var/run/docker.sock
     privileged: true
     environment:
@@ -30,6 +31,7 @@ services:
       - TZ=${TIME_ZONE}
       - API_SERVICE_NAME=deephole_stock_api_service
       - API_PORT=${API_PORT}
+      - JUPYTER_LAB_PORT=${JUPYTER_LAB_PORT}
       - ENABLE_CRON=false
       - IFIND_REFRESH_TOKEN=${IFIND_REFRESH_TOKEN}
       - NUMBA_NUM_THREADS=auto
@@ -37,6 +39,7 @@ services:
       - MKL_NUM_THREADS=auto
     ports:
       - "${API_PORT}:${API_PORT}"
+      - "${JUPYTER_LAB_PORT}:${JUPYTER_LAB_PORT}"
     command: uvicorn api:app --host 0.0.0.0 --port ${API_PORT}
     restart: unless-stopped
     
@@ -56,6 +59,7 @@ services:
       - TZ=${TIME_ZONE}
       - API_SERVICE_NAME=deephole_stock_api_service
       - API_PORT=${API_PORT}
+      - JUPYTER_LAB_PORT=${JUPYTER_LAB_PORT}
       - DASHBOARD_SERVICE_NAME=deephole_stock_dashboard
       - DASHBOARD_PORT=${DASHBOARD_PORT}
       - STOCK_FETCHER_SERVICE_NAME=deephole_stock_cron_fetcher
@@ -64,26 +68,6 @@ services:
       - CRON_SCHEDULE_HK=${CRON_SCHEDULE_HK}
       - CRON_SCHEDULE_US=${CRON_SCHEDULE_US}
     restart: unless-stopped
-
-  # deephole_stock_dashboard:
-  #   image: deephole-stock-data:6.0
-  #   container_name: deephole_stock_dashboard
-  #   depends_on:
-  #     - deephole_stock_db_init
-  #     - deephole_stock_api_service
-  #   volumes:
-  #     - ${DATA_VOLUME}:/data
-  #     - ${LOG_VOLUME}:/logs
-  #   environment:
-  #     - TZ=${TIME_ZONE}
-  #     - API_SERVICE_NAME=deephole_stock_api_service
-  #     - API_PORT=${API_PORT}
-  #     - DASHBOARD_PORT=${DASHBOARD_PORT}
-  #     - ENABLE_CRON=false
-  #   ports:
-  #     - "${DASHBOARD_PORT}:${DASHBOARD_PORT}"   # 👈 从 .env 读取端口
-  #   command: streamlit run dashboard.py --server.port ${DASHBOARD_PORT} --server.address 0.0.0.0
-  #   restart: unless-stopped
 
   deephole_stock_dashboard:
     image: deephole-stock-data:6.0
@@ -112,4 +96,5 @@ services:
 
 volumes:
   duckdb_data:
-  duckdb_logs:
+  app_logs:
+  notebooks_runtime:

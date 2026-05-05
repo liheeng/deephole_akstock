@@ -1357,14 +1357,7 @@ async def terminal(ws: WebSocket):
         await ws.close()
 
 
-# ===== Jupyter APIs
-# 全局保存 Jupyter 子进程
-jupyter_process = None
-JUPYTER_PORT = 8888
-JUPYTER_NOTEBOOK_DIR = "/.notebooks" if is_running_in_docker() else "./.notebooks"
-
-
-def is_port_ready(port: int, timeout=30, interval=1):
+def is_port_ready(port: int, timeout=100, interval=1):
     start = time.time()
     while time.time() - start < timeout:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -1379,6 +1372,16 @@ def is_port_ready(port: int, timeout=30, interval=1):
     return False
 
 
+# ===== Jupyter APIs
+# 全局保存 Jupyter 子进程
+env = os.environ.copy()
+jupyter_process = None
+JUPYTER_PORT = 8888
+JUPYTER_NOTEBOOK_DIR = "/notebooks_runtime" if is_running_in_docker() else "./notebooks_runtime"
+env["JUPYTER_RUNTIME_DIR"] = JUPYTER_NOTEBOOK_DIR
+env["HOME"] = "/root"
+
+
 # 启动 JupyterLab
 @app.get("/api/jupyter/start-jupyter")
 def start_jupyter(request: Request):
@@ -1391,19 +1394,29 @@ def start_jupyter(request: Request):
 
     tornado_settings = '{"headers":{"Content-Security-Policy":"frame-ancestors *"}}' 
     # 后台启动 jupyter（无浏览器、允许远程、关闭token）
-    jupyter_process = subprocess.Popen([
+    cmd = [
         "jupyter", "lab",
         f"--notebook-dir={JUPYTER_NOTEBOOK_DIR}",
         f"--port={JUPYTER_PORT}",
         "--no-browser",
         "--ip=0.0.0.0",
-        "--ServerApp.token=''",
-        "--ServerApp.allow_origin='*'",  
+        "--allow-root",                # 容器环境必备
+        "--ServerApp.token=",          # 不要写成 ''，直接留空
+        "--ServerApp.password=",       # 同样留空
+        "--ServerApp.allow_origin=*",  # 去掉引号
         "--ServerApp.allow_credentials=True",
         "--ServerApp.allow_remote_access=True",
-        "--ServerApp.tornado_settings=" + tornado_settings,
+        f"--ServerApp.tornado_settings={tornado_settings}",
         "--ServerApp.disable_check_xsrf=True"
-    ])
+    ]
+
+    jupyter_process = subprocess.Popen(
+        cmd,
+        env=os.environ.copy(),         # 确保继承了容器的所有环境变量
+        start_new_session=True,
+        stdout=None,                   # 调试期间先不要用 DEVNULL，看看控制台报错
+        stderr=None
+    )
 
     logger.info(f"jupyter lab is starting, waiting for the port startup, process: {jupyter_process.pid}, url: http://localhost:{JUPYTER_PORT}/lab")
     
