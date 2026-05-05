@@ -1,0 +1,60 @@
+{
+  "messages": [
+    {
+      "type": "msg",
+      "time": 1777989977.2192578,
+      "raw_time": false,
+      "sender": "e9efcc19db954d30b6efe97644d56270",
+      "body": "hello",
+      "id": "30d55dc4-90d3-4cad-9327-89315453591b"
+    },
+    {
+      "id": "a179bf92-0a66-496c-8476-99e97f305b97",
+      "body": "hello",
+      "time": 1777989977.3784034,
+      "type": "msg",
+      "raw_time": false,
+      "sender": "e9efcc19db954d30b6efe97644d56270"
+    },
+    {
+      "type": "msg",
+      "body": "he l p",
+      "sender": "e9efcc19db954d30b6efe97644d56270",
+      "raw_time": false,
+      "time": 1777989981.5190427,
+      "id": "852a5025-8c8e-45fa-8772-b961b6654d97"
+    },
+    {
+      "sender": "e9efcc19db954d30b6efe97644d56270",
+      "id": "b6401005-1584-4003-b771-4d4208583565",
+      "raw_time": false,
+      "time": 1777989982.7554023,
+      "type": "msg",
+      "body": "help me"
+    },
+    {
+      "type": "msg",
+      "body": "me",
+      "time": 1777989983.050665,
+      "id": "ac1f5d46-1012-4b38-85c7-24614b701477",
+      "sender": "e9efcc19db954d30b6efe97644d56270",
+      "raw_time": false
+    }
+  ],
+  "users": {
+    "e9efcc19db954d30b6efe97644d56270": {
+      "bot": false,
+      "initials": "AP",
+      "username": "e9efcc19db954d30b6efe97644d56270",
+      "name": "Anonymous Praxidike",
+      "display_name": "Anonymous Praxidike",
+      "color": "var(--jp-collaborator-color5)",
+      "mention_name": "Anonymous-Praxidike",
+      "avatar_url": null
+    }
+  },
+  "attachments": {},
+  "metadata": {
+    "id": "1c6c29f8-5148-4d9a-b2ab-1a1a1d8b475a"
+  }
+}
