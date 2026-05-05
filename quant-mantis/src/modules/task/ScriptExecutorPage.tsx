@@ -15,10 +15,14 @@ export default function ScriptExecutorPage() {
     const [logs, setLogs] = useState<LogLine[]>([]);
     const [jobs, setJobs] = useState<any[]>([]);
 
+    status;
+    logs;
+
     // 订阅日志
     const streamedLogs = useLogStream(jobId || '');
 
     useEffect(() => {
+
         setLogs(streamedLogs);
     }, [streamedLogs]);
 
@@ -47,7 +51,9 @@ export default function ScriptExecutorPage() {
                 <Paper sx={{ height: '100%', p: 1 }}>
                     <ScriptEditor
                         value={script}
-                        onChange={setScript}
+                        onChange={(v: string | undefined) =>{
+                            if (v) setScript(v);
+                        }}
                         onRun={() => {
                             executeScriptJob(script).then(res => {
                                 if (res) {
@@ -82,7 +88,7 @@ export default function ScriptExecutorPage() {
                         flexDirection: 'column',
                     }}
                 >
-                    <LogPanel jobId={jobId} logs={logs} />
+                    <LogPanel jobId={jobId} />
                 </Paper>
             </Box>
 

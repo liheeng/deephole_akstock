@@ -118,6 +118,7 @@ export default function SyncStockDailyPage() {
             <Tabs
                 value={market}
                 onChange={(e, v) => {
+                    e; // avoid compiling error
                     setMarket(v);
                     setResult(null);
                     setError(null);

@@ -2,9 +2,14 @@ import { useEffect, useState } from 'react'
 import { Stack, Typography } from '@mui/material'
 import MainCard from '../../../components/visual/MainCard'
 import TaskTable from './TaskTable'
+import { Task } from '../types/task'
 import { getTasks, runTask } from '../../../api/task'
 
-export default function TaskList() {
+interface TaskListProps {
+    onSelectTask: (task: Task) => void
+}
+
+export default function TaskList({onSelectTask}: TaskListProps) {
     const [tasks, setTasks] = useState<any[]>([])
 
     const load = async () => {
@@ -27,6 +32,11 @@ export default function TaskList() {
                         await runTask(id)
                         load()
                     }}
+                    onSelectTask={(taskId: string) => {
+                            const task = tasks.filter((task: Task) => task.id === taskId);
+                            onSelectTask(task[0]);
+                        }
+                    }
                 />
             </Stack>
         </MainCard>

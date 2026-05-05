@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Box, IconButton, Select, MenuItem, Tooltip } from '@mui/material';
-import Editor, { loader } from '@monaco-editor/react';
+import Editor from '@monaco-editor/react';
 import { PlayArrow, Stop } from '@mui/icons-material';
 
 // 可选内置主题：vs (浅色), vs-dark (深色), hc-black (高对比)
@@ -9,7 +9,7 @@ type ThemeType = typeof THEMES[number];
 
 interface ScriptEditorProps {
   value: string;
-  onChange: (v: string) => void;
+  onChange: (v: string | undefined) => void;
   onRun?: () => void;
   onStop?: () => void;
 }

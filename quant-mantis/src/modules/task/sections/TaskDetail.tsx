@@ -27,10 +27,10 @@ export default function TaskDetail() {
 
             <RunControls taskId={task.id} onRefresh={load} />
 
-            <Grid container spacing={2}>
-                <Grid item sx={{xs:12}}>
+            <Grid container spacing={2} >
+                {/* <Grid item xs={12}> */}
                     <LogPanel jobId={task.id} />
-                </Grid>
+                {/* </Grid> */}
             </Grid>
         </MainCard>
     )

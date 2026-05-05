@@ -107,7 +107,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
                                     {!drawerCollapsed && (
                                         <Collapse in={isOpen} timeout="auto" unmountOnExit>
                                             <List disablePadding>
-                                                {group.children?.map((item) => (
+                                                {group.children?.map((item: any) => (
                                                     <ListItem key={item.path} disablePadding>
                                                         <ListItemButton
                                                             component={Link}

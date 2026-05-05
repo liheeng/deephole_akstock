@@ -137,6 +137,7 @@ export default function PortfolioExpertPage() {
             quickSuggestions: true,
           }}
           onMount={(editor, monaco) => {
+            editor;
             // 添加自定义类型声明
             monaco.languages.typescript.javascriptDefaults.addExtraLib(
               `declare class PortfolioBuilder {

@@ -68,7 +68,10 @@ export const ExecutionHistory: React.FC<ExecutionHistoryProps> = ({ jobs, onSele
                 component="div"
                 count={jobs.length}
                 page={page}
-                onPageChange={(e, newPage) => setPage(newPage)}
+                onPageChange={(e, newPage) => {
+                    e;
+                    setPage(newPage)}
+                }
                 rowsPerPage={rowsPerPage}
                 onRowsPerPageChange={(e) => {
                     setRowsPerPage(parseInt(e.target.value, 10));

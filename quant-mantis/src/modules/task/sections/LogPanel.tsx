@@ -1,6 +1,6 @@
 // components/LogPanel.tsx
 import React, { useEffect, useRef } from 'react';
-import { Box, Paper, Typography } from '@mui/material';
+import { Paper, Typography } from '@mui/material';
 import { useLogStream, type LogLine } from '../../../hooks/useLogStream';
 
 interface LogPanelProps {

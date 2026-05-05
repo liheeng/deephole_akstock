@@ -40,7 +40,7 @@ export default function EnhancedTaskMonitorPage() {
                 <Box sx={{ flex: 1 }}>
                     <TaskTable
                         tasks={tasks}
-                        selectedTaskId={selectedTaskId}
+                        selectedTaskId={selectedTaskId || undefined}
                         onSelectTask={setSelectedTaskId}
                     />
                 </Box>
