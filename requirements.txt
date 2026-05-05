@@ -10,13 +10,13 @@ matplotlib==3.7.2
 
 # ===== 数据源 =====
 akshare
-easyquotation
 yfinance
 baostock==0.9.1
 duckdb
 
 # ===== Web / API =====
 fastapi==0.136.1
+fastapi-cors
 uvicorn
 pydantic==2.13.3
 python-multipart
@@ -28,9 +28,12 @@ paramiko
 
 # ===== Jupyter ====-
 jupyterlab==4.0.12
-jupyter-ai
-jupyter-lsp
-python-lsp-server[all]
+jupyter_server==2.17.0
+jupyter_client==8.8.0
+jupyter_core==5.9.1
+# jupyter-ai
+jupyter-lsp==2.3.1
+python-lsp-server[all]==1.14.0
 
 # ===== 工具 =====
 requests==2.33.1

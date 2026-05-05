@@ -23,6 +23,8 @@ services:
     volumes:
       - ${DATA_VOLUME}:/data
       - ${LOG_VOLUME}:/logs
+      - /var/run/docker.sock:/var/run/docker.sock
+    privileged: true
     environment:
       - PYTHONPATH=/app 
       - TZ=${TIME_ZONE}
@@ -37,6 +39,7 @@ services:
       - "${API_PORT}:${API_PORT}"
     command: uvicorn api:app --host 0.0.0.0 --port ${API_PORT}
     restart: unless-stopped
+    
 
   _TEMP_DEEPHOLE_FETCHER_SERVICE:
     image: _TEMP_IMAGE_NAME_:_TEMP_IMAGE_VERSION
@@ -46,6 +49,8 @@ services:
     volumes:
       - ${DATA_VOLUME}:/data
       - ${LOG_VOLUME}:/logs
+      - /var/run/docker.sock:/var/run/docker.sock
+    privileged: true
     environment:
       - PYTHONPATH=/app 
       - TZ=${TIME_ZONE}
@@ -91,7 +96,8 @@ services:
     volumes:
       - ${DATA_VOLUME}:/data
       - ${LOG_VOLUME}:/logs
-
+      - /var/run/docker.sock:/var/run/docker.sock
+    privileged: true
     environment:
       - TZ=${TIME_ZONE}
       - API_SERVICE_NAME=_TEMP_DEEPHOLE_API_SERVICE
