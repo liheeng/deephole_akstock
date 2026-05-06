@@ -135,7 +135,8 @@ def call_task(
             return {"message": f"无效的同步类型: {sync_type}"}
     except Exception as e:
         logger.exception(e)
-        raise HTTPException(status_code=500, detail=f"错误: {str(e)}")
+        # raise HTTPException(status_code=500, detail=f"错误: {str(e)}")
+        return {"message": f"错误发生, task没有创建，同步类型: {sync_type}, 错误{str(e)}"}
 
 
 class ScriptRequest(BaseModel):
@@ -158,7 +159,8 @@ def execute_script_job(req: ScriptRequest):
             return {"status": "failed", "message": "Failed to create script execute task"}
     except Exception as e:
         logger.exception(e)
-        raise HTTPException(status_code=500, detail=f"错误: {str(e)}")
+        # raise HTTPException(status_code=500, detail=f"错误: {str(e)}")
+        return {"status": "failed", "message": f"Failed to create script execute task, error happen {str(e)}"}
 
 
 class JobMeta(BaseModel):
@@ -1284,34 +1286,78 @@ async def handle_pty(ws: WebSocket):
 
 async def handle_ssh(ws, target):
     client = paramiko.SSHClient()
+
+    # ======================
+    # 🔥 修复：强制自动接受主机密钥（解决第一次连接确认问题）
+    # ======================
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    
+    # 加载系统 host key（防止警告）
+    try:
+        client.load_system_host_keys()
+    except:
+        pass
 
-    client.connect(
-        hostname=target["host"],
-        username=target["username"],
-        password=target["password"],
-    )
+    try:
+        # 连接（增加超时更稳定）
+        client.connect(
+            hostname=target["host"],
+            username=target["username"],
+            password=target["password"],
+            timeout=10,        # 超时时间
+            allow_agent=False, # 关闭 SSH 代理（避免干扰）
+            # look_for_keys=False # 不查找本地密钥（更干净）
+        )
 
-    channel = client.invoke_shell()
+        # 获取伪终端
+        channel = client.invoke_shell(term='xterm-256color', width=120, height=32)
 
-    async def read():
-        while True:
-            if channel.recv_ready():
-                data = channel.recv(1024)
-                await ws.send_text(data.decode(errors="ignore"))
-            await asyncio.sleep(0.01)
+        async def read():
+            while True:
+                if not client.get_transport() or not client.get_transport().is_active():
+                    break
+                if channel.recv_ready():
+                    data = channel.recv(1024)
+                    if not data:
+                        break
+                    await ws.send_text(data.decode(errors="ignore"))
+                await asyncio.sleep(0.01)
 
-    async def write():
-        while True:
-            msg = await ws.receive_text()
+        async def write():
+            while True:
+                try:
+                    msg = await ws.receive_text()
 
-            # resize（简单版）
-            if msg.startswith("{"):
-                continue
+                    # 处理前端发来的 resize 消息
+                    if msg.startswith("{"):
+                        import json
+                        try:
+                            resize = json.loads(msg)
+                            if resize.get("type") == "resize":
+                                cols = resize.get("cols", 120)
+                                rows = resize.get("rows", 32)
+                                channel.resize_pty(width=cols, height=rows)
+                        except:
+                            pass
+                        continue
 
-            channel.send(msg)
+                    # 正常输入
+                    if channel.send_ready():
+                        channel.send(msg)
+                except:
+                    break
 
-    await asyncio.gather(read(), write())
+        await asyncio.gather(read(), write())
+
+    except Exception as e:
+        # 发送错误给前端
+        await ws.send_text(f"\r\n[SSH 连接失败: {str(e)}]\r\n")
+    finally:
+        # 安全关闭
+        try:
+            client.close()
+        except:
+            pass
 
 
 async def handle_host(ws, target):

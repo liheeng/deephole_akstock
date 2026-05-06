@@ -26,7 +26,7 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useQuery } from '@tanstack/react-query';
-import { apiClient } from "../../api/Client";
+import { syncDaily, queryTasks } from "../../api/Client";
 
 // 任务类型映射
 const jobTypeMap = {
@@ -69,8 +69,8 @@ export default function SyncStockDailyPage() {
     const { data: tasks, isFetching } = useQuery({
         queryKey: ['tasks'],
         queryFn: () =>
-            apiClient.get('/tasks', { withCredentials: true }).then((res) => {
-                if (res.status !== 200) return [];
+            queryTasks().then((res) => {
+                if (!res || res.status !== 200) return [];
                 return res.data;
             }),
         refetchInterval: autoRefresh ? 5000 : false
@@ -92,14 +92,13 @@ export default function SyncStockDailyPage() {
         setResult(null);
 
         try {
-            const res = await apiClient.get(
-                `/sync_daily/${MARKET_CONFIG[market]}`,
-                {
-                    params: { data_source_api: dataSource },
-                    withCredentials: true
+
+            syncDaily(MARKET_CONFIG[market], dataSource).then(res => {
+                if (res) {
+                    setResult(res.data.message);
                 }
-            );
-            setResult(res.data);
+            })
+            
         } catch (err: any) {
             setError(err?.response?.data || err.message);
         } finally {

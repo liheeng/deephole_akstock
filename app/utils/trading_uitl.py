@@ -1,40 +1,40 @@
 from datetime import datetime
 import akshare as ak
 import pandas as pd
+import cn_stock_holidays.data_hk as hkex
+import exchange_calendars as xcals
 
 
 def is_trading_day(market: str = "CN", date_str: str | None = None) -> bool:
-    today = datetime.today().strftime("%Y-%m-%d") if not date_str else date_str
+    target_day = datetime.today().strftime("%Y-%m-%d") if not date_str else date_str
     
     if market == "CN":
         cal = ak.tool_trade_date_hist_sina()
+        trade_days = set(cal["trade_date"].astype(str))
+        return target_day in trade_days
     elif market == "HK":
-        cal = ak.hk_tradecal()
+        d = datetime.strptime(target_day, "%Y-%m-%d").date()
+        return hkex.is_trading_day(d)
     elif market == "US":
-        cal = ak.us_tradecal()
+        xnys = xcals.get_calendar("XNYS")
+        return xnys.is_session(target_day)
     else:
         return False
-    
-    trade_days = set(cal["trade_date"].astype(str))
-    return today in trade_days
 
 
 def is_trading_today(market: str = "CN") -> bool:
     # 1. 获取今天的 datetime 对象
     today = datetime.today().date()  # 只保留 年月日
 
-    # 2. 获取对应市场日历
     if market == "CN":
         df = ak.tool_trade_date_hist_sina()
+        df["trade_date"] = pd.to_datetime(df["trade_date"]).dt.date
+        return today in df["trade_date"].values
+
     elif market == "HK":
-        df = ak.hk_tradecal()
+        return hkex.is_trading_day(today)
     elif market == "US":
-        df = ak.us_tradecal()
+        xnys = xcals.get_calendar("XNYS")
+        return xnys.is_session(today.strftime("%Y-%m-%d"))
     else:
         return False
-
-    # 3. 【关键】把 akshare 的日期转成 datetime.date
-    df["trade_date"] = pd.to_datetime(df["trade_date"]).dt.date
-
-    # 4. 直接判断（纯 datetime 对比，不会有格式问题）
-    return today in df["trade_date"].values

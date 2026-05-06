@@ -363,7 +363,7 @@ export async function logStream(jobId: string): Promise<EventSource | null> {
 export async function fetchDefaultLogs(n: number = 50): Promise<{ timestamp: string, level: string, message: string }[]> {
     try {
         const res = await apiClient.get(`/logs/tail?n=${n}`, {
-            withCredentials: true, 
+            withCredentials: true,
             headers: {
                 "Content-Type": "application/json",
             }
@@ -419,7 +419,7 @@ export async function executeScriptJob(script: string): Promise<any | null> {
 
     if (res.data.status === 'success') {
         // ECharts Candlestick 需要的格式通常是: [date, open, close, low, high]
-        return {taskId: res.data.task_id, jobId: res.data.job_id, jobType: res.data.job_type};
+        return { taskId: res.data.task_id, jobId: res.data.job_id, jobType: res.data.job_type };
     }
     return null;
 };
@@ -437,3 +437,30 @@ export async function cancelScriptJob(jobId: string, jobType: string): Promise<a
     }
     return false;
 };
+
+export async function syncDaily(market: string, datasource_api: string): Promise<any | null> {
+    // 构造你提到的 SQL 语句
+    try { 
+        return await apiClient.get(
+            `/sync_daily/${market}`,
+            {
+                params: { data_source_api: datasource_api },
+                withCredentials: true
+            }
+        )
+    } catch (err) {
+        console.error("syncDaily失败", err);
+        return null;
+    }
+};
+
+export async function queryTasks(): Promise<any | null> {
+    // 构造你提到的 SQL 语句
+    try { 
+        return apiClient.get('/tasks', { withCredentials: true })
+    } catch (err) {
+        console.error("query tasks failed", err);
+        return null;
+    }
+};
+
