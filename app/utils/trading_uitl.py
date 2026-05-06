@@ -1,5 +1,6 @@
 from datetime import datetime
 import akshare as ak
+import pandas as pd
 
 
 def is_trading_day(market: str = "CN", date_str: str | None = None) -> bool:

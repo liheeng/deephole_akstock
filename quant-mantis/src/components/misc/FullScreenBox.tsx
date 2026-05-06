@@ -4,12 +4,13 @@ import { useEffect } from "react"
 
 // interface FullscreenBoxProps {
 //     children: React.ReactNode
+//     enableIcon: boolean
 //     isFull: boolean
 //     onToggle?: () => void
 //     sx?: any
 // }
 
-export const FullScreenBox = ({ children, isFull=false, onToggle, sx }: any) => {
+export const FullScreenBox = ({ children, enableIcon=true, isFull=false, onToggle, sx }: any) => {
     
     useEffect(() => {
         const handleEsc = (e: KeyboardEvent) => {
@@ -43,31 +44,33 @@ export const FullScreenBox = ({ children, isFull=false, onToggle, sx }: any) => 
                 ...sx
             }}
         >
-            <IconButton
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onToggle();
-                }}
-                sx={{ 
-                    position: "absolute", 
-                    top: 0, 
-                    right: 0, 
-                    zIndex: 10000, 
-                    bgcolor: "rgba(95, 93, 93, 0.4)",
-                    color: "#7d7c7cd8",
-                    // "&:hover": { bgcolor: "rgba(0,0,0,0.6)" },
-                    "&:hover": {
-                                color: "#4003f5",
-                                bgcolor: "rgba(249, 247, 247, 0.92)"
-                            },
-                    "& svg": {
-                                fontSize: 18   // 🔥 关键：图标变小
-                            },
-                }}
-                size="small"
-            >
-                {isFull ? <FullscreenExit /> : <Fullscreen />}
-            </IconButton>
+            { enableIcon && (
+                <IconButton
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onToggle();
+                    }}
+                    sx={{ 
+                        position: "absolute", 
+                        top: 0, 
+                        right: 0, 
+                        zIndex: 10000, 
+                        bgcolor: "rgba(95, 93, 93, 0.4)",
+                        color: "#7d7c7cd8",
+                        // "&:hover": { bgcolor: "rgba(0,0,0,0.6)" },
+                        "&:hover": {
+                                    color: "#4003f5",
+                                    bgcolor: "rgba(249, 247, 247, 0.92)"
+                                },
+                        "& svg": {
+                                    fontSize: 18   // 🔥 关键：图标变小
+                                },
+                    }}
+                    size="small"
+                >
+                    {isFull ? <FullscreenExit /> : <Fullscreen />}
+                </IconButton>)
+            }
             
             <Box sx={{ 
                     flex: 1, 

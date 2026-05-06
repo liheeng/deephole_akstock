@@ -148,11 +148,11 @@ export default function WebTerminal({ target }: { target: any[] }) {
         <Box
             sx={{
                 width: "100%",
-                height: 600,
+                height: "95%",
                 background: "#1e1e1e",
                 display: "flex",
                 alignItems: "stretch",
-                justifyContent: "stretch",
+                justifyContent: "stretch"
             }}
         >
             <div
