@@ -20,7 +20,6 @@ logger.add("./logs/baostock_download.log", rotation="100 MB", encoding="utf-8", 
 
 # ====================== 数据库初始化 ======================
 def init_database():
-    
     con = duckdb.connect(DB_PATH)
     # 日K表
     con.execute("""
@@ -79,7 +78,7 @@ def get_last_download_dates(con, code):
     return kline_max, factor_max
 
 
-def downlaod_factor(code, start, end, con, factor_max=None):
+def download_factor(code, start, end, con, factor_max=None):
     try:
         # ✅ 如果已有数据
         if factor_max:
@@ -202,8 +201,8 @@ def handle_download(code, start, end, con):
     if not download_daily(code, start, end, con, kline_max):
         return False
 
-    # -------- 2. 优先处理：复权因子（严格按列名插入，杜绝顺序错误） --------
-    downlaod_factor(code, start, end, con, factor_max)
+    # -------- 2. 处理：复权因子（严格按列名插入，杜绝顺序错误） --------
+    download_factor(code, start, end, con, factor_max)
 
 
 # ====================== 自动获取有效交易日 ======================
@@ -225,9 +224,9 @@ def main():
     if not is_today_trading_day():
         logger.info("⏭️ 今日无交易日，跳过")
         return
-    
+
     logger.info("✅ 今日交易日，开始下载")
-    
+
     # 获取最近交易日
     last_trade_date = get_recent_trade_day(datetime.now().strftime("%Y-%m-%d"))
 
