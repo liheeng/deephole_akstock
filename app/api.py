@@ -1183,16 +1183,17 @@ def get_total_targets():
 
     result = TERMINAL_TARGETS.copy()
     try:
-        client = docker.from_env()
-        containers = client.containers.list()
+        if is_running_in_docker():
+            client = docker.from_env()
+            containers = client.containers.list()
 
-        for c in containers:
-            result.append({
-                "id": f"docker:{c.name}",
-                "name": f"🐳 {c.name}",
-                "type": "docker",
-                "container": c.name,
-            })
+            for c in containers:
+                result.append({
+                    "id": f"docker:{c.name}",
+                    "name": f"🐳 {c.name}",
+                    "type": "docker",
+                    "container": c.name,
+                })
     except Exception as e:
         logger.exception(e)
         print("docker not available", e)
@@ -1386,11 +1387,13 @@ env["HOME"] = "/root"
 @app.get("/api/jupyter/start-jupyter")
 def start_jupyter(request: Request):
     logger.info("received start jupyter labl request")
+    # server_ip = get_current_server_ip(request)
+    server_ip = get_server_ip(request)
+    jupyterlab_url = f"http://{server_ip}:{JUPYTER_PORT}/lab"
 
     global jupyter_process
     if jupyter_process is not None and jupyter_process.poll() is None:
-        server_ip = get_current_server_ip(request)
-        return {"status": "running", "process_id": f"{jupyter_process}", "url": f"http://{server_ip}:{JUPYTER_PORT}/lab"}
+        return {"status": "running", "process_id": f"{jupyter_process}", "url": jupyterlab_url}
 
     tornado_settings = '{"headers":{"Content-Security-Policy":"frame-ancestors *"}}' 
     # 后台启动 jupyter（无浏览器、允许远程、关闭token）
@@ -1418,14 +1421,14 @@ def start_jupyter(request: Request):
         stderr=None
     )
 
-    logger.info(f"jupyter lab is starting, waiting for the port startup, process: {jupyter_process.pid}, url: http://localhost:{JUPYTER_PORT}/lab")
+    logger.info(f"jupyter lab is starting, waiting for the port startup, process: {jupyter_process.pid}, url: {jupyterlab_url}")
     
     # ✅【关键】等待端口真正启动成功，再返回！
     if not is_port_ready(JUPYTER_PORT):
         raise Exception("Jupyter 启动超时")
     
-    logger.info(f"jupyter lab is running, process: {jupyter_process.pid}, url: http://localhost:{JUPYTER_PORT}/lab")
-    return {"status": "running", "process_id": f"{jupyter_process.pid}", "url": f"http://localhost:{JUPYTER_PORT}/lab"}
+    logger.info(f"jupyter lab is running, process: {jupyter_process.pid}, url: {jupyterlab_url}")
+    return {"status": "running", "process_id": f"{jupyter_process.pid}", "url": f"{jupyterlab_url}"}
 
 
 # 停止 JupyterLab
@@ -1496,13 +1499,10 @@ def get_current_server_ip(request: Request) -> str:
 
 API_SERVICE_NAME = os.getenv("API_SERVICE_NAME", "akstock_api_service")
 # API_PORT = os.getenv("API_PORT", "8000")
-
 # API = "http://" + API_SERVICE_NAME + ":" + API_PORT if is_running_in_docker() else "http://localhost:" + API_PORT
 
-@app.get("/api/api_service/ip")
-async def my_api(request: Request):
-    logger.info(f"received get api service ip request {request}")
-    # 🔥 这就是你当前服务的IP（多网卡也绝对正确）
+
+def get_server_ip(request: Request):
     server_ip = ""
     if is_running_in_docker():
         try:
@@ -1514,6 +1514,15 @@ async def my_api(request: Request):
             server_ip = API_SERVICE_NAME
     else:
         server_ip = get_current_server_ip(request)
+
+    return server_ip
+
+
+@app.get("/api/api_service/ip")
+async def my_api(request: Request):
+    logger.info(f"received get api service ip request {request}")
+    # 🔥 这就是你当前服务的IP（多网卡也绝对正确）
+    server_ip = get_server_ip(request)
     
     return {
         "msg": "ok",
