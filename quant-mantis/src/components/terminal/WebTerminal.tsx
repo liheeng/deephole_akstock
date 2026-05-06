@@ -5,26 +5,41 @@ import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
 import { fetchAPIServiceIp } from "../../api/Client"
 
-export default function WebTerminal({ target }: { target: any[] }) {
+interface Props {
+    target: any;
+    fontSize: number;
+    theme: any;
+}
+
+export default function WebTerminal({ target, fontSize, theme }: Props) {
     const containerRef = useRef<HTMLDivElement>(null);
     const termRef = useRef<Terminal | null>(null);
+    const fitAddonRef = useRef<FitAddon | null>(null);
     const wsRef = useRef<WebSocket | null>(null);
     const sendQueue = useRef<string[]>([]);
-    const mountedRef = useRef(false); // 🔥 关键
+    const mountedRef = useRef(false);
     const [apiServiceIp, setApiServiceIp] = useState<any>(null);
 
-    console.log("api_service: ", apiServiceIp)
-    
     useEffect(() => {
-            fetchAPIServiceIp().then(res => {
-                setApiServiceIp(res.server_ip);
-            });
-        }, []);
+        fetchAPIServiceIp().then(res => {
+            setApiServiceIp(res.server_ip);
+        });
+    }, []);
+
+    // 监听字号/主题变化，实时生效
+    useEffect(() => {
+        if (!termRef.current || !fitAddonRef.current) return;
+        const term = termRef.current;
+        term.options.fontSize = fontSize;
+        term.options.theme = theme;
+
+        setTimeout(() => {
+            fitAddonRef.current?.fit();
+        }, 30);
+    }, [fontSize, theme]);
 
     useEffect(() => {
-        if (!containerRef.current) return;
-
-        // 🚫 防止 StrictMode 重复执行
+        if (!containerRef.current || !apiServiceIp) return;
         if (mountedRef.current) return;
         mountedRef.current = true;
 
@@ -32,28 +47,19 @@ export default function WebTerminal({ target }: { target: any[] }) {
 
         const term = new Terminal({
             fontFamily: `"JetBrains Mono", Consolas, monospace`,
-            fontSize: 13,
+            fontSize: fontSize,
             lineHeight: 1.2,
-
             cursorBlink: true,
             cursorStyle: "block",
-
-            theme: {
-                background: "#1e1e1e",
-                foreground: "#d4d4d4",
-                cursor: "#ffffff",
-                selectionBackground: "#264f78",
-            },
-
+            theme: theme,
             scrollback: 1000,
         });
 
         const fitAddon = new FitAddon();
+        fitAddonRef.current = fitAddon;
         term.loadAddon(fitAddon);
-
         term.open(container);
 
-        // 👉 延迟 fit（避免 dimensions undefined）
         setTimeout(() => {
             fitAddon.fit();
         }, 0);
@@ -63,18 +69,15 @@ export default function WebTerminal({ target }: { target: any[] }) {
         const ws = new WebSocket(
             `ws://${apiServiceIp}:8000/api/ws/terminal`
         );
-
         wsRef.current = ws;
 
         const sendResize = () => {
             if (!termRef.current) return;
-
             const payload = JSON.stringify({
                 type: "resize",
                 cols: term.cols,
                 rows: term.rows,
             });
-
             if (ws.readyState === WebSocket.OPEN) {
                 ws.send(payload);
             }
@@ -82,15 +85,11 @@ export default function WebTerminal({ target }: { target: any[] }) {
 
         ws.onopen = () => {
             term.write("\r\n[Connected]\r\n");
-
-            // 🔥 关键：发送 target
             ws.send(JSON.stringify({
                 type: "init",
                 target
             }));
-
             sendResize();
-
             while (sendQueue.current.length > 0) {
                 ws.send(sendQueue.current.shift()!);
             }
@@ -113,30 +112,26 @@ export default function WebTerminal({ target }: { target: any[] }) {
         });
 
         const resizeObserver = new ResizeObserver(() => {
-    // Only fit if the element is actually visible
-    if (container.offsetWidth > 0 && container.offsetHeight > 0) {
-        requestAnimationFrame(() => {
-            if (!termRef.current) return;
-            try {
-                fitAddon.fit();
-                sendResize();
-            } catch (e) {}
+            if (container.offsetWidth > 0 && container.offsetHeight > 0) {
+                requestAnimationFrame(() => {
+                    if (!termRef.current) return;
+                    try {
+                        fitAddon.fit();
+                        sendResize();
+                    } catch (e) { }
+                });
+            }
         });
-    }
-});
 
         resizeObserver.observe(container);
 
         return () => {
             mountedRef.current = false;
-
             resizeObserver.disconnect();
-
             if (wsRef.current) {
                 wsRef.current.close();
                 wsRef.current = null;
             }
-
             if (termRef.current) {
                 termRef.current.dispose();
                 termRef.current = null;
@@ -148,7 +143,7 @@ export default function WebTerminal({ target }: { target: any[] }) {
         <Box
             sx={{
                 width: "100%",
-                height: "95%",
+                height: "100%",
                 background: "#1e1e1e",
                 display: "flex",
                 alignItems: "stretch",

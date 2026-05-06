@@ -14,18 +14,41 @@ type Target = {
     mode?: string;
 };
 
-// 定义 Tab 实例类型，包含 UI 标题
 type TabInstance = Target & {
     instanceId: string;
-    tabTitle: string; // 用于显示的标题
+    tabTitle: string;
     host?: string;
     username?: string;
     password?: string;
+    fontSize: number;
+    themeKey: string;
+};
+
+// 预设终端主题
+const terminalThemes: Record<string, any> = {
+    dark: {
+        background: "#1e1e1e",
+        foreground: "#d4d4d4",
+        cursor: "#ffffff",
+        selectionBackground: "#264f78",
+    },
+    light: {
+        background: "#ffffff",
+        foreground: "#333333",
+        cursor: "#000000",
+        selectionBackground: "#c8e1ff",
+    },
+    midnight: {
+        background: "#0c0c0c",
+        foreground: "#00ff00",
+        cursor: "#00ff00",
+        selectionBackground: "#1a331a",
+    }
 };
 
 export default function TerminalPage() {
     const [targets, setTargets] = useState<Target[]>([]);
-    const [selectedId, setSelectedId] = useState(""); // 下拉框当前选中的 ID
+    const [selectedId, setSelectedId] = useState("");
 
     const [tabs, setTabs] = useState<TabInstance[]>([]);
     const [activeTabId, setActiveTabId] = useState<string | null>(null);
@@ -33,8 +56,6 @@ export default function TerminalPage() {
     const [openLauncher, setOpenLauncher] = useState(false);
     const [form, setForm] = useState({ host: "", username: "", password: "" });
     const [fullSection, setFullSection] = useState<string | null>(null);
-
-    // 1. 只在初始化时获取列表
     useEffect(() => {
         fetchTerminalTargets().then(res => {
             setTargets(res);
@@ -43,7 +64,6 @@ export default function TerminalPage() {
 
     const handleSelect = (id: string) => {
         if (!id) return;
-
         const t = targets.find(x => x.id === id);
         if (!t) return;
 
@@ -62,9 +82,10 @@ export default function TerminalPage() {
             ...target,
             ...credentials,
             instanceId,
-            tabTitle: title
+            tabTitle: title,
+            fontSize: 14,
+            themeKey: "dark"
         };
-
         setTabs(prev => [...prev, newTab]);
         setActiveTabId(instanceId);
     };
@@ -90,23 +111,35 @@ export default function TerminalPage() {
         });
     };
 
+    // 修改单个tab字体大小
+    const handleChangeFontSize = (instanceId: string, size: number) => {
+        setTabs(prev => prev.map(t =>
+            t.instanceId === instanceId ? { ...t, fontSize: size } : t
+        ));
+    };
+
+    // 修改单个tab主题
+    const handleChangeTheme = (instanceId: string, themeKey: string) => {
+        setTabs(prev => prev.map(t =>
+            t.instanceId === instanceId ? { ...t, themeKey } : t
+        ));
+    };
+
     return (
-        // 最外层：占满整个视口 + 垂直弹性布局
         <Box sx={{
             p: 2,
-            height: "100vh",        // 占满屏幕高度
+            height: "100vh",
             display: "flex",
             flexDirection: "column"
         }}>
             <Typography variant="h5" sx={{ mb: 2 }}>🖥️ Web Terminal</Typography>
 
-            {/* 下拉选择框 */}
             <Select
                 size="small"
                 value={selectedId}
                 displayEmpty
                 onChange={(e) => handleSelect(e.target.value)}
-                sx={{ mb: 2, minWidth: 200, width: 300 }}
+                sx={{ mb: 2, width: 260, maxWidth: 500 }}
             >
                 <MenuItem value="" disabled>+ 点击此处打开新终端</MenuItem>
                 {targets.map(t => (
@@ -122,7 +155,6 @@ export default function TerminalPage() {
                 onToggle={() => setFullSection(fullSection === 'terminal' ? null : 'terminal')}
                 sx={{ flex: 1, minHeight: 0, minWidth: 0 }} // minWidth: 0 允许它被压缩
             >
-                {/* Tab 标签栏 */}
                 {tabs.length > 0 && (
                     <Box sx={{ borderBottom: 1, borderColor: 'divider', flexShrink: 0 }}>
                         <Tabs
@@ -156,35 +188,87 @@ export default function TerminalPage() {
                     </Box>
                 )}
 
-                {/* 终端内容区：自动占满剩余所有空间 */}
-
                 <Box sx={{
                     mt: 1,
-                    flex: 1,           // 关键：占满剩余高度
+                    flex: 1,
                     display: "flex",
                     flexDirection: "column",
-                    pb: "40px",
-                    overflow: "hidden" // 防止滚动条异常
+                    overflow: "hidden",
+                    pb: "20px",
+                    boxSizing: "border-box"
                 }}>
                     {tabs.map((tab) => (
                         <Box
                             key={tab.instanceId}
                             sx={{
                                 display: activeTabId === tab.instanceId ? "flex" : "none",
+                                flexDirection: "column",
                                 flex: 1,
-                                // height: "100%",
-                                minHeight: 0
+                                height: "100%",
+                                gap: 1
                             }}
                         >
+                            {/* 每个终端独立工具栏 */}
+                            <Box sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1.5,
+                                px: 2,
+                                py: 1,
+                                bgcolor: "#646363",
+                                borderRadius: 1,
+                                flexShrink: 0
+                            }}>
+                                <Typography variant="body2" sx={{ color: "#3577fc", width: 60, fontSize: 16 }}>字号:</Typography>
+                                {[10, 12, 14, 16, 18, 20, 24, 32].map(size => (
+                                    <Button
+                                        key={size}
+                                        size="small"
+                                        sx={{ minWidth: 36 }}
+                                        variant={tab.fontSize === size ? "contained" : "outlined"}
+                                        onClick={() => handleChangeFontSize(tab.instanceId, size)}
+                                    >
+                                        {size}
+                                    </Button>
+                                ))}
 
-                            <WebTerminal target={tab as any} />
+                                {/* <Box sx={{ width: 1, height: 20, bgcolor: "#646363", mx: 1 }} /> */}
 
+                                <Typography variant="body2" sx={{ color: "#3577fc", width: 60, fontSize: 16 }}>主题:</Typography>
+                                <Button
+                                    size="small"
+                                    variant={tab.themeKey === "dark" ? "contained" : "outlined"}
+                                    onClick={() => handleChangeTheme(tab.instanceId, "dark")}
+                                >
+                                    暗黑
+                                </Button>
+                                <Button
+                                    size="small"
+                                    variant={tab.themeKey === "light" ? "contained" : "outlined"}
+                                    onClick={() => handleChangeTheme(tab.instanceId, "light")}
+                                >
+                                    浅色
+                                </Button>
+                                <Button
+                                    size="small"
+                                    variant={tab.themeKey === "midnight" ? "contained" : "outlined"}
+                                    onClick={() => handleChangeTheme(tab.instanceId, "midnight")}
+                                >
+                                    复古绿
+                                </Button>
+                            </Box>
+
+                            <Box sx={{ flex: 1, overflow: "hidden" }}>
+                                <WebTerminal
+                                    target={tab as any}
+                                    fontSize={tab.fontSize}
+                                    theme={terminalThemes[tab.themeKey]}
+                                />
+                            </Box>
                         </Box>
                     ))}
-
                 </Box>
             </FullScreenBox>
-            {/* SSH 弹窗 */}
             <Dialog open={openLauncher} onClose={() => setOpenLauncher(false)}>
                 <DialogTitle>Connect via SSH</DialogTitle>
                 <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
@@ -198,6 +282,5 @@ export default function TerminalPage() {
                 </DialogActions>
             </Dialog>
         </Box>
-
     );
 }
