@@ -144,11 +144,35 @@ export const EquityChartPanel = ({ viewMode }: any) => {
                             name: `${tradeId}_entry`,
                             coord: [entryIdx, t['Avg Entry Price']],
                             value: isBuyEntry ? 'B' : 'S',
-                            symbol: 'pin',
-                            symbolSize: isSelected ? 28 : 22,
-                            itemStyle: { color: isSelected ? '#fd3605' : (isBuyEntry ? '#ef5350' : '#26a69a'), borderColor: '#fff', borderWidth: 1 },
-                            label: { show: true, formatter: isBuyEntry ? 'B' : 'S', fontSize: 12 },
-                            detail: { type: 'Entry', action: isBuyEntry ? '买入 B' : '卖出 S', time: entryTime, price: t['Avg Entry Price'].toFixed(3), direction: directionStr, quantity: size, status: t['Status'] }
+                            symbol: 'circle',
+                            symbolSize: isSelected ? 26 : 20,
+                            // 核心：白底 + 对应颜色边框
+                            itemStyle: {
+                                backgroundColor: isSelected ? '#fababa' : '#fff', // 白色背景（ TradingView 标配）
+                                borderColor: isSelected ? '#860101' : (isBuyEntry ? '#ef5350' : '#26a69a'), // 边框：红/绿
+                                borderWidth: 2,
+                                color: isSelected ? '#fababa' : '#fff' // 图标颜色
+                            },
+                            // 文字标签：红/绿 颜色，白底风格
+                            label: {
+                                show: true,
+                                formatter: isBuyEntry ? 'B' : 'S',
+                                fontSize: isSelected ? 12: 10,
+                                color: isSelected ? '#891d02' : (isBuyEntry ? '#ef5350' : '#26a69a'), // 文字颜色
+                                backgroundColor: isSelected ? '#fababa' : '#fff', // 文字背景白色
+                                borderColor: isSelected ? '#fababa' : '#fff',
+                                borderWidth: 1,
+                                padding: [2, 4]
+                            },
+                            detail: {
+                                type: 'Entry',
+                                action: isBuyEntry ? '买入 B' : '卖出 S',
+                                time: entryTime,
+                                price: t['Avg Entry Price'].toFixed(3),
+                                direction: directionStr,
+                                quantity: size,
+                                status: t['Status']
+                            }
                         });
                     }
                 }
@@ -164,11 +188,36 @@ export const EquityChartPanel = ({ viewMode }: any) => {
                             name: `${tradeId}_exit`,
                             coord: [exitIdx, t['Avg Exit Price']],
                             value: isSellExit ? 'S' : 'B',
-                            symbol: 'diamond',
-                            symbolSize: isSelected ? 22 : 16,
-                            itemStyle: { color: isSelected ? '#9bfa9b' : (isSellExit ? '#26a69a' : '#ef5350'), borderColor: '#fff', borderWidth: 1 },
-                            label: { show: true, formatter: isSellExit ? 'S' : 'B', fontSize: 10 },
-                            detail: { type: 'Exit', action: isSellExit ? '卖出 S' : '买入 B', time: exitTime, price: t['Avg Exit Price'].toFixed(3), direction: directionStr, quantity: size, pnl: pnl, return: returnRate }
+                            symbol: 'rect',
+                            symbolSize: isSelected ? 24 : 16,
+                            // 样式：白底 + 彩色边框
+                            itemStyle: {
+                                backgroundColor: isSelected ? '#fababa' : '#fff',
+                                borderColor: isSelected ? '#005149' : (isSellExit ? '#26a69a' : '#ef5350'),
+                                borderWidth: 2,
+                                color: isSelected ? '#fababa' : '#fff'
+                            },
+                            // 标签：白底 + 对应颜色文字/边框
+                            label: {
+                                show: true,
+                                formatter: isSellExit ? 'S' : 'B',
+                                fontSize: isSelected ? 12 : 10,
+                                color: isSelected ? '#005149' : (isSellExit ? '#26a69a' : '#ef5350'),
+                                backgroundColor: isSelected ? '#fababa' : '#fff',
+                                borderColor: isSelected ? '#fababa' : '#fff',
+                                borderWidth: 1,
+                                padding: [2, 4]
+                            },
+                            detail: {
+                                type: 'Exit',
+                                action: isSellExit ? '卖出 S' : '买入 B',
+                                time: exitTime,
+                                price: t['Avg Exit Price'].toFixed(3),
+                                direction: directionStr,
+                                quantity: size,
+                                pnl: pnl,
+                                return: returnRate
+                            }
                         });
                     }
                 }
