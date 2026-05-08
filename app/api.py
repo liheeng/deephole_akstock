@@ -220,56 +220,79 @@ def tail_logs(n: int = 50):
 
 @app.websocket("/api/ws/logs/default")
 async def default_log_ws(websocket: WebSocket, level: str = "", keyword: str = ""):
-    logger.info(f"received get app log webstock request, webstocket: {websocket}, level: {level}, keyword: {keyword}")
+    logger.info(f"客户端连接日志WebSocket: {websocket}, level={level}, keyword={keyword}")
     await websocket.accept()
+
     last_pos = 0
-
-    while True:
-        if not os.path.exists(LOG_PATH):
-            await asyncio.sleep(1)
-            continue
-
+    if os.path.exists(LOG_PATH):
         with open(LOG_PATH, "r", encoding="utf-8") as f:
-            f.seek(last_pos)
-            lines = f.readlines()
+            f.seek(0, os.SEEK_END)
             last_pos = f.tell()
 
-        for line in lines:
-            # ===================== 修复：适配你真实的日志格式 =====================
-            ts = ""
-            lv = "INFO"
-            msg = ""
+    # 继承上一行的日志级别（给异常堆栈用）
+    last_level = "INFO"
 
-            try:
-                # 按 | 分割：[时间, 等级, 剩余内容]
-                parts = line.strip().split(" | ", 2)
-                if len(parts) == 3:
-                    ts = parts[0].strip()                     # 时间
-                    lv = parts[1].strip()                      # 等级
-                    msg_part = parts[2].strip()                # 模块:行号 - 消息
+    try:
+        while True:
+            if not os.path.exists(LOG_PATH):
+                await asyncio.sleep(0.3)
+                continue
 
-                    # 把后面的内容也一起当消息展示（更友好）
-                    msg = msg_part
-            except Exception:
-                # 解析失败就原样输出
+            with open(LOG_PATH, "r", encoding="utf-8") as f:
+                f.seek(last_pos)
+                lines = f.readlines()
+                last_pos = f.tell()
+
+            if not lines:
+                await asyncio.sleep(0.2)
+                continue
+
+            # 逐行读取、逐行发送（严格按你的要求）
+            for line in lines:
+                raw_line = line.strip()
+                if not raw_line:
+                    continue
+
                 ts = ""
-                lv = "INFO"
-                msg = line.strip()
+                lv = last_level
+                msg = raw_line
+                log_type = ""  # 正常日志为空
 
-            # ===================== 过滤逻辑 =====================
-            if level and lv != level:
-                continue
-            if keyword and keyword.lower() not in msg.lower():
-                continue
+                # 解析标准日志行
+                if " | " in raw_line:
+                    try:
+                        parts = raw_line.split(" | ", 2)
+                        if len(parts) >= 3:
+                            ts = parts[0].strip()
+                            lv = parts[1].strip()
+                            msg = parts[2].strip()
+                            last_level = lv
+                    except Exception:
+                        pass
+                else:
+                    # 【核心】无 | 无时间 → 标记特殊类型
+                    log_type = "__CONTENT__"
 
-            # ===================== 发送（永远不会报错） =====================
-            await websocket.send_json({
-                "timestamp": ts,
-                "level": lv,
-                "message": msg
-            })
+                # 过滤
+                if level and lv != level:
+                    continue
+                if keyword and keyword.lower() not in msg.lower():
+                    continue
 
-        await asyncio.sleep(0.5)
+                # 每行独立发送！
+                await websocket.send_json({
+                    "type": log_type,       # 新增：特殊标识
+                    "timestamp": ts,
+                    "level": lv,
+                    "message": msg
+                })
+
+            await asyncio.sleep(0.2)
+
+    except WebSocketDisconnect:
+        logger.info(f"客户端断开日志WebSocket: {websocket}")
+    except Exception as e:
+        logger.error(f"日志异常: {e}")
 
 
 class SQLQuery(BaseModel):

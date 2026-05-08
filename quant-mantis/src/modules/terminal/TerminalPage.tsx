@@ -1,6 +1,7 @@
 import {
     Box, MenuItem, Select, Typography, Dialog, DialogTitle,
-    DialogContent, TextField, DialogActions, Button, Tabs, Tab
+    DialogContent, TextField, DialogActions, Button, Tabs, Tab,
+    Slider // 导入Slider组件
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import WebTerminal from "../../components/terminal/WebTerminal";
@@ -153,7 +154,7 @@ export default function TerminalPage() {
                 enableIcon={tabs.length > 0}
                 isFull={fullSection === 'terminal'}
                 onToggle={() => setFullSection(fullSection === 'terminal' ? null : 'terminal')}
-                sx={{ flex: 1, minHeight: 0, minWidth: 0 }} // minWidth: 0 允许它被压缩
+                sx={{ flex: 1, minHeight: 0, minWidth: 0 }}
             >
                 {tabs.length > 0 && (
                     <Box sx={{ borderBottom: 1, borderColor: 'divider', flexShrink: 0 }}>
@@ -219,22 +220,26 @@ export default function TerminalPage() {
                                 borderRadius: 1,
                                 flexShrink: 0
                             }}>
-                                <Typography variant="body2" sx={{ color: "#3577fc", width: 60, fontSize: 16 }}>字号:</Typography>
-                                {[10, 12, 14, 16, 18, 20, 24, 32].map(size => (
-                                    <Button
-                                        key={size}
-                                        size="small"
-                                        sx={{ minWidth: 36 }}
-                                        variant={tab.fontSize === size ? "contained" : "outlined"}
-                                        onClick={() => handleChangeFontSize(tab.instanceId, size)}
-                                    >
-                                        {size}
-                                    </Button>
-                                ))}
+                                {/* 🔥 字号拖动条（替换原按钮组） */}
+                                {/* <Typography variant="body2" sx={{ color: "#3577fc", width: 60, fontSize: 16, whiteSpace: "nowrap" }}> */}
+                                <Typography variant="body2" sx={{ mr: 1, whiteSpace: "nowrap" }}>
+                                    字号: {tab.fontSize}px
+                                </Typography>
+                                <Slider
+                                    size="small"
+                                    min={10}
+                                    max={32}
+                                    step={1}
+                                    value={tab.fontSize}
+                                    onChange={(_, value) => handleChangeFontSize(tab.instanceId, value as number)}
+                                    sx={{ width: 180, color: "#3577fc" }}
+                                    valueLabelDisplay="auto"
+                                />
 
-                                {/* <Box sx={{ width: 1, height: 20, bgcolor: "#646363", mx: 1 }} /> */}
-
-                                <Typography variant="body2" sx={{ color: "#3577fc", width: 60, fontSize: 16 }}>主题:</Typography>
+                                {/* <Typography variant="body2" sx={{ color: "#3577fc", width: 60, fontSize: 16, ml: 2 }}> */}
+                                <Typography variant="body2" sx={{ mr: 1, whiteSpace: "nowrap" }}>
+                                    主题:
+                                </Typography>
                                 <Button
                                     size="small"
                                     variant={tab.themeKey === "dark" ? "contained" : "outlined"}

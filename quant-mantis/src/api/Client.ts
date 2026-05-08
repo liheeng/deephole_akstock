@@ -359,8 +359,16 @@ export async function logStream(jobId: string): Promise<EventSource | null> {
     return new EventSource(url, { withCredentials: true } as any);
 }
 
+// 新增：统一日志类型，和WebSocket保持一致
+interface LogLine {
+    type?: string; // __CONTENT__ = 异常堆栈行
+    timestamp: string;
+    level: string;
+    message: string;
+}
+
 // 获取 default.log 最近 n 行
-export async function fetchDefaultLogs(n: number = 50): Promise<{ timestamp: string, level: string, message: string }[]> {
+export async function fetchDefaultLogs(n: number = 50): Promise<LogLine[]> {
     try {
         const res = await apiClient.get(`/logs/tail?n=${n}`, {
             withCredentials: true,
@@ -370,25 +378,45 @@ export async function fetchDefaultLogs(n: number = 50): Promise<{ timestamp: str
         });
         const rawLogs: string[] = res.data.logs || [];
 
-        // 解析日志：适配 时间 | 等级 | 内容 格式
+        // 缓存上一行的日志级别（异常堆栈继承上级颜色/级别）
+        let lastLevel = "INFO";
+        
+        // 解析日志：适配 时间 | 等级 | 内容 格式 + 异常行标记__CONTENT__
         const parsedLogs = rawLogs.map(line => {
-            // 按 " | " 分割成三部分
-            const parts = line.split(' | ');
-
-            // 正常日志 = 3段
-            if (parts.length >= 3) {
+            const trimLine = line.trim();
+            // 空行直接返回
+            if (!trimLine) {
                 return {
-                    timestamp: parts[0].trim(),
-                    level: parts[1].trim(),      // INFO / ERROR
-                    message: parts[2].trim(),    // 完整内容
+                    type: "__CONTENT__",
+                    timestamp: '',
+                    level: lastLevel,
+                    message: trimLine,
                 };
             }
 
-            // 异常行兜底
+            // 按 " | " 分割成三部分
+            const parts = trimLine.split(' | ');
+
+            // 正常日志 = 3段 → 无type标记
+            if (parts.length >= 3) {
+                const timestamp = parts[0].trim();
+                const level = parts[1].trim();
+                const message = parts[2].trim();
+                // 更新上一级别，给后续异常行使用
+                lastLevel = level;
+                return {
+                    timestamp,
+                    level,
+                    message,
+                };
+            }
+
+            // 异常行/堆栈行 → 标记__CONTENT__，继承上一行级别
             return {
+                type: "__CONTENT__",
                 timestamp: '',
-                level: 'INFO',
-                message: line.trim(),
+                level: lastLevel,
+                message: trimLine,
             };
         });
 
