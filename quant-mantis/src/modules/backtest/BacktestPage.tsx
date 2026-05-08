@@ -1,6 +1,10 @@
 // pages/BacktestPage.tsx
-
-import { Box } from "@mui/material"
+import { useEffect, useRef, useState } from "react"
+import {
+    Box, Backdrop,
+    CircularProgress,
+    Typography
+} from "@mui/material"
 import Split from "react-split"
 
 // import { useNodes } from "../../hooks/useNodes"
@@ -8,7 +12,7 @@ import { NodeRegistry } from "../../model/dsl_node/node_registry";
 import TopToolbar from "../../components/layout/TopToolbar"
 import PortfolioPanel from "../../components/portfolio/PortfolioPanel"
 import StrategyGraph from "../../components/backtest/StrategyGraph"
-import { useBacktestStore} from "../../store/backtest/backtest.store"
+import { useBacktestStore } from "../../store/backtest/backtest.store"
 import { useBacktestResultStore } from "../../store/backtest/backtestresult.store"
 import GlobalDialogs from "../../components/dsl/GlobalEditorDialog"
 import { callBacktest } from "../../api/Client";
@@ -29,14 +33,17 @@ export default function BacktestPage() {
     const datasetId = useDatasetStore(s => s.currentDatasetId)
     const datasets = useDatasetStore(s => s.datasets)
     const dataset = datasets.find(d => d.id === datasetId)
-        
+
     const openWizard = useDialogStore((s: any) => s.openDialog)
-    
+
+    const [isBacktesting, setIsBacktesting] = useState(false)
+    const waitingRef = useRef(true)
+
     // ❗防止未加载
     const runBacktest = async () => {
         const portfolioCheck = validatePortfolioConfig()
         const datasetCheck = validateDatasetConfig()
-        
+
         if (!portfolioCheck.isValid()) {
             alert("投资组合配置错误:\n" + portfolioCheck.errors.join("\n"))
             return
@@ -49,13 +56,57 @@ export default function BacktestPage() {
 
         const portfolioConfig = buildPortfolioPayload()
         const datasetConfig = buildBacktestPayload()
+
         const backtestConfig = {
             portfolio_config: portfolioConfig,
             dataset_config: datasetConfig,
         }
-        const data = await callBacktest(backtestConfig)
-        if (data) {
-            setBacktestResult(data)
+
+        setIsBacktesting(true)
+        waitingRef.current = true
+
+        try {
+            // 真正的回测请求
+            const backtestPromise = callBacktest(backtestConfig)
+
+            // 循环 timeout 检查
+            while (waitingRef.current) {
+
+                const result = await Promise.race([
+                    backtestPromise,
+                    new Promise((resolve) =>
+                        setTimeout(() => resolve("__timeout__"), 30000)
+                    )
+                ])
+
+                // 回测完成
+                if (result !== "__timeout__") {
+                    if (result) {
+                        setBacktestResult(result)
+                    }
+
+                    setIsBacktesting(false)
+                    return
+                }
+
+                // timeout
+                const shouldContinue = window.confirm(
+                    "回测仍在运行，是否继续等待 30 秒？"
+                )
+
+                if (!shouldContinue) {
+                    waitingRef.current = false
+                    setIsBacktesting(false)
+                    return
+                }
+            }
+
+        } catch (err) {
+            console.error(err)
+            alert("回测失败")
+
+        } finally {
+            setIsBacktesting(false)
         }
     }
 
@@ -66,7 +117,7 @@ export default function BacktestPage() {
             return
         }
 
-        openWizard("backtest_wizard", {dataset: dataset, runBacktest: runBacktest})
+        openWizard("backtest_wizard", { dataset: dataset, runBacktest: runBacktest })
     }
 
     if (!nodes || Object.keys(nodes).length === 0) {
@@ -149,7 +200,7 @@ export default function BacktestPage() {
                     }}
                 >
                     <WindowWrapper title="Strategy Graph" defaultMode="normal" disableMinimize={true}>
-                        <Box sx={{ flex: 1, minHeight: 0, minWidth: 0}}>
+                        <Box sx={{ flex: 1, minHeight: 0, minWidth: 0 }}>
                             <StrategyGraph />
                         </Box>
                     </WindowWrapper>
@@ -157,7 +208,22 @@ export default function BacktestPage() {
 
             </Split>
 
-            {GlobalDialogs({nodes})}
+            {GlobalDialogs({ nodes })}
+
+            <Backdrop
+                open={isBacktesting}
+                sx={{
+                    color: "#fff",
+                    zIndex: 9999,
+                    flexDirection: "column",
+                    gap: 2
+                }}
+            >
+                <CircularProgress color="inherit" />
+                <Typography>
+                    Backtesting Running...
+                </Typography>
+            </Backdrop>
         </Box>
 
     )
