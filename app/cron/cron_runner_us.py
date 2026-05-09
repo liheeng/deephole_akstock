@@ -4,11 +4,11 @@ import os
 import requests
 from core.job import JobType
 from loguru import logger
-from datetime import datetime
+from datetime import datetime, timedelta
 from utils.common import is_running_in_docker
 from sources.data_source import DataSourceApiName
 from utils.log_manager import init_logger
-from utils.trading_uitl import is_trading_today
+from utils.trading_uitl import is_trading_day, get_target_sync_date
 
 init_logger()
 
@@ -18,7 +18,8 @@ API = "http://" + API_SERVICE_NAME + ":" + API_PORT if is_running_in_docker() el
 sync_us_daily_url = f"{API}/api/sync_daily/" + JobType.US_DAILY_SYNC.value
 
 logger.info(f"cron task --- start US cron task at {datetime.now()}")
-if not is_trading_today("US"):
+yesterday = datetime.now().date() - timedelta(days=1)
+if not is_trading_day("US", get_target_sync_date()):
     logger.info(f"cron task --- today ({datetime.now()}) is not trading day, no need to sync data of US market.")
 else:
     response = requests.get(

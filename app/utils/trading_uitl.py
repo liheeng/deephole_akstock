@@ -1,8 +1,21 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import akshare as ak
 import pandas as pd
 import cn_stock_holidays.data_hk as hkex
 import exchange_calendars as xcals
+
+
+def get_target_sync_date() -> str:
+    """
+    如果当前时间在下午 3 点（15:00）之前，返回前一天日期。
+    如果当前时间在下午 3 点（15:00）及之后，返回当天日期。
+    返回格式为 "%Y-%m-%d"
+    """
+    now = datetime.now()
+    if now.hour < 15:
+        return (now - timedelta(days=1)).strftime("%Y-%m-%d")
+    else:
+        return now.strftime("%Y-%m-%d")
 
 
 def is_trading_day(market: str = "CN", date_str: str | None = None) -> bool:
