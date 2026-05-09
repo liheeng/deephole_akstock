@@ -6,6 +6,7 @@ import random
 from loguru import logger
 from tqdm import tqdm
 from datetime import datetime, timedelta, date
+from utils.trading_uitl import get_target_sync_date
 
 # ====================== 核心配置 ======================
 DB_PATH = "./data/baostock_data.duckdb"
@@ -44,11 +45,11 @@ def init_database():
 
 def is_today_trading_day():
     # 今天日期字符串，格式 YYYY-MM-DD
-    today = date.today().strftime("%Y-%m-%d")
-
+    _end_day = get_target_sync_date()
+    
     # 登录（不用注册）
     # 查询单天交易日历
-    rs = bs.query_trade_dates(start_date=today, end_date=today)
+    rs = bs.query_trade_dates(start_date=_end_day, end_date=_end_day)
     if rs.error_code != '0':
         print("query_trade_dates 失败：", rs.error_msg)
         bs.logout()
@@ -130,7 +131,7 @@ def download_daily(code, start, end, con, kline_max=None):
             kline_start = next_day
 
             # ✅ 核心新增判断（推荐 >=）
-            if kline_start >= end:
+            if kline_start > end:
                 logger.info(f"⏭️ {code} | 日K已最新，跳过 | max={kline_max}")
                 return False
 

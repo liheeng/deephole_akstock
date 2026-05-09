@@ -7,12 +7,12 @@ import exchange_calendars as xcals
 
 def get_target_sync_date() -> str:
     """
-    如果当前时间在下午 3 点（15:00）之前，返回前一天日期。
-    如果当前时间在下午 3 点（15:00）及之后，返回当天日期。
+    如果当前时间在下午 17 点（17:00）之前，返回前一天日期。
+    如果当前时间在下午 17 点（17:00）及之后，返回当天日期。
     返回格式为 "%Y-%m-%d"
     """
     now = datetime.now()
-    if now.hour < 15:
+    if now.hour < 17:
         return (now - timedelta(days=1)).strftime("%Y-%m-%d")
     else:
         return now.strftime("%Y-%m-%d")
