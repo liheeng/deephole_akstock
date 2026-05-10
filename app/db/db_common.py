@@ -1,7 +1,11 @@
 from utils.common import is_running_in_docker
 from datetime import datetime
+import os
 
-data_volume = "/data" if is_running_in_docker() else "./data"
+DEEPHOLE_STOCK_DB_PATH = os.environ["DEEPHOLE_STOCK_DB_PATH"]
+BAOSTOCK_HIS_DB_PATH = os.environ["BAOSTOCK_HIS_DB_PATH"]
+
+data_volume = DEEPHOLE_STOCK_DB_PATH if DEEPHOLE_STOCK_DB_PATH is not None else ("/data" if is_running_in_docker() else "./data")
 DB = data_volume + "/stock.duckdb"
 
 

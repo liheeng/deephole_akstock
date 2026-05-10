@@ -7,9 +7,13 @@ from loguru import logger
 from tqdm import tqdm
 from datetime import datetime, timedelta, date
 from utils.trading_uitl import get_target_sync_date
+import os
+
 
 # ====================== 核心配置 ======================
-DB_PATH = "./data/baostock_data.duckdb"
+BAOSTOCK_HIS_DB_PATH = os.environ["BAOSTOCK_HIS_DB_PATH"]
+DB_PATH = BAOSTOCK_HIS_DB_PATH if BAOSTOCK_HIS_DB_PATH is not None else "./data"
+DB_PATH = DB_PATH + "/baostock_data.duckdb"
 START_DATE = "2000-01-01"
 # END_DATE = "2026-04-24"
 SLEEP_MIN = 1.5
