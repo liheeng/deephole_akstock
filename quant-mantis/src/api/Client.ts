@@ -3,7 +3,7 @@ import axios from 'axios';
 // Init nodes
 import { NodeRegistry } from "../model/dsl_node/node_registry";
 import { useNodes } from "../hooks/useNodes"
-import { API_URL_BASE, CONTENT_TYPE, CORS_CONFIG } from "../configs/apiConfig"
+import { API_URL_BASE, WS_API_URL_BASE, CONTENT_TYPE, CORS_CONFIG } from "../configs/apiConfig"
 import { type Dataset } from "../store/dataset.store";
 import { type BacktestState } from "../store/backtest/backtest.store";
 import { type BacktestResultState } from "../store/backtest/backtestresult.store";
@@ -429,8 +429,8 @@ export async function fetchDefaultLogs(n: number = 50): Promise<LogLine[]> {
 
 export async function createSystemLogWebsockChannel(): Promise<WebSocket | null> {
     try {
-        const res = await fetchAPIServiceIp();
-        return new WebSocket(`ws://${res.server_ip}:8000/api/ws/logs/default`);
+        // const res = await fetchAPIServiceIp();
+        return new WebSocket(`${WS_API_URL_BASE}/api/ws/logs/default`);
     } catch (err) {
         console.error("fail to create system log webstock channel...", err);
         return null;

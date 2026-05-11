@@ -4,7 +4,7 @@ import { Terminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
 import { fetchAPIServiceIp } from "../../api/Client"
-
+import { WS_API_URL_BASE } from '../../configs/apiConfig'
 interface Props {
     target: any;
     fontSize: number;
@@ -67,7 +67,7 @@ export default function WebTerminal({ target, fontSize, theme }: Props) {
         termRef.current = term;
 
         const ws = new WebSocket(
-            `ws://${apiServiceIp}:8000/api/ws/terminal`
+            `${WS_API_URL_BASE}/api/ws/terminal`
         );
         wsRef.current = ws;
 
