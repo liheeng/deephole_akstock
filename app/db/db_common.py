@@ -2,11 +2,11 @@ from utils.common import is_running_in_docker
 from datetime import datetime
 import os
 
-DEEPHOLE_STOCK_DB_PATH = os.environ["DEEPHOLE_STOCK_DB_PATH"]
-BAOSTOCK_HIS_DB_PATH = os.environ["BAOSTOCK_HIS_DB_PATH"]
+# 有环境变量就用，没有就用默认路径，绝不报错
+DEEPHOLE_STOCK_DB_PATH = os.environ.get("DEEPHOLE_STOCK_DB_PATH", "/data" if is_running_in_docker() else "./data")
+BAOSTOCK_HIS_DB_PATH = os.environ.get("BAOSTOCK_HIS_DB_PATH", "/data" if is_running_in_docker() else "./data")
 
-data_volume = DEEPHOLE_STOCK_DB_PATH if DEEPHOLE_STOCK_DB_PATH is not None else ("/data" if is_running_in_docker() else "./data")
-DB = data_volume + "/stock.duckdb"
+DB = DEEPHOLE_STOCK_DB_PATH + "/stock.duckdb"
 
 
 def safe_time(v: str):
