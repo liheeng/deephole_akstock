@@ -4,7 +4,7 @@ import os
 
 # 有环境变量就用，没有就用默认路径，绝不报错
 DEEPHOLE_STOCK_DB_PATH = os.environ.get("DEEPHOLE_STOCK_DB_PATH", "/data" if is_running_in_docker() else "./data")
-BAOSTOCK_HIS_DB_PATH = os.environ.get("BAOSTOCK_HIS_DB_PATH", "/data" if is_running_in_docker() else "./data")
+
 
 DB = DEEPHOLE_STOCK_DB_PATH + "/stock.duckdb"
 
