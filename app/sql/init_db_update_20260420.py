@@ -13,7 +13,7 @@ def update_db():
 
     con = duckdb.connect(DB_PATH)
 
-    print("🚀 Init database...")
+    print("🚀 Update database...")
 
     # =========================
     # 1. universe_map（指数 / 板块）

@@ -13,7 +13,7 @@ def update_db():
 
     con = duckdb.connect(DB_PATH)
 
-    print("🚀 Init database...")
+    print("🚀 Update database...")
 
     # =========================
     # 1. -- 回测系统-数据集元数据表

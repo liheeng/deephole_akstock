@@ -1,5 +1,14 @@
 {
     "python-envs.defaultEnvManager": "ms-python.python:conda",
     "python-envs.defaultPackageManager": "ms-python.python:conda",
-    "idf.pythonInstallPath": "/Users/mac/opt/anaconda3/envs/ai-py312/bin/python"
+    "idf.pythonInstallPath": "/Users/mac/opt/anaconda3/envs/ai-py312/bin/python",
+    "sqltools.useNodeRuntime": true,
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "driver": "DuckDB",
+            "database": "${workspaceFolder:deephole_akstock}/stock.duckdb",
+            "name": "stockdb"
+        }
+    ]
 }

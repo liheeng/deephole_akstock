@@ -77,3 +77,21 @@
 * symbol: code.exchange (dot-connected), e.g., 600000.SH, 00700.HK,AAPL.NASDAQ
 * symbol_type: security type: stock, index, future, option, otc, preferred
 * market: country/region: CN, HK, US
+
+
+# Data Merge
+
+* How to copy stock_daily data from other source to stock.duckdb
+  
+``` bash
+# login duckdb, then run the command to export stock daily data
+COPY (
+  SELECT * FROM stock_daily
+  WHERE date > '2026-04-10'
+) TO 'stock_daily_export_20260522.parquet' (FORMAT PARQUET);
+
+# copy the parquet file to akstock/data folder
+# login local duckdb, then run below command to import data
+INSERT or REPLACE into stock_daily select * from stock_daily_export_20260522.parquet where date > '2026-04-10';
+# Note: please change date condition and export/import parquet file name.
+```

@@ -69,7 +69,7 @@ def is_today_trading_day():
 def get_last_download_dates(con, code):
     # kline 最大日期
     kline_max = con.execute(
-        "SELECT MAX(date) FROM kline_day WHERE code = ?",
+        "SELECT date FROM kline_day WHERE code = ? ORDER BY date DESC LIMIT 1;",
         [code]
     ).fetchone()[0]
 

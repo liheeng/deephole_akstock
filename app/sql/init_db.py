@@ -148,6 +148,7 @@ def init_db():
             -- ==============================
             vol_ma5 DOUBLE,              -- 5日成交量均值（短期资金活跃度）
             vol_ma10 DOUBLE,             -- 10日成交量均值
+            vol_ma20 DOUBLE,             -- 20日成交量均值
 
             obv DOUBLE,                  -- OBV（On Balance Volume，资金流向）
 
@@ -211,6 +212,17 @@ def init_db():
             -- ===== 连续性 =====
             up_3days BOOLEAN,
             down_3days BOOLEAN,
+            
+            acc_signal BOOLEAN;
+            trend_strong BOOLEAN;
+            trend_weak BOOLEAN;
+            momentum_strong BOOLEAN;
+            low_volatility BOOLEAN;
+            high_volatility BOOLEAN;
+            volume_spike BOOLEAN;
+            volume_trend BOOLEAN;
+            breakout_confirm BOOLEAN;
+            reversal_signal BOOLEAN;
 
             create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
