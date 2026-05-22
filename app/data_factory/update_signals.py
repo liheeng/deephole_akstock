@@ -697,6 +697,7 @@ class SignalsUpdater:
                         d.volume,
 
                         i.ma5,
+                        i.ma10,
                         i.ma20,
                         i.ma60,
 
@@ -705,7 +706,11 @@ class SignalsUpdater:
                         i.atr14,
 
                         i.boll_up,
-                        i.boll_down
+                        i.boll_down,
+
+                        i.vol_ma5,
+                        i.vol_ma10,
+                        i.vol_ma20
 
                     FROM stock_daily d
                     JOIN stock_indicators i
@@ -736,6 +741,7 @@ class SignalsUpdater:
                             d.volume,
 
                             i.ma5,
+                            i.ma10,
                             i.ma20,
                             i.ma60,
 
@@ -744,7 +750,11 @@ class SignalsUpdater:
                             i.atr14,
 
                             i.boll_up,
-                            i.boll_down
+                            i.boll_down,
+
+                            i.vol_ma5,
+                            i.vol_ma10,
+                            i.vol_ma20
 
                         FROM stock_daily d
                         JOIN stock_indicators i
