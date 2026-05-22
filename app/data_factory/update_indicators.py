@@ -314,10 +314,12 @@ class IndicatorUpdater:
         logger.info(
             f"Need update symbols: {len(symbols)}"
         )
-
+        count = 0
+        total = len(symbols)
         for symbol in symbols:
 
-            logger.info(f"Updating: {symbol}")
+            logger.info(f"Updating({count}/{total}): {symbol}")
+            count += 1
 
             # =========================
             # indicators 最后日期

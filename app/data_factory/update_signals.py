@@ -650,11 +650,14 @@ class SignalsUpdater:
         # =========================
         # 更新每个symbol
         # =========================
+        count = 0
+        total = len(symbols)
         for symbol in symbols:
 
             logger.info(
-                f"Updating signals: {symbol}"
+                f"Updating signals({count}/{total}): {symbol}"
             )
+            count += 1
 
             # =========================
             # 获取signals最后日期
