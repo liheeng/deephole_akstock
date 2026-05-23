@@ -51,7 +51,7 @@ export class NodeRegistry {
             for (const name of this._groups[group]) {
                 const meta = this._meta[name];
                 result[group].push({
-                    name: meta.name,
+                    name: name,
                     factory: (this._factories[name] as any).toString(),
                     desc: meta.desc,
                     params: meta.params.map((p) => ({
@@ -82,7 +82,7 @@ export class NodeRegistry {
                 const nodeParams = params.map(
                     (p: any) => new NodeParam(p.name, p.type, p.default, p.desc)
                 );
-                const meta = new NodeMeta(name, group, desc, nodeParams);
+                const meta = new NodeMeta(p.name, group, desc, nodeParams);
 
                 // 2. ✅ 把 Python lambda → JS 函数
                 const factoryFunc = this._lambdaStringToFunction(factory);

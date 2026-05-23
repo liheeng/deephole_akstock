@@ -2,6 +2,7 @@ from .context import PortfolioContext
 import pandas as pd
 from vectorbt_test.core.registry import NodeRegistry, NodeMeta, NodeParam
 from vectorbt_test.core.nodes import NodeDType, NodeType, Node
+from utils.group_func_registry import GroupFuncReg
 
 
 class DataNode(Node):
@@ -64,6 +65,7 @@ class DBNode(RawDataNode):
         return df[self.field_name]
     
 
+@GroupFuncReg.register(group="nodes")
 def register_data():
     NodeRegistry.register(
         "Price",

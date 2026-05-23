@@ -83,7 +83,7 @@ class NodeRegistry:
                 meta = cls._meta[name]
 
                 result[group].append({
-                    "name": meta.name,
+                    "name": name,
                     "factory": lambda_to_str(cls._factories[name]),
                     "desc": meta.desc,
                     "params": [

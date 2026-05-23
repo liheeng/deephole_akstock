@@ -2,6 +2,7 @@ from vectorbt_test.core.nodes import Node, FeatureNode, NodeType, NodeDType, Con
 from vectorbt_test.core.registry import NodeRegistry, NodeMeta, NodeParam
 from vectorbt_test.core.context import PortfolioContext
 from vectorbt_test.core.base import Scope
+from utils.group_func_registry import GroupFuncReg
 
 
 class Function(FeatureNode):
@@ -182,6 +183,7 @@ class ZScoreTS(Function):
         )
 
 
+@GroupFuncReg.register(group="nodes")
 def register_functions():
     NodeRegistry.register(
         "cross",

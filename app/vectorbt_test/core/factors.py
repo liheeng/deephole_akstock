@@ -6,6 +6,7 @@ from vectorbt_test.core.context import PortfolioContext
 from vectorbt_test.core.registry import NodeRegistry, NodeMeta, NodeParam
 from vectorbt_test.core.base import Scope
 import pandas as pd
+from utils.group_func_registry import GroupFuncReg
 
 
 class Factor(FeatureNode):
@@ -75,6 +76,7 @@ class GeneralFactor(Factor):
         super().__init__(name, expr_str)
 
 
+@GroupFuncReg.register(group="nodes")
 def register_factors():
     NodeRegistry.register(
         "GFactor",

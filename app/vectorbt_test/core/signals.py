@@ -7,6 +7,7 @@ from vectorbt_test.core.node_builder import NodeBuilder
 from vectorbt_test.core.registry import NodeRegistry, NodeMeta, NodeParam
 from vectorbt_test.core.context import PortfolioContext
 import pandas as pd
+from utils.group_func_registry import GroupFuncReg
 
 
 class SignalGroup(enum.Enum):
@@ -334,6 +335,7 @@ class RebalanceWeekEnd(CSSignal):
         return df
 
 
+@GroupFuncReg.register(group="nodes")
 def register_signals():
     NodeRegistry.register(
         "Cooldown",

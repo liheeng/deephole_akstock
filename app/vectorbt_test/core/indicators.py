@@ -3,6 +3,7 @@ from vectorbt_test.core.registry import NodeRegistry, NodeMeta, NodeParam
 from vectorbt_test.core.context import PortfolioContext
 from vectorbt_test.core.base import Scope
 import pandas as pd
+from utils.group_func_registry import GroupFuncReg
 
 
 class IndicatorResult:
@@ -342,6 +343,7 @@ class VolumeBreakoutIndicator(Indicator):
         return self.apply(data["volume"], _vol_breakout, context)
     
 
+@GroupFuncReg.register(group="nodes")
 def register_indicators():
     NodeRegistry.register(
         "MA",
