@@ -82,7 +82,7 @@ export class NodeRegistry {
                 const nodeParams = params.map(
                     (p: any) => new NodeParam(p.name, p.type, p.default, p.desc)
                 );
-                const meta = new NodeMeta(p.name, group, desc, nodeParams);
+                const meta = new NodeMeta(name, group, desc, nodeParams);
 
                 // 2. ✅ 把 Python lambda → JS 函数
                 const factoryFunc = this._lambdaStringToFunction(factory);

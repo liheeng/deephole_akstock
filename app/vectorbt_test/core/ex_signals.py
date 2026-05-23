@@ -26,66 +26,50 @@ def register_ex_signals():
     # =========================
 
     NodeRegistry.register(
-        "_ma5_above_ma20",
-        lambda name="ma5_above_ma20", signal_group=SignalGroup.TS: ExSignal(
-            name, signal_group
-        ),
+        "ma5_above_ma20",
+        lambda: ExSignal("ma5_above_ma20", SignalGroup.TS),
         NodeMeta(name="ma5_above_ma20", group="signal", desc="MA5 above MA20"),
     )
 
     NodeRegistry.register(
-        "_ma20_above_ma60",
-        lambda name="ma20_above_ma60", signal_group=SignalGroup.TS: ExSignal(
-            name, signal_group
-        ),
+        "ma20_above_ma60",
+        lambda: ExSignal("ma20_above_ma60", SignalGroup.TS),
         NodeMeta(name="ma20_above_ma60", group="signal", desc="MA20 above MA60"),
     )
 
     NodeRegistry.register(
-        "_close_above_ma20",
-        lambda name="close_above_ma20", signal_group=SignalGroup.TS: ExSignal(
-            name, signal_group
-        ),
+        "close_above_ma20",
+        lambda: ExSignal("close_above_ma20", SignalGroup.TS),
         NodeMeta(name="close_above_ma20", group="signal", desc="Close above MA20"),
     )
 
     NodeRegistry.register(
-        "_rsi_overbought",
-        lambda name="rsi_overbought", signal_group=SignalGroup.TS: ExSignal(
-            name, signal_group
-        ),
+        "rsi_overbought",
+        lambda: ExSignal("rsi_overbought", SignalGroup.TS),
         NodeMeta(name="rsi_overbought", group="signal", desc="RSI overbought"),
     )
 
     NodeRegistry.register(
-        "_rsi_oversold",
-        lambda name="rsi_oversold", signal_group=SignalGroup.TS: ExSignal(
-            name, signal_group
-        ),
+        "rsi_oversold",
+        lambda: ExSignal("rsi_oversold", SignalGroup.TS),
         NodeMeta(name="rsi_oversold", group="signal", desc="RSI oversold"),
     )
 
     NodeRegistry.register(
-        "_breakout_20d",
-        lambda name="breakout_20d", signal_group=SignalGroup.TS: ExSignal(
-            name, signal_group
-        ),
+        "breakout_20d",
+        lambda: ExSignal("breakout_20d", SignalGroup.TS),
         NodeMeta(name="breakout_20d", group="signal", desc="20-day breakout"),
     )
 
     NodeRegistry.register(
-        "_breakdown_20d",
-        lambda name="breakdown_20d", signal_group=SignalGroup.TS: ExSignal(
-            name, signal_group
-        ),
+        "breakdown_20d",
+        lambda: ExSignal("breakdown_20d", SignalGroup.TS),
         NodeMeta(name="breakdown_20d", group="signal", desc="20-day breakdown"),
     )
 
     NodeRegistry.register(
-        "_boll_upper_break",
-        lambda name="boll_upper_break", signal_group=SignalGroup.TS: ExSignal(
-            name, signal_group
-        ),
+        "boll_upper_break",
+        lambda: ExSignal("boll_upper_break", SignalGroup.TS),
         NodeMeta(
             name="boll_upper_break",
             group="signal",
@@ -94,10 +78,8 @@ def register_ex_signals():
     )
 
     NodeRegistry.register(
-        "_boll_lower_break",
-        lambda name="boll_lower_break", signal_group=SignalGroup.TS: ExSignal(
-            name, signal_group
-        ),
+        "boll_lower_break",
+        lambda: ExSignal("boll_lower_break", SignalGroup.TS),
         NodeMeta(
             name="boll_lower_break",
             group="signal",
@@ -106,36 +88,28 @@ def register_ex_signals():
     )
 
     NodeRegistry.register(
-        "_vol_spike",
-        lambda name="vol_spike", signal_group=SignalGroup.TS: ExSignal(
-            name, signal_group
-        ),
+        "vol_spike",
+        lambda: ExSignal("vol_spike", SignalGroup.TS),
         NodeMeta(name="vol_spike", group="signal", desc="Volume spike"),
     )
 
     NodeRegistry.register(
-        "_vol_ma5_above_ma20",
-        lambda name="vol_ma5_above_ma20", signal_group=SignalGroup.TS: ExSignal(
-            name, signal_group
-        ),
+        "vol_ma5_above_ma20",
+        lambda: ExSignal("vol_ma5_above_ma20", SignalGroup.TS),
         NodeMeta(
             name="vol_ma5_above_ma20", group="signal", desc="Volume MA5 above MA20"
         ),
     )
 
     NodeRegistry.register(
-        "_up_3days",
-        lambda name="up_3days", signal_group=SignalGroup.TS: ExSignal(
-            name, signal_group
-        ),
+        "up_3days",
+        lambda: ExSignal("up_3days", SignalGroup.TS),
         NodeMeta(name="up_3days", group="signal", desc="Up 3 consecutive days"),
     )
 
     NodeRegistry.register(
-        "_down_3days",
-        lambda name="down_3days", signal_group=SignalGroup.TS: ExSignal(
-            name, signal_group
-        ),
+        "down_3days",
+        lambda: ExSignal("down_3days", SignalGroup.TS),
         NodeMeta(name="down_3days", group="signal", desc="Down 3 consecutive days"),
     )
 
@@ -144,66 +118,50 @@ def register_ex_signals():
     # =========================
 
     NodeRegistry.register(
-        "_atr_high_vol",
-        lambda name="atr_high_vol", signal_group=SignalGroup.TS_CS: ExSignal(
-            name, signal_group
-        ),
+        "atr_high_vol",
+        lambda: ExSignal("atr_high_vol", SignalGroup.TS_CS),
         NodeMeta(name="atr_high_vol", group="signal", desc="ATR high volatility"),
     )
 
     NodeRegistry.register(
-        "_low_volatility",
-        lambda name="low_volatility", signal_group=SignalGroup.TS_CS: ExSignal(
-            name, signal_group
-        ),
+        "low_volatility",
+        lambda: ExSignal("low_volatility", SignalGroup.TS_CS),
         NodeMeta(name="low_volatility", group="signal", desc="Low volatility"),
     )
 
     NodeRegistry.register(
-        "_high_volatility",
-        lambda name="high_volatility", signal_group=SignalGroup.TS_CS: ExSignal(
-            name, signal_group
-        ),
+        "high_volatility",
+        lambda: ExSignal("high_volatility", SignalGroup.TS_CS),
         NodeMeta(name="high_volatility", group="signal", desc="High volatility"),
     )
 
     NodeRegistry.register(
-        "_volume_spike",
-        lambda name="volume_spike", signal_group=SignalGroup.TS_CS: ExSignal(
-            name, signal_group
-        ),
+        "volume_spike",
+        lambda: ExSignal("volume_spike", SignalGroup.TS_CS),
         NodeMeta(name="volume_spike", group="signal", desc="Volume spike"),
     )
 
     NodeRegistry.register(
-        "_volume_trend",
-        lambda name="volume_trend", signal_group=SignalGroup.TS_CS: ExSignal(
-            name, signal_group
-        ),
+        "volume_trend",
+        lambda: ExSignal("volume_trend", SignalGroup.TS_CS),
         NodeMeta(name="volume_trend", group="signal", desc="Volume trend"),
     )
 
     NodeRegistry.register(
-        "_breakout_confirm",
-        lambda name="breakout_confirm", signal_group=SignalGroup.TS_CS: ExSignal(
-            name, signal_group
-        ),
+        "breakout_confirm",
+        lambda: ExSignal("breakout_confirm", SignalGroup.TS_CS),
         NodeMeta(name="breakout_confirm", group="signal", desc="Breakout confirmation"),
     )
 
     NodeRegistry.register(
-        "_reversal_signal",
-        lambda name="reversal_signal", signal_group=SignalGroup.TS_CS: ExSignal(
-            name, signal_group
-        ),
+        "reversal_signal",
+        lambda: ExSignal("reversal_signal", SignalGroup.TS_CS),
         NodeMeta(name="reversal_signal", group="signal", desc="Reversal signal"),
     )
 
     NodeRegistry.register(
-        "_momentum_strong",
-        lambda name="momentum_strong", signal_group=SignalGroup.TS_CS: ExSignal(
-            name, signal_group
-        ),
+        "momentum_strong",
+        lambda: ExSignal("momentum_strong", SignalGroup.TS_CS),
         NodeMeta(name="momentum_strong", group="signal", desc="Strong momentum"),
     )
 
@@ -212,17 +170,13 @@ def register_ex_signals():
     # =========================
 
     NodeRegistry.register(
-        "_trend_strong",
-        lambda name="trend_strong", signal_group=SignalGroup.CS: ExSignal(
-            name, signal_group
-        ),
+        "trend_strong",
+        lambda: ExSignal("trend_strong", SignalGroup.CS),
         NodeMeta(name="trend_strong", group="signal", desc="Strong trend"),
     )
 
     NodeRegistry.register(
-        "_trend_weak",
-        lambda name="trend_weak", signal_group=SignalGroup.CS: ExSignal(
-            name, signal_group
-        ),
+        "trend_weak",
+        lambda: ExSignal("trend_weak", SignalGroup.CS),
         NodeMeta(name="trend_weak", group="signal", desc="Weak trend"),
     )

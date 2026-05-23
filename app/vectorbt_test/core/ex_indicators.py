@@ -28,21 +28,21 @@ class ExIndicator(Indicator):
 
 
 @GroupFuncReg.register(group="nodes")
-def registry_ex_indicators():
+def register_ex_indicators():
     # 这里注册一些常用的指标，方便在表达式里直接调用
     NodeRegistry.register(
-        "_ma5",
-        lambda name="ma5": ExIndicator(name),
+        "ma5",
+        lambda: ExIndicator("ma5"),
         NodeMeta(
             name="ma5",
             group="indicator",
-            desc="ma5"
+            desc="ma5",
         )
     )
 
     NodeRegistry.register(
-        "_ma10",
-        lambda name="ma10": ExIndicator(name),
+        "ma10",
+        lambda: ExIndicator("ma10"),
         NodeMeta(
             name="ma10)",
             group="indicator",
@@ -51,8 +51,8 @@ def registry_ex_indicators():
     )
 
     NodeRegistry.register(
-        "_ma20",
-        lambda name="ma20": ExIndicator(name),
+        "ma20",
+        lambda: ExIndicator("ma20"),
         NodeMeta(
             name="ma20",
             group="indicator",
@@ -61,8 +61,8 @@ def registry_ex_indicators():
     )
 
     NodeRegistry.register(
-        "_ma60",
-        lambda name="ma60": ExIndicator(name),
+        "ma60",
+        lambda: ExIndicator("ma60"),
         NodeMeta(
             name="ma60",
             group="indicator",
@@ -71,8 +71,8 @@ def registry_ex_indicators():
     )
 
     NodeRegistry.register(
-        "_ma120",
-        lambda name="ma120": ExIndicator(name),
+        "ma120",
+        lambda: ExIndicator("ma120"),
         NodeMeta(
             name="ma120",
             group="indicator",
@@ -81,8 +81,8 @@ def registry_ex_indicators():
     )
 
     NodeRegistry.register(
-        "_ema12",
-        lambda name="ema12": ExIndicator(name),
+        "ema12",
+        lambda: ExIndicator("ema12"),
         NodeMeta(
             name="ema12",
             group="indicator",
@@ -91,8 +91,8 @@ def registry_ex_indicators():
     )
 
     NodeRegistry.register(
-        "_ema26",
-        lambda name="ema26": ExIndicator(name),
+        "ema26",
+        lambda: ExIndicator("ema26"),
         NodeMeta(
             name="ema26",
             group="indicator",
@@ -101,8 +101,8 @@ def registry_ex_indicators():
     )
 
     NodeRegistry.register(
-        "_macd",
-        lambda name="macd": ExIndicator(name),
+        "macd",
+        lambda: ExIndicator("macd"),
         NodeMeta(
             name="macd",
             group="indicator",
@@ -111,8 +111,8 @@ def registry_ex_indicators():
     )
 
     NodeRegistry.register(
-        "_macd_signal",
-        lambda name="macd_signal": ExIndicator(name),
+        "macd_signal",
+        lambda: ExIndicator("macd_signal"),
         NodeMeta(
             name="macd_signal",
             group="indicator",
@@ -121,8 +121,8 @@ def registry_ex_indicators():
     )
 
     NodeRegistry.register(
-        "_macd_his",
-        lambda name="macd_his": ExIndicator(name),
+        "macd_his",
+        lambda: ExIndicator("macd_his"),
         NodeMeta(
             name="macd_his",
             group="indicator",
@@ -131,8 +131,8 @@ def registry_ex_indicators():
     )
 
     NodeRegistry.register(
-        "_rsi14",
-        lambda name="rsi14": ExIndicator(name),
+        "rsi14",
+        lambda: ExIndicator("rsi14"),
         NodeMeta(
             name="rsi14",
             group="indicator",
@@ -141,38 +141,38 @@ def registry_ex_indicators():
     )
 
     NodeRegistry.register(
-        "_kdj_k",
-        lambda name="kdj_k": ExIndicator(name),
+        "k",
+        lambda: ExIndicator("kdj_k"),
         NodeMeta(
-            name="kdj_k",
+            name="k",
             group="indicator",
             desc="kdj_k"
         )
     )
 
     NodeRegistry.register(
-        "_kdj_d",
-        lambda name="kdj_d": ExIndicator(name),
+        "d",
+        lambda: ExIndicator("kdj_d"),
         NodeMeta(
-            name="kdj_d",
+            name="d",
             group="indicator",
             desc="kdj_d"
         )
     )
 
     NodeRegistry.register(
-        "_kdj_j",
-        lambda name="kdj_j": ExIndicator(name),
+        "j",
+        lambda: ExIndicator("kdj_j"),
         NodeMeta(
-            name="kdj_j",
+            name="j",
             group="indicator",
             desc="kdj_j"
         )
     )
 
     NodeRegistry.register(
-        "_atr14",
-        lambda name="atr14": ExIndicator(name),
+        "atr14",
+        lambda: ExIndicator("atr14"),
         NodeMeta(
             name="atr14",
             group="indicator",
@@ -181,8 +181,8 @@ def registry_ex_indicators():
     )
 
     NodeRegistry.register(
-        "_boll_mid",
-        lambda name="boll_mid": ExIndicator(name),
+        "boll_mid",
+        lambda: ExIndicator("boll_mid"),
         NodeMeta(
             name="boll_mid",
             group="indicator",
@@ -191,8 +191,8 @@ def registry_ex_indicators():
     )
 
     NodeRegistry.register(
-        "_boll_up",
-        lambda name="boll_up": ExIndicator(name),
+        "boll_up",
+        lambda: ExIndicator("boll_up"),
         NodeMeta(    
             name="boll_up",
             group="indicator",
@@ -201,8 +201,8 @@ def registry_ex_indicators():
     )
 
     NodeRegistry.register(
-        "_boll_down",
-        lambda name="boll_down": ExIndicator(name),
+        "boll_down",
+        lambda: ExIndicator("boll_down"),
         NodeMeta(
             name="boll_down",
             group="indicator",
@@ -211,8 +211,8 @@ def registry_ex_indicators():
     )
 
     NodeRegistry.register(
-        "_vol_ma5",
-        lambda name="vol_ma5": ExIndicator(name),
+        "vol_ma5",
+        lambda: ExIndicator("vol_ma5"),
         NodeMeta(
             name="vol_ma5",
             group="indicator",
@@ -221,8 +221,8 @@ def registry_ex_indicators():
     )
 
     NodeRegistry.register(
-        "_vol_ma10",
-        lambda name="vol_ma10": ExIndicator(name),
+        "vol_ma10",
+        lambda: ExIndicator("vol_ma10"),
         NodeMeta(
             name="vol_ma10",
             group="indicator",
@@ -231,8 +231,8 @@ def registry_ex_indicators():
     )
 
     NodeRegistry.register(
-        "_vol_ma20",
-        lambda name="vol_ma20": ExIndicator(name),
+        "vol_ma20",
+        lambda: ExIndicator("vol_ma20"),
         NodeMeta(
             name="vol_ma20",
             group="indicator",
@@ -241,8 +241,8 @@ def registry_ex_indicators():
     )
 
     NodeRegistry.register(
-        "_obv",
-        lambda name="obv": ExIndicator(name),
+        "obv",
+        lambda: ExIndicator("obv"),
         NodeMeta(
             name="obv",
             group="indicator",
@@ -251,8 +251,8 @@ def registry_ex_indicators():
     )   
 
     NodeRegistry.register(
-        "_ret_1d",
-        lambda name="ret_1d": ExIndicator(name),
+        "ret_1d",
+        lambda: ExIndicator("ret_1d"),
         NodeMeta(
             name="ret_1d",
             group="indicator",
@@ -261,8 +261,8 @@ def registry_ex_indicators():
     )
 
     NodeRegistry.register(
-        "_ret_5d",
-        lambda name="ret_5d": ExIndicator(name),
+        "ret_5d",
+        lambda: ExIndicator("ret_5d"),
         NodeMeta(
             name="ret_5d",
             group="indicator",
@@ -271,8 +271,8 @@ def registry_ex_indicators():
     )
 
     NodeRegistry.register(
-        "_ret_20d",
-        lambda name="ret_20d": ExIndicator(name),
+        "ret_20d",
+        lambda: ExIndicator("ret_20d"),
         NodeMeta(
             name="ret_20d",
             group="indicator",
@@ -281,8 +281,8 @@ def registry_ex_indicators():
     )
 
     NodeRegistry.register(
-        "_pct_from_ma20",
-        lambda name="pct_from_ma20": ExIndicator(name),
+        "pct_from_ma20",
+        lambda: ExIndicator("pct_from_ma20"),
         NodeMeta(
             name="pct_from_ma20",
             group="indicator",
