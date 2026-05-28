@@ -9,6 +9,9 @@ from datetime import datetime, timedelta
 from utils.trading_uitl import get_target_sync_date
 import os
 from utils.common import is_running_in_docker
+import eventlet
+# 启用超时机制
+eventlet.monkey_patch(socket=True)
 
 # ====================== 核心配置 ======================
 BAOSTOCK_HIS_DB_PATH = os.environ.get("BAOSTOCK_HIS_DB_PATH", "/data" if is_running_in_docker() else "./data")
@@ -19,7 +22,7 @@ SLEEP_MIN = 1.5
 SLEEP_MAX = 3
 
 # 日志
-logger.add("./logs/baostock_download.log", rotation="100 MB", encoding="utf-8", enqueue=True)
+logger.add("./logs/baostock_daily_download.log", rotation="100 MB", encoding="utf-8", enqueue=True)
 
 
 # ====================== 数据库初始化 ======================
@@ -82,7 +85,7 @@ def get_last_download_dates(con, code):
     return kline_max, factor_max
 
 
-def download_factor(code, start, end, con, factor_max=None):
+def download_factor(code, start, end, con, factor_max=None, max_retry=2):
     try:
         # ✅ 如果已有数据
         if factor_max:
@@ -96,8 +99,23 @@ def download_factor(code, start, end, con, factor_max=None):
                 con.execute("DELETE FROM adjust_factor WHERE code = ?", [code])
 
         # ✅ 全量拉取
-        rs = bs.query_adjust_factor(code, start, end)
-        df = rs.get_data()
+        retry_count = 0
+        df = pd.DataFrame()
+        while retry_count < max_retry:
+            try:
+                with eventlet.Timeout(15, False):  # 15秒没响应就跳过
+                    rs = bs.query_adjust_factor(code, start, end)
+                    df = rs.get_data()
+                    break  # 成功获取数据，跳出重试循环
+            except eventlet.timeout.Timeout:
+                # 超时 → 重试
+                retry_count += 1
+                logger.warning(f"⚠️ {code} 请求复权因子超时，{retry_count}/{max_retry} 重试...")
+                time.sleep(5)  # 重试前等5秒
+            except Exception as e:
+                # 其他错误 → 直接跳过
+                print(f"❌ {code} 下载失败: {str(e)}")
+                break
 
         if not df.empty:
             df["code"] = code
@@ -122,7 +140,7 @@ def download_factor(code, start, end, con, factor_max=None):
         logger.error(f"❌ {code} | 复权因子失败：{str(e)}")
 
 
-def download_daily(code, start, end, con, kline_max=None):
+def download_daily(code, start, end, con, kline_max=None, max_retry=2):
     try:
         kline_start = start
 
@@ -140,20 +158,31 @@ def download_daily(code, start, end, con, kline_max=None):
 
         fields = "date,open,high,low,close,preclose,volume,amount,adjustflag,turn,tradestatus,pctChg,peTTM,pbMRQ,psTTM,pcfNcfTTM"
 
-        rs = bs.query_history_k_data_plus(
-            code,
-            fields,
-            kline_start,
-            end,
-            "d",
-            "3"
-        )
+        retry_count = 0
+        df = pd.DataFrame()
+        while retry_count < max_retry:
+            try:
+                with eventlet.Timeout(15, False):  # 15秒没响应就跳过
+                    rs = bs.query_history_k_data_plus(
+                        code,
+                        fields,
+                        kline_start,
+                        end,
+                        "d",
+                        "3"
+                    )
+                    if rs is not None:
+                        df = rs.get_data()
+            except eventlet.Timeout:
+                # 超时 → 重试
+                retry_count += 1
+                print(f"⚠️ {code} 请求超时，{retry_count}/{max_retry} 重试...")
+                time.sleep(5)  # 重试前等5秒
 
-        if rs is not None:
-            df = rs.get_data()
-        else:
-            logger.info(f"⏭️ {code} | 日K无数据，跳过")
-            return False
+            except Exception as e:
+                # 其他错误 → 直接跳过
+                print(f"❌ {code} 下载失败: {str(e)}")
+                break
 
         if df.empty:
             logger.info(f"⏭️ {code} | 日K无数据，跳过")

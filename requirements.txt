@@ -13,6 +13,7 @@ akshare
 yfinance
 baostock==0.9.1
 duckdb
+eventlet
 
 # ===== Web / API =====
 fastapi==0.136.1

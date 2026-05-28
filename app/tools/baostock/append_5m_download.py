@@ -9,6 +9,9 @@ from datetime import datetime, timedelta
 from utils.trading_uitl import get_target_sync_date
 import os
 from utils.common import is_running_in_docker
+import eventlet
+# 启用超时机制
+eventlet.monkey_patch(socket=True)
 
 # ====================== 核心配置 ======================
 BAOSTOCK_HIS_DB_PATH = os.environ.get("BAOSTOCK_HIS_DB_PATH", "/data" if is_running_in_docker() else "./data")
@@ -72,7 +75,7 @@ def is_stock_code(code):
     return True
 
 
-def download_5m(code, start, end, con, last_date=None):
+def download_5m(code, start, end, con, last_date=None, max_retry=2):
     try:
         kline_start = start
 
@@ -88,22 +91,37 @@ def download_5m(code, start, end, con, last_date=None):
                 return False
 
         fields = "date,time,code,open,high,low,close,volume,amount,adjustflag"
+        # ✅ 核心：给 baostock 请求加 15秒 超时
+        retry_count = 0
+        df = pd.DataFrame()
+        while retry_count < max_retry:
+            try:
+                with eventlet.Timeout(15, False):  # 15秒没响应就跳过
+                    rs = bs.query_history_k_data_plus(
+                        code,
+                        fields,
+                        kline_start,
+                        end,
+                        frequency="5",
+                        adjustflag="2"   # 复权状态(1：后复权， 2：前复权，3：不复权)
+                    )
 
-        rs = bs.query_history_k_data_plus(
-            code,
-            fields,
-            kline_start,
-            end,
-            frequency="5",
-            adjustflag="2"   # 复权状态(1：后复权， 2：前复权，3：不复权)
-        )
+                    if rs is not None:
+                        df = rs.get_data()
+                    else:
+                        logger.info(f"⏭️ {code} | 5分钟K线无数据，跳过")
+                        return False
+            except eventlet.Timeout:
+                # 超时 → 重试
+                retry_count += 1
+                print(f"⚠️ {code} 请求超时，{retry_count}/{max_retry} 重试...")
+                time.sleep(5)  # 重试前等5秒
 
-        if rs is not None:
-            df = rs.get_data()
-        else:
-            logger.info(f"⏭️ {code} | 5分钟K线无数据，跳过")
-            return False
-
+            except Exception as e:
+                # 其他错误 → 直接跳过
+                print(f"❌ {code} 下载失败: {str(e)}")
+                break
+        
         if df.empty:
             logger.info(f"⏭️ {code} | 5分钟K线无数据，跳过")
             return False
