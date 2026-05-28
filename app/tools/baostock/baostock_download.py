@@ -5,15 +5,8 @@ import random
 from loguru import logger
 from tqdm import tqdm
 from datetime import datetime
-import sys
-import os
 
-# 确保项目根目录在 sys.path 中，使 utils 等模块可导入
-_project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-if _project_root not in sys.path:
-    sys.path.insert(0, _project_root)
-
-from append_download import (
+from tools.baostock.append_download import (
     DB_PATH,
     START_DATE as START_DATE_DAY,
     SLEEP_MIN,
@@ -25,7 +18,7 @@ from append_download import (
     download_factor,
     get_recent_trade_day,
 )
-from append_5m_download import (
+from tools.baostock.append_5m_download import (
     START_DATE as START_DATE_5M,
     init_database as init_5m_db,
     get_last_download_date,
