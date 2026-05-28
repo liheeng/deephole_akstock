@@ -72,9 +72,20 @@ def main():
     codes = stock_df["code"].tolist()
     logger.info(f"📈 总证券数：{len(codes)}")
 
+    counter = 0
+    reset_interval = 50  # 每下载50只股票，强制重连 baostock
+
     con = duckdb.connect(DB_PATH)
     for code in tqdm(codes, desc="下载进度"):
         try:
+            # ========== 核心：每 N 次 重连 baostock ==========
+            counter += 1
+            if counter % reset_interval == 0:
+                logger.info("=== 刷新 baostock 连接，防止阻塞 ===")
+                bs.logout()
+                time.sleep(2)
+                bs.login() 
+
             handle_download(code, START_DATE_DAY, START_DATE_5M, last_trade_date, con)
             time.sleep(random.uniform(SLEEP_MIN, SLEEP_MAX))
         except Exception as e:
