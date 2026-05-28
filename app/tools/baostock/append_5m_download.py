@@ -32,7 +32,8 @@ def init_database():
             open DOUBLE, high DOUBLE, low DOUBLE, close DOUBLE,
             volume DOUBLE, amount DOUBLE, adjustflag STRING,
             PRIMARY KEY (code, date, time)
-        )
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS uniq_kline_5m_code_date_time ON kline_5minutes(code, date, time);
     """)
     con.close()
 
@@ -55,11 +56,14 @@ def is_today_trading_day():
 
 def get_last_download_date(con, code):
     """获取该股票5分钟K线已下载的最大日期"""
-    result = con.execute(
-        "SELECT date FROM kline_5minutes WHERE code = ? ORDER BY date DESC LIMIT 1;",
-        [code]
-    ).fetchone()
-    return result[0] if result else None
+    try:
+        result = con.execute(
+            "SELECT date FROM kline_5minutes WHERE code = ? ORDER BY date DESC LIMIT 1;",
+            [code]
+        ).fetchone()
+        return result[0] if result else None
+    except Exception:
+        return None
 
 
 def is_stock_code(code):
@@ -114,7 +118,11 @@ def download_5m(code, start, end, con, last_date=None):
                 logger.info(f"⏭️ {code} | 5分钟K线已最新，跳过 | max={last_date}")
                 return False
 
-        df = safe_download(code, kline_start, end)  # type: ignore[call-arg]
+        try:
+            df = safe_download(code, kline_start, end)  # type: ignore[call-arg]
+        except Exception as e:
+            logger.error(f"❌ {code} | 5分钟K线下载失败：{str(e)}")
+            return False
 
         if df is None or df.empty:
             logger.info(f"⏭️ {code} | 5分钟K线无数据，跳过")
@@ -197,14 +205,14 @@ def main():
             if counter % reset_interval == 0:
                 logger.info("=== 刷新 baostock 连接，防止阻塞 ===")
                 bs.logout()
-                time.sleep(2)
+                time.sleep(5)
                 bs.login()
 
             handle_download(code, START_DATE, last_trade_date, con)
 
             time.sleep(random.uniform(SLEEP_MIN, SLEEP_MAX))
         except Exception as e:
-            logger.error(f"❌ {code} | 失败：{str(e)}")
+            logger.exception(f"❌ {code} | 失败：{str(e)}")
 
     con.close()
     bs.logout()

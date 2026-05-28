@@ -34,7 +34,8 @@ def init_database():
             turn DOUBLE, tradestatus STRING, pctChg DOUBLE, peTTM DOUBLE,
             pbMRQ DOUBLE, psTTM DOUBLE, pcfNcfTTM DOUBLE,
             PRIMARY KEY (code, date)
-        )
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS uniq_kline_day_code_date ON kline_day(code, date);
     """)
     # 复权因子表
     con.execute("""
@@ -42,7 +43,8 @@ def init_database():
             code STRING, dividOperateDate STRING,
             foreAdjustFactor DOUBLE, backAdjustFactor DOUBLE, adjustFactor DOUBLE,
             PRIMARY KEY (code, dividOperateDate)
-        )
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS uniq_adjust_factor_code_date ON adjust_factor(code, dividOperateDate);
     """)
     con.close()
 
@@ -69,16 +71,22 @@ def is_today_trading_day():
 
 def get_last_download_dates(con, code):
     # kline 最大日期
-    kline_max = con.execute(
-        "SELECT date FROM kline_day WHERE code = ? ORDER BY date DESC LIMIT 1;",
-        [code]
-    ).fetchone()[0]
+    try:
+        kline_max = con.execute(
+            "SELECT date FROM kline_day WHERE code = ? ORDER BY date DESC LIMIT 1;",
+            [code]
+        ).fetchone()[0]
+    except Exception:
+        kline_max = None
 
-    # 复权因子最大日期
-    factor_max = con.execute(
-        "SELECT MAX(dividOperateDate) FROM adjust_factor WHERE code = ?",
-        [code]
-    ).fetchone()[0]
+    try:  
+        # 复权因子最大日期
+        factor_max = con.execute(
+            "SELECT MAX(dividOperateDate) FROM adjust_factor WHERE code = ?",
+            [code]
+        ).fetchone()[0]
+    except Exception:
+        factor_max = None
 
     return kline_max, factor_max
 
@@ -113,7 +121,11 @@ def download_factor(code, start, end, con, factor_max=None):
                 con.execute("DELETE FROM adjust_factor WHERE code = ?", [code])
 
         # ✅ 全量拉取
-        df = safe_download_factor(code, start, end)  # type: ignore[call-arg]
+        try:
+            df = safe_download_factor(code, start, end)  # type: ignore[call-arg]
+        except Exception as e:
+            logger.error(f"❌ {code} | 复权因子下载失败：{str(e)}")
+            return False
 
         if df is not None and not df.empty:
             df["code"] = code
@@ -150,7 +162,7 @@ def safe_download_daily(code, start, end):
             start,
             end,
             "d",
-            "3"
+            "2"
         )
         if rs is not None:
             return rs.get_data()
@@ -163,7 +175,7 @@ def safe_download_daily(code, start, end):
         return None
 
 
-def download_daily(code, start, end, con, kline_max=None, max_retry=2):
+def download_daily(code, start, end, con, kline_max=None):
     try:
         kline_start = start
 
@@ -180,7 +192,11 @@ def download_daily(code, start, end, con, kline_max=None, max_retry=2):
                 return False
 
         # ✅ 全量拉取
-        df = safe_download_daily(code, start, end)  # type: ignore[call-arg]
+        try:
+            df = safe_download_daily(code, start, end)  # type: ignore[call-arg]
+        except Exception as e:
+            logger.error(f"❌ {code} | 日K下载失败：{str(e)}")
+            return False
 
         if df is None or df.empty:
             logger.info(f"⏭️ {code} | 日K无数据，跳过")
@@ -232,8 +248,8 @@ def handle_download(code, start, end, con):
     if not download_daily(code, start, end, con, kline_max):
         return False
 
-    # -------- 2. 处理：复权因子（严格按列名插入，杜绝顺序错误） --------
-    download_factor(code, start, end, con, factor_max)
+    # # -------- 2. 处理：复权因子（严格按列名插入，杜绝顺序错误） --------
+    # download_factor(code, start, end, con, factor_max)
 
 
 # ====================== 自动获取有效交易日 ======================
@@ -280,7 +296,7 @@ def main():
             if counter % reset_interval == 0:
                 logger.info("=== 刷新 baostock 连接，防止阻塞 ===")
                 bs.logout()
-                time.sleep(2)
+                time.sleep(5)
                 bs.login()
 
             # if code.startswith("sh.6") or code.startswith("sz.0"):
@@ -289,7 +305,7 @@ def main():
             # else:
             #     continue
         except Exception as e:
-            logger.error(f"❌ {code} | 失败：{str(e)}")
+            logger.exception(f"❌ {code} | 失败：{str(e)}")
 
     con.close()
     bs.logout()

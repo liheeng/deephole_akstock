@@ -43,8 +43,8 @@ def handle_download(code, start_day, start_5m, end, con):
     kline_max, factor_max = get_last_download_dates(con, code)
     download_daily(code, start_day, end, con, kline_max)
 
-    # -------- 2. 复权因子 --------
-    download_factor(code, start_day, end, con, factor_max)
+    # # -------- 2. 复权因子 --------
+    # download_factor(code, start_day, end, con, factor_max)
 
     # -------- 3. 5分钟K线（仅股票代码有分钟线） --------
     if is_stock_code(code):
@@ -83,13 +83,13 @@ def main():
             if counter % reset_interval == 0:
                 logger.info("=== 刷新 baostock 连接，防止阻塞 ===")
                 bs.logout()
-                time.sleep(2)
-                bs.login() 
+                time.sleep(5)
+                bs.login()
 
             handle_download(code, START_DATE_DAY, START_DATE_5M, last_trade_date, con)
             time.sleep(random.uniform(SLEEP_MIN, SLEEP_MAX))
         except Exception as e:
-            logger.error(f"❌ {code} | 失败：{str(e)}")
+            logger.exception(f"❌ {code} | 失败：{str(e)}")
 
     con.close()
     bs.logout()
