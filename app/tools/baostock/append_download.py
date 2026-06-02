@@ -124,7 +124,7 @@ def download_factor(code, start, end, con, factor_max=None):
         try:
             df = safe_download_factor(code, start, end)  # type: ignore[call-arg]
         except Exception as e:
-            logger.error(f"❌ {code} | 复权因子下载失败：{str(e)}")
+            logger.exception(f"❌ {code} | 复权因子下载失败：{str(e)}")
             return False
 
         if df is not None and not df.empty:
@@ -147,7 +147,7 @@ def download_factor(code, start, end, con, factor_max=None):
             logger.info(f"📊 {code} | 复权因子无数据")
             return False
     except Exception as e:
-        logger.error(f"❌ {code} | 复权因子失败：{str(e)}")
+        logger.exception(f"❌ {code} | 复权因子失败：{str(e)}")
 
 
 # 10 秒强制超时
@@ -191,11 +191,11 @@ def download_daily(code, start, end, con, kline_max=None):
                 logger.info(f"⏭️ {code} | 日K已最新，跳过 | max={kline_max}")
                 return False
 
-        # ✅ 全量拉取
+        # ✅ 增量/全量拉取（使用 kline_start，避免重复下载已有数据）
         try:
-            df = safe_download_daily(code, start, end)  # type: ignore[call-arg]
+            df = safe_download_daily(code, kline_start, end)  # type: ignore[call-arg]
         except Exception as e:
-            logger.error(f"❌ {code} | 日K下载失败：{str(e)}")
+            logger.exception(f"❌ {code} | 日K下载失败：{str(e)}")
             return False
 
         if df is None or df.empty:
@@ -237,7 +237,7 @@ def download_daily(code, start, end, con, kline_max=None):
         return True
 
     except Exception as e:
-        logger.error(f"❌ {code} | 日K失败：{str(e)}")
+        logger.exception(f"❌ {code} | 日K失败：{str(e)}")
 
 
 # ====================== 核心处理（复权因子优先） ======================

@@ -121,7 +121,7 @@ def download_5m(code, start, end, con, last_date=None):
         try:
             df = safe_download(code, kline_start, end)  # type: ignore[call-arg]
         except Exception as e:
-            logger.error(f"❌ {code} | 5分钟K线下载失败：{str(e)}")
+            logger.exception(f"❌ {code} | 5分钟K线下载失败：{str(e)}")
             return False
 
         if df is None or df.empty:
@@ -154,7 +154,7 @@ def download_5m(code, start, end, con, last_date=None):
         return True
 
     except Exception as e:
-        logger.error(f"❌ {code} | 5分钟K线失败：{str(e)}")
+        logger.exception(f"❌ {code} | 5分钟K线失败：{str(e)}")
         return False
 
 
