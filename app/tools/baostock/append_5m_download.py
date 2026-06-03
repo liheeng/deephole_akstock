@@ -32,10 +32,20 @@ def init_database():
             code STRING, date STRING, time STRING,
             open DOUBLE, high DOUBLE, low DOUBLE, close DOUBLE,
             volume DOUBLE, amount DOUBLE, adjustflag STRING,
+            amplitude_pct DOUBLE,
+            amount_log DOUBLE,
+            activity_bias DOUBLE,
             PRIMARY KEY (code, date, time)
         );
         CREATE UNIQUE INDEX IF NOT EXISTS uniq_kline_5m_code_date_time ON kline_5minutes(code, date, time);
     """)
+
+    # 兼容旧表：新增列（已存在则忽略）
+    for col in ["amplitude_pct", "amount_log", "activity_bias"]:
+        try:
+            con.execute(f"ALTER TABLE kline_5minutes ADD COLUMN {col} DOUBLE;")
+        except Exception:
+            pass
     con.close()
 
 
@@ -143,8 +153,12 @@ def download_5m(code, start, end, con, last_date=None):
 
         con.execute("""
             INSERT INTO kline_5minutes
-            (code, date, time, open, high, low, close, volume, amount, adjustflag)
-            SELECT code, date, time, open, high, low, close, volume, amount, adjustflag
+            (code, date, time, open, high, low, close, volume, amount, adjustflag,
+             amplitude_pct, amount_log, activity_bias)
+            SELECT code, date, time, open, high, low, close, volume, amount, adjustflag,
+                   ((high - low) / NULLIF(open, 0) * 100),
+                   LN(NULLIF(amount, 0) + 1),
+                   (close - open) / NULLIF(high - low, 0)
             FROM tmp
         """)
 
