@@ -16,7 +16,6 @@ import os
 import numpy as np
 import pandas as pd
 from loguru import logger
-from tqdm import tqdm
 from utils.common import is_running_in_docker
 
 BAOSTOCK_HIS_DB_PATH = os.environ.get(
@@ -282,54 +281,82 @@ def get_stale_codes(con):
     ]
 
 
-def update_code(con, code: str, daily_max, signal_max, lookback: int = 200):
-    """更新单只股票的信号"""
-    if signal_max is None:
-        df = con.execute("""
+def build_stale_map(stale_codes: list) -> dict:
+    """构建 {symbol: last_signal_date_or_None} 的快速查找表"""
+    return {r[0]: r[2] for r in stale_codes}
+
+
+BATCH_SIZE = 15  # 每批 15 只
+LOOKBACK = 200   # 增量更新时读取最近 N 根 K 线
+
+
+def process_batch(con, codes_batch: list[str], stale_map: dict):
+    """批量处理信号计算（自适应：新股全量，老股只读最近K线）
+
+    批量读取 kline_day + bs_indicators，per-symbol 计算信号，
+    增量过滤后批量写入。
+    """
+    new_codes = [c for c in codes_batch if stale_map.get(c) is None]
+    update_codes = [c for c in codes_batch if stale_map.get(c) is not None]
+
+    frames = []
+
+    # ---- 新股：读取全量 K 线 + 指标 ----
+    if new_codes:
+        in_new = ",".join(f"'{c}'" for c in new_codes)
+        df_new = con.execute(f"""
             SELECT
-                d.code AS symbol, d.date, d.open, d.high, d.low, d.close, d.volume,
+                d.code AS symbol, d.date::DATE AS date,
+                d.open, d.high, d.low, d.close, d.volume,
                 i.ma5, i.ma10, i.ma20, i.ma60,
                 i.rsi14, i.atr14,
                 i.boll_up, i.boll_down,
                 i.vol_ma5, i.vol_ma10, i.vol_ma20
             FROM kline_day d
-            JOIN bs_indicators i ON d.code = i.symbol AND d.date = i.date
-            WHERE d.code = ?
-            ORDER BY d.date
-        """, [code]).df()
-    else:
-        df = con.execute("""
-            SELECT * FROM (
+            JOIN bs_indicators i ON d.code = i.symbol AND d.date::DATE = i.date
+            WHERE d.code IN ({in_new})
+            ORDER BY d.code, d.date
+        """).df()
+        frames.append(df_new)
+
+    # ---- 老股：只读最近 LOOKBACK 根 K 线 + 指标 ----
+    if update_codes:
+        in_update = ",".join(f"'{c}'" for c in update_codes)
+        df_update = con.execute(f"""
+            SELECT symbol, date, open, high, low, close, volume,
+                   ma5, ma10, ma20, ma60,
+                   rsi14, atr14,
+                   boll_up, boll_down,
+                   vol_ma5, vol_ma10, vol_ma20
+            FROM (
                 SELECT
-                    d.code AS symbol, d.date, d.open, d.high, d.low, d.close, d.volume,
+                    d.code AS symbol, d.date::DATE AS date,
+                    d.open, d.high, d.low, d.close, d.volume,
                     i.ma5, i.ma10, i.ma20, i.ma60,
                     i.rsi14, i.atr14,
                     i.boll_up, i.boll_down,
-                    i.vol_ma5, i.vol_ma10, i.vol_ma20
+                    i.vol_ma5, i.vol_ma10, i.vol_ma20,
+                    ROW_NUMBER() OVER (PARTITION BY d.code ORDER BY d.date DESC) AS rn
                 FROM kline_day d
-                JOIN bs_indicators i ON d.code = i.symbol AND d.date = i.date
-                WHERE d.code = ?
-                ORDER BY d.date DESC
-                LIMIT ?
+                JOIN bs_indicators i ON d.code = i.symbol AND d.date::DATE = i.date
+                WHERE d.code IN ({in_update})
             )
-            ORDER BY date
-        """, [code, lookback]).df()
+            WHERE rn <= {LOOKBACK}
+            ORDER BY symbol, date
+        """).df()
+        frames.append(df_update)
 
-    if df.empty:
-        logger.warning(f"{code}: 无数据")
+    if not frames:
         return 0
 
+    df_all = pd.concat(frames, ignore_index=True)
+    del frames
+
+    if df_all.empty:
+        return 0
+
+    # ---- per-symbol 计算信号 + 增量过滤 ----
     calc = SignalsCalculator()
-    df = calc.calculate(df)
-
-    if signal_max is not None:
-        df["date_parsed"] = pd.to_datetime(df["date"]).dt.date
-        df = df[df["date_parsed"] > signal_max]
-        df = df.drop(columns=["date_parsed"])
-
-    if df.empty:
-        return 0
-
     signal_cols = [
         "symbol", "date",
         "ma5_above_ma20", "ma20_above_ma60", "close_above_ma20",
@@ -344,9 +371,30 @@ def update_code(con, code: str, daily_max, signal_max, lookback: int = 200):
         "volume_spike", "volume_trend",
         "breakout_confirm", "reversal_signal",
     ]
-    df = df[signal_cols]
 
-    con.register("tmp_signals", df)
+    results = []
+    for sym in codes_batch:
+        sym_df = df_all[df_all["symbol"] == sym].copy()
+        if sym_df.empty:
+            continue
+
+        sym_df = calc.calculate(sym_df)
+
+        signal_max = stale_map.get(sym)
+        if signal_max is not None:
+            sym_df = sym_df[pd.to_datetime(sym_df["date"]) > pd.Timestamp(signal_max)]
+
+        if not sym_df.empty:
+            results.append(sym_df[signal_cols])
+
+    if not results:
+        return 0
+
+    df_out = pd.concat(results, ignore_index=True)
+    n = len(df_out)
+
+    # ---- 批量写入 ----
+    con.register("tmp_signals", df_out)
     con.execute("""
         INSERT OR REPLACE INTO bs_signals (
             symbol, date,
@@ -380,12 +428,11 @@ def update_code(con, code: str, daily_max, signal_max, lookback: int = 200):
         FROM tmp_signals
     """)
     con.unregister("tmp_signals")
-    n = len(df)
-    del df
+    del df_all, df_out, results
     return n
 
 
-RECONNECT_INTERVAL = 100  # 每 100 只重建连接，防内存累积
+RECONNECT_INTERVAL = 30  # 每 30 批重建连接，防内存累积
 
 
 # ======================== 主函数 ========================
@@ -401,22 +448,25 @@ def main():
 
     # 获取需要更新的股票
     stale = get_stale_codes(con)
+    stale_map = build_stale_map(stale)
     logger.info(f"需要更新的股票数: {len(stale)}")
 
     total_inserted = 0
-    for idx, (code, daily_max, signal_max) in enumerate(tqdm(stale, desc="计算信号进度")):
+    for i in range(0, len(stale), BATCH_SIZE):
+        batch = stale[i:i + BATCH_SIZE]
+        codes_batch = [r[0] for r in batch]
         try:
-            inserted = update_code(con, code, daily_max, signal_max)
+            inserted = process_batch(con, codes_batch, stale_map)
             total_inserted += inserted
-            if inserted > 0:
-                logger.info(f"✅ {code}: 更新 {inserted} 行")
+            logger.info(f"✅ 批次 {i//BATCH_SIZE + 1}/{(len(stale)-1)//BATCH_SIZE + 1}: {len(codes_batch)} 只, 更新 {inserted} 行")
         except Exception:
-            logger.exception(f"❌ {code}: 更新失败，跳过")
+            logger.exception(f"❌ 批次 {i//BATCH_SIZE + 1} 失败，跳过该批")
             continue
         finally:
+            del batch, codes_batch
             gc.collect()
 
-        if (idx + 1) % RECONNECT_INTERVAL == 0:
+        if (i // BATCH_SIZE + 1) % RECONNECT_INTERVAL == 0:
             logger.info("🔄 重建 DuckDB 连接，释放内部缓存...")
             con.close()
             con = duckdb.connect(DB_PATH)
