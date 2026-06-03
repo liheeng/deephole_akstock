@@ -176,26 +176,55 @@ class FactorScoresCalculator:
 
 # ======================== 核心逻辑 ========================
 def get_stale_codes(con):
-    """获取需要更新的股票代码列表"""
-    rows = con.execute("""
-        SELECT
-            d.code,
-            MAX(d.date::DATE) AS daily_max,
-            MAX(f.date) AS factor_max
-        FROM kline_day d
-        LEFT JOIN bs_factor_scores f ON d.code = f.symbol
-        GROUP BY d.code
-        HAVING factor_max IS NULL OR MAX(d.date::DATE) > MAX(f.date)
-        ORDER BY d.code
-    """).fetchall()
-    return [(r[0], r[1], r[2]) for r in rows]
+    """获取需要更新的股票代码及其最后因子日期。
+
+    拆成两次独立 GROUP BY + pandas merge，避免大表 LEFT JOIN。
+
+    Returns:
+        list of (code, daily_max_date, factor_max_date_or_None)
+    """
+    # 1) kline_day 每只股票的最大日期
+    daily_df = con.execute("""
+        SELECT code, MAX(date::DATE) AS daily_max
+        FROM kline_day
+        GROUP BY code
+        ORDER BY code
+    """).df()
+
+    # 2) bs_factor_scores 每只股票的最大日期
+    factor_df = con.execute("""
+        SELECT symbol, MAX(date) AS factor_max
+        FROM bs_factor_scores
+        GROUP BY symbol
+    """).df()
+
+    # 3) pandas merge（内存操作，极快）
+    merged = daily_df.merge(
+        factor_df, left_on="code", right_on="symbol", how="left"
+    )
+    stale = merged[
+        merged["factor_max"].isna() | (merged["daily_max"] > merged["factor_max"])
+    ]
+    return [
+        (r.code, r.daily_max, r.factor_max if pd.notna(r.factor_max) else None)
+        for r in stale.itertuples()
+    ]
+
+
+def build_stale_map(stale_codes: list) -> dict:
+    """构建 {symbol: last_factor_date_or_None} 的快速查找表"""
+    return {r[0]: r[2] for r in stale_codes}
 
 
 BATCH_SIZE = 100  # 每批 100 只，保证 groupby(date) 有足够样本算 z-score
 
 
-def process_batch(con, codes_batch: list[str]):
-    """批量计算因子分数（多只股票一起算，groupby(date) 有意义）"""
+def process_batch(con, codes_batch: list[str], stale_map: dict):
+    """批量计算因子分数（多只股票一起算，groupby(date) 有意义）
+
+    全量读取 K 线 + 指标（z-score 依赖跨股票截面），
+    但只写入 bs_factor_scores 中尚不存在的日期。
+    """
     quoted = [f"'{c}'" for c in codes_batch]
     in_clause = ",".join(quoted)
 
@@ -222,6 +251,21 @@ def process_batch(con, codes_batch: list[str]):
     # 批量计算因子（groupby(date) 有多个股票，z-score 有意义）
     calc = FactorScoresCalculator()
     df = calc.calculate(df)
+
+    # 🔑 只保留 bs_factor_scores 中没有的新日期
+    # factor_max is None → 该股没有任何因子记录，全部保留
+    # factor_max is date  → 只保留 > factor_max 的日期
+    keep_mask = pd.Series(True, index=df.index)
+    for sym in codes_batch:
+        factor_max = stale_map.get(sym)
+        if factor_max is not None:
+            keep_mask = keep_mask & ~(
+                (df["symbol"] == sym) & (df["date"] <= factor_max)
+            )
+    df = df[keep_mask]
+
+    if df.empty:
+        return 0
 
     # 写入
     out_cols = [
@@ -298,14 +342,16 @@ def main():
             con.execute(stmt + ";")
 
     # 获取需要更新的股票
-    stale = [r[0] for r in get_stale_codes(con)]
+    stale = get_stale_codes(con)
+    stale_map = build_stale_map(stale)
     logger.info(f"需要更新的股票数: {len(stale)}")
 
     total_inserted = 0
     for i in range(0, len(stale), BATCH_SIZE):
-        codes_batch = stale[i:i + BATCH_SIZE]
+        batch = stale[i:i + BATCH_SIZE]
+        codes_batch = [r[0] for r in batch]
         try:
-            inserted = process_batch(con, codes_batch)
+            inserted = process_batch(con, codes_batch, stale_map)
             total_inserted += inserted
             logger.info(f"✅ 批次 {i//BATCH_SIZE + 1}/{(len(stale)-1)//BATCH_SIZE + 1}: {len(codes_batch)} 只, 更新 {inserted} 行")
         except Exception:

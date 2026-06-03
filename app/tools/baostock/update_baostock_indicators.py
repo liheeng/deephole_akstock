@@ -73,19 +73,49 @@ BATCH_SIZE = 15  # 每批 15 只（RK3399 4G 内存限制，避免 DuckDB 窗口
 
 
 def get_stale_codes(con):
-    """获取需要更新的股票代码列表"""
-    rows = con.execute("""
-        SELECT
-            d.code,
-            MAX(d.date::DATE) AS daily_max,
-            MAX(i.date) AS ind_max
-        FROM kline_day d
-        LEFT JOIN bs_indicators i ON d.code = i.symbol
-        GROUP BY d.code
-        HAVING ind_max IS NULL OR MAX(d.date::DATE) > MAX(i.date)
-        ORDER BY d.code
-    """).fetchall()
-    return [(r[0], r[1], r[2]) for r in rows]
+    """获取需要更新的股票代码及其最后指标日期。
+
+    拆成两次独立 GROUP BY + pandas merge，避免大表 LEFT JOIN。
+    两次聚合各自走索引/zonemap，比 JOIN 快一个数量级。
+
+    Returns:
+        list of (code, daily_max_date, ind_max_date_or_None)
+    """
+    # 1) kline_day 每只股票的最大日期
+    daily_df = con.execute("""
+        SELECT code, MAX(date::DATE) AS daily_max
+        FROM kline_day
+        GROUP BY code
+        ORDER BY code
+    """).df()
+
+    # 2) bs_indicators 每只股票的最大日期
+    ind_df = con.execute("""
+        SELECT symbol, MAX(date) AS ind_max
+        FROM bs_indicators
+        GROUP BY symbol
+    """).df()
+
+    # 3) pandas merge（内存操作，极快）
+    merged = daily_df.merge(
+        ind_df, left_on="code", right_on="symbol", how="left"
+    )
+    # 只保留：indicators 没记录 或 kline 日期更新
+    stale = merged[
+        merged["ind_max"].isna() | (merged["daily_max"] > merged["ind_max"])
+    ]
+    return [
+        (r.code, r.daily_max, r.ind_max if pd.notna(r.ind_max) else None)
+        for r in stale.itertuples()
+    ]
+
+
+def build_stale_map(stale_codes: list) -> dict:
+    """构建 {symbol: last_ind_date_or_None} 的快速查找表
+
+    None 表示该股票在 bs_indicators 中完全没有记录（新股）。
+    """
+    return {r[0]: r[2] for r in stale_codes}
 
 
 def calculate_indicators(df: pd.DataFrame) -> pd.DataFrame:
@@ -193,25 +223,77 @@ def get_connection():
     return con
 
 
-def process_batch(con, codes_batch: list[str]):
-    """处理一批股票的指标计算"""
-    quoted = [f"'{c}'" for c in codes_batch]
-    in_clause = ",".join(quoted)
+LOOKBACK = 300  # 增量更新时读取最近 N 根 K 线（MA120 + 充足余量）
 
-    # 简单 SQL，无窗口函数，避免 DuckDB 内部 OOM
-    df = con.execute(f"""
-        SELECT code AS symbol, date::DATE AS date,
-               open, high, low, close, volume
-        FROM kline_day
-        WHERE code IN ({in_clause})
-        ORDER BY symbol, date
-    """).df()
+
+def process_batch(con, codes_batch: list[str], stale_map: dict):
+    """处理一批股票的指标计算（自适应：新股全量，老股只读最近K线）
+
+    - 新股（bs_indicators 无记录）：读取全量 K 线
+    - 老股（已有指标，仅需追加新日期）：只读最近 LOOKBACK 根 K 线
+    - 只写入 bs_indicators 中尚不存在的日期
+    """
+    # 拆分为新股和老股
+    new_codes = [c for c in codes_batch if stale_map.get(c) is None]
+    update_codes = [c for c in codes_batch if stale_map.get(c) is not None]
+
+    frames = []
+
+    # ---- 新股：读取全量 K 线 ----
+    if new_codes:
+        in_new = ",".join(f"'{c}'" for c in new_codes)
+        df_new = con.execute(f"""
+            SELECT code AS symbol, date::DATE AS date,
+                   open, high, low, close, volume
+            FROM kline_day
+            WHERE code IN ({in_new})
+            ORDER BY symbol, date
+        """).df()
+        frames.append(df_new)
+
+    # ---- 老股：只读最近 LOOKBACK 根 K 线 ----
+    if update_codes:
+        in_update = ",".join(f"'{c}'" for c in update_codes)
+        df_update = con.execute(f"""
+            SELECT symbol, date, open, high, low, close, volume
+            FROM (
+                SELECT code AS symbol, date::DATE AS date,
+                       open, high, low, close, volume,
+                       ROW_NUMBER() OVER (PARTITION BY code ORDER BY date DESC) AS rn
+                FROM kline_day
+                WHERE code IN ({in_update})
+            )
+            WHERE rn <= {LOOKBACK}
+            ORDER BY symbol, date
+        """).df()
+        frames.append(df_update)
+
+    if not frames:
+        return 0
+
+    df = pd.concat(frames, ignore_index=True)
+    del frames
 
     if df.empty:
         return 0
 
-    # pandas 全量计算
+    # pandas 计算指标
     df = calculate_indicators(df)
+
+    # 🔑 只保留 bs_indicators 中没有的新日期
+    # ind_max is None → 新股，全部保留
+    # ind_max is date  → 老股，只保留 > ind_max 的新日期
+    keep_mask = pd.Series(True, index=df.index)
+    for sym in codes_batch:
+        ind_max = stale_map.get(sym)
+        if ind_max is not None:
+            keep_mask = keep_mask & ~(
+                (df["symbol"] == sym) & (df["date"] <= ind_max)
+            )
+    df = df[keep_mask]
+
+    if df.empty:
+        return 0
 
     # 写入
     con.register("tmp_batch", df)
@@ -263,6 +345,7 @@ def main():
 
     # 获取需要更新的股票
     stale = get_stale_codes(con)
+    stale_map = build_stale_map(stale)
     logger.info(f"需要更新的股票数: {len(stale)}")
 
     # 分批处理
@@ -271,7 +354,7 @@ def main():
         batch = stale[i:i + BATCH_SIZE]
         codes_batch = [r[0] for r in batch]
         try:
-            inserted = process_batch(con, codes_batch)
+            inserted = process_batch(con, codes_batch, stale_map)
             total_inserted += inserted
             logger.info(f"✅ 批次 {i//BATCH_SIZE + 1}/{(len(stale)-1)//BATCH_SIZE + 1}: {len(codes_batch)} 只, 更新 {inserted} 行")
         except Exception:

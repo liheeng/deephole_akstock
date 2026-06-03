@@ -250,19 +250,36 @@ class SignalsCalculator:
 
 # ======================== 核心逻辑 ========================
 def get_stale_codes(con):
-    """获取需要更新的股票代码列表"""
-    rows = con.execute("""
-        SELECT
-            d.code,
-            MAX(d.date::DATE) AS daily_max,
-            MAX(s.date) AS signal_max
-        FROM kline_day d
-        LEFT JOIN bs_signals s ON d.code = s.symbol
-        GROUP BY d.code
-        HAVING signal_max IS NULL OR MAX(d.date::DATE) > MAX(s.date)
-        ORDER BY d.code
-    """).fetchall()
-    return [(r[0], r[1], r[2]) for r in rows]
+    """获取需要更新的股票代码及其最后信号日期。
+
+    拆成两次独立 GROUP BY + pandas merge，避免大表 LEFT JOIN。
+    """
+    # 1) kline_day 每只股票的最大日期
+    daily_df = con.execute("""
+        SELECT code, MAX(date::DATE) AS daily_max
+        FROM kline_day
+        GROUP BY code
+        ORDER BY code
+    """).df()
+
+    # 2) bs_signals 每只股票的最大日期
+    sig_df = con.execute("""
+        SELECT symbol, MAX(date) AS signal_max
+        FROM bs_signals
+        GROUP BY symbol
+    """).df()
+
+    # 3) pandas merge（内存操作，极快）
+    merged = daily_df.merge(
+        sig_df, left_on="code", right_on="symbol", how="left"
+    )
+    stale = merged[
+        merged["signal_max"].isna() | (merged["daily_max"] > merged["signal_max"])
+    ]
+    return [
+        (r.code, r.daily_max, r.signal_max if pd.notna(r.signal_max) else None)
+        for r in stale.itertuples()
+    ]
 
 
 def update_code(con, code: str, daily_max, signal_max, lookback: int = 200):
