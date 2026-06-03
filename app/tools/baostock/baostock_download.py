@@ -5,7 +5,7 @@ import random
 from loguru import logger
 from tqdm import tqdm
 from datetime import datetime
-
+from tools.baostock.baostock_base import get_recent_trade_day
 from tools.baostock.append_download import (
     DB_PATH,
     START_DATE as START_DATE_DAY,
@@ -14,9 +14,7 @@ from tools.baostock.append_download import (
     init_database as init_day_db,
     is_today_trading_day,
     get_last_download_dates,
-    download_daily,
-    download_factor,
-    get_recent_trade_day,
+    download_daily
 )
 from tools.baostock.append_5m_download import (
     START_DATE as START_DATE_5M,
