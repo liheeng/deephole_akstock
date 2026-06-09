@@ -10,6 +10,7 @@ from utils.trading_uitl import get_target_sync_date
 import os
 from utils.common import is_running_in_docker
 from func_timeout import func_set_timeout
+from func_timeout.exceptions import FunctionTimedOut
 from tools.baostock.baostock_base import get_recent_trade_day
 
 # ====================== 核心配置 ======================
@@ -131,6 +132,17 @@ def download_5m(code, start, end, con, last_date=None):
 
         try:
             df = safe_download(code, kline_start, end)  # type: ignore[call-arg]
+        except FunctionTimedOut as e:
+            logger.error(f"⏰ {code} | 5分钟K线超时，刷新 baostock 连接后重试...{str(e)}")
+            bs.logout()
+            time.sleep(5)
+            bs.login()
+            logger.info(f"🔄 {code} | 重试下载5分钟K线...")
+            try:
+                df = safe_download(code, kline_start, end)  # type: ignore[call-arg]
+            except (FunctionTimedOut, Exception) as e2:
+                logger.exception(f"❌ {code} | 5分钟K线重试仍然失败：{str(e2)}")
+                return False
         except Exception as e:
             logger.exception(f"❌ {code} | 5分钟K线下载失败：{str(e)}")
             return False
@@ -168,7 +180,7 @@ def download_5m(code, start, end, con, last_date=None):
 
         return True
 
-    except Exception as e:
+    except (FunctionTimedOut, Exception) as e:
         logger.exception(f"❌ {code} | 5分钟K线失败：{str(e)}")
         return False
 

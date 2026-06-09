@@ -10,6 +10,7 @@ from utils.trading_uitl import get_target_sync_date
 import os
 from utils.common import is_running_in_docker
 from func_timeout import func_set_timeout
+from func_timeout.exceptions import FunctionTimedOut
 from tools.baostock.baostock_base import get_recent_trade_day
 
 # ====================== 核心配置 ======================
@@ -195,6 +196,17 @@ def download_daily(code, start, end, con, kline_max=None):
         # ✅ 增量/全量拉取（使用 kline_start，避免重复下载已有数据）
         try:
             df = safe_download_daily(code, kline_start, end)  # type: ignore[call-arg]
+        except FunctionTimedOut as e:
+            logger.error(f"⏰ {code} | 日K超时，刷新 baostock 连接后重试...{str(e)}")
+            bs.logout()
+            time.sleep(5)
+            bs.login()
+            logger.info(f"🔄 {code} | 重试下载日K...")
+            try:
+                df = safe_download_daily(code, kline_start, end)  # type: ignore[call-arg]
+            except (FunctionTimedOut, Exception) as e2:
+                logger.exception(f"❌ {code} | 日K重试仍然失败：{str(e2)}")
+                return False
         except Exception as e:
             logger.exception(f"❌ {code} | 日K下载失败：{str(e)}")
             return False

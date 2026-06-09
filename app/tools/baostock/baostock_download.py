@@ -4,7 +4,7 @@ import time
 import random
 from loguru import logger
 from tqdm import tqdm
-from datetime import datetime
+from datetime import timedelta, datetime, time as datetime_time
 from tools.baostock.baostock_base import get_recent_trade_day
 from tools.baostock.append_download import (
     DB_PATH,
@@ -16,6 +16,7 @@ from tools.baostock.append_download import (
     get_last_download_dates,
     download_daily
 )
+from func_timeout.exceptions import FunctionTimedOut
 from tools.baostock.append_5m_download import (
     START_DATE as START_DATE_5M,
     init_database as init_5m_db,
@@ -66,6 +67,10 @@ def main():
     last_trade_date = get_recent_trade_day(datetime.now().strftime("%Y-%m-%d"))
 
     # 获取股票列表
+    # 注意：如果当天是交易日但时间未到晚上8点，可能导致查询不到当天的证券列表，因此回退到前一天的交易日查询证券列表
+    today = datetime.now()
+    if last_trade_date == today.strftime("%Y-%m-%d") and today.time() < datetime_time(20, 0):
+        last_trade_date = (today - timedelta(days=1)).strftime("%Y-%m-%d")
     stock_df = bs.query_all_stock(day=last_trade_date).get_data()
     codes = stock_df["code"].tolist()
     logger.info(f"📈 总证券数：{len(codes)}")
@@ -86,7 +91,7 @@ def main():
 
             handle_download(code, START_DATE_DAY, START_DATE_5M, last_trade_date, con)
             time.sleep(random.uniform(SLEEP_MIN, SLEEP_MAX))
-        except Exception as e:
+        except (FunctionTimedOut, Exception) as e:
             logger.exception(f"❌ {code} | 失败：{str(e)}")
 
     con.close()
