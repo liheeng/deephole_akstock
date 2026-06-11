@@ -5,7 +5,7 @@ import random
 from loguru import logger
 from tqdm import tqdm
 from datetime import timedelta, datetime, time as datetime_time
-from tools.baostock.baostock_base import get_recent_trade_day
+from tools.baostock.baostock_base import get_recent_trade_day, refresh_baostock_connection
 from tools.baostock.append_download import (
     DB_PATH,
     START_DATE as START_DATE_DAY,
@@ -85,9 +85,7 @@ def main():
             counter += 1
             if counter % reset_interval == 0:
                 logger.info("=== 刷新 baostock 连接，防止阻塞 ===")
-                bs.logout()
-                time.sleep(5)
-                bs.login()
+                refresh_baostock_connection()
 
             handle_download(code, START_DATE_DAY, START_DATE_5M, last_trade_date, con)
             time.sleep(random.uniform(SLEEP_MIN, SLEEP_MAX))

@@ -11,7 +11,7 @@ import os
 from utils.common import is_running_in_docker
 from func_timeout import func_set_timeout
 from func_timeout.exceptions import FunctionTimedOut
-from tools.baostock.baostock_base import get_recent_trade_day
+from tools.baostock.baostock_base import get_recent_trade_day, refresh_baostock_connection
 
 # ====================== 核心配置 ======================
 BAOSTOCK_HIS_DB_PATH = os.environ.get("BAOSTOCK_HIS_DB_PATH", "/data" if is_running_in_docker() else "./data")
@@ -134,9 +134,7 @@ def download_5m(code, start, end, con, last_date=None):
             df = safe_download(code, kline_start, end)  # type: ignore[call-arg]
         except FunctionTimedOut as e:
             logger.error(f"⏰ {code} | 5分钟K线超时，刷新 baostock 连接后重试...{str(e)}")
-            bs.logout()
-            time.sleep(5)
-            bs.login()
+            refresh_baostock_connection()
             logger.info(f"🔄 {code} | 重试下载5分钟K线...")
             try:
                 df = safe_download(code, kline_start, end)  # type: ignore[call-arg]
@@ -219,9 +217,7 @@ def main():
             counter += 1
             if counter % reset_interval == 0:
                 logger.info("=== 刷新 baostock 连接，防止阻塞 ===")
-                bs.logout()
-                time.sleep(5)
-                bs.login()
+                refresh_baostock_connection()
 
             handle_download(code, START_DATE, last_trade_date, con)
 
