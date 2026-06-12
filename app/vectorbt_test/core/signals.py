@@ -199,10 +199,10 @@ class BinarySignalOp(ComplexSignal):
     def _args(self):
         return [self.left.cache_key(), self.right.cache_key(), self.op] + super()._args()
     
-    def is_group(self, scope: int) -> bool:
-        return (super().is_group(scope)
-                and self.left.is_scope(scope)
-                and self.right.is_scope(scope))
+    def is_group(self, signal_groups: int) -> bool:
+        return (super().is_group(signal_groups)
+                and self.left.is_group(signal_groups)
+                and self.right.is_group(signal_groups))
     
     def compute(self, data, context: PortfolioContext):
         l = self.left.evaluate(data, context)

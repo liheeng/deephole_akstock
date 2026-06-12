@@ -6,6 +6,7 @@ from vectorbt_test.core.node_builder import NodeBuilder
 from vectorbt_test.core.nodes import NodeType
 from typing import List, Dict
 import numpy as np
+import pandas as pd
 
 
 class HybridStrategy(Strategy):
@@ -78,13 +79,22 @@ class HybridStrategy(Strategy):
             return self._cs_strategy(alpha, signal)
         
     def _ts_strategy(self, alpha, signal: Signal | None = None) -> StrategyResult:
-        entries = alpha > self.threshold
-        exits   = alpha < -self.threshold
+        if alpha is None:
+            # 纯信号模式（无因子）
+            if signal is not None:
+                entries = signal
+                exits = signal
+            else:
+                entries = pd.Series(dtype=bool)
+                exits = pd.Series(dtype=bool)
+        else:
+            entries = alpha > self.threshold
+            exits = alpha < -self.threshold
 
-    # 👇 加 signal gating（核心）
-        if signal is not None:
-            entries = entries & signal
-            exits   = exits & signal
+            # 👇 加 signal gating（核心）
+            if signal is not None:
+                entries = entries & signal
+                exits = exits & signal
 
         return StrategyResult(
             type="signal",

@@ -45,21 +45,36 @@ class ExprParser:
         if isinstance(node, ast.BinOp):
             left = self._parse_node(node.left)
             right = self._parse_node(node.right)
-            assert left.dtype == NodeDType.NUMERIC
-            assert right.dtype == NodeDType.NUMERIC
+
+            is_numeric = left.dtype == NodeDType.NUMERIC and right.dtype == NodeDType.NUMERIC
+            is_signal = left.dtype in (NodeDType.BOOL, NodeDType.SIGNAL) and right.dtype in (NodeDType.BOOL, NodeDType.SIGNAL)
 
             if isinstance(node.op, ast.Add):
+                assert is_numeric, "Add requires numeric operands"
                 return left + right
             elif isinstance(node.op, ast.Sub):
+                assert is_numeric, "Sub requires numeric operands"
                 return left - right
             elif isinstance(node.op, ast.Mult):
+                assert is_numeric, "Mult requires numeric operands"
                 return left * right
             elif isinstance(node.op, ast.Div):
+                assert is_numeric, "Div requires numeric operands"
                 return left / right
             elif isinstance(node.op, ast.BitAnd):
-                return left & right
+                if is_numeric:
+                    return left & right
+                elif is_signal:
+                    return left & right  # Signal.__and__
+                else:
+                    raise ValueError(f"Cannot apply & between {left.dtype} and {right.dtype}")
             elif isinstance(node.op, ast.BitOr):
-                return left | right
+                if is_numeric:
+                    return left | right
+                elif is_signal:
+                    return left | right  # Signal.__or__
+                else:
+                    raise ValueError(f"Cannot apply | between {left.dtype} and {right.dtype}")
 
         # ===== 比较 =====
         if isinstance(node, ast.Compare):
