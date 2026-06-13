@@ -9,6 +9,18 @@ def get_symbols(db, region: Region) -> list[str]:
     return result
 
 
+def get_CN_symbols(db) -> list[str]:
+    return get_symbols(db, Region.CN)
+
+
+def get_HK_symbols(db) -> list[str]:
+    return get_symbols(db, Region.HK)
+
+
+def get_US_symbols(db) -> list[str]:
+    return get_symbols(db, Region.US)
+
+
 def get_symbol_data(db, symbol: str, start_date: str = None, end_date: str = None) -> pd.DataFrame:
     start = start_date if start_date else "1990-01-01"
     end = end_date if end_date else datetime.now().strftime("%Y-%m-%d")

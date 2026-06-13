@@ -7,7 +7,7 @@ from vectorbt_test.core.functions import register_functions
 from vectorbt_test.core.data import register_data
 from vectorbt_test.core.ex_indicators import register_ex_indicators
 from vectorbt_test.core.ex_signals import register_ex_signals
-from vectorbt_test.ex_signals.box_strategy_signals import register_box_strategy_signals
+from vectorbt_test.picker.picker_signals.box_strategy_signals import register_box_strategy_signals
 
 
 def load_register_nodes():

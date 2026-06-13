@@ -1,18 +1,22 @@
 """
-箱体突破选股策略 — 使用 StockPickerBuilder 框架
+箱体突破选股策略 — Filter Chain 5 阶段
 
-策略信号组合：
-  entry = HeavyDrop & BoxConsolidation & VolumeBreakout & PullbackConfirm
+流程:
+  Stage1: HeavyDrop             — 筑底：最低≥60天前, 最低<最高×0.2, 最高≥120天前
+  Stage2: BoxConsolidation      — 盘整：日振幅<2%, 总振幅<10%
+  Stage3: VolumeBreakout        — 突破：涨幅>6%, 量>均量×3
+  Stage4: ShortBoxConsolidation — 回踩：价在ref高低间, 量<ref量×50%
+  Stage5: PullbackConfirm       — 确认：涨幅>5%, 量>ref量×50%, close>ref_close
 
-展示 StockPickerBuilder + PickStrategy + PickStrategyPortfolio 的完整用法。
+Stage4/5 通过 ref_values 自动获取 Stage3 触发日的 OHLCV 作为参考值。
 
 使用方式：
-  python -m app.vectorbt_test.example.box_strategy_ex
+  python -m app.vectorbt_test.example.picker_box_strategy_ex
 """
 
 from db.duckdb import DuckDBController
 from db.db_common import DB
-from db.stock_daily_util import get_symbols_data
+from db.stock_daily_util import get_CN_symbols, get_symbols_data
 
 from vectorbt_test.engine.init import load_register_nodes
 from vectorbt_test.engine.data_provider import DataProvider
@@ -20,53 +24,39 @@ from vectorbt_test.picker import StockPickerBuilder
 
 
 def main():
-    # ===== 1. 注册所有节点 =====
     load_register_nodes()
-
-    # ===== 2. 连接数据库获取数据 =====
     db_controller = DuckDBController(DB)
 
-    symbols_str = "603259.SH, 600362.SH, 000858.SZ, 600519.SH"
+    raw_symbols = get_CN_symbols(db_controller)
+    symbols = [s[0] if isinstance(s, (list, tuple)) else s for s in raw_symbols]
+    symbols_str = ", ".join(symbols)
+
     start_date = "2022-01-01"
-    end_date = "2026-06-01"
+    end_date = "2026-06-11"
 
     print("=" * 80)
-    print("📊 箱体突破选股策略 (StockPickerBuilder 框架)")
+    print("📊 Filter Chain 5 阶段箱体突破选股 — 全市场 A 股")
     print("=" * 80)
-    print(f"股票池: {symbols_str}")
-    print(f"时间范围: {start_date} ~ {end_date}")
+    print(f"股票数量: {len(symbols)}  |  时间: {start_date} ~ {end_date}")
 
     df = get_symbols_data(db_controller, symbols_str, start_date, end_date)
     data_provider = DataProvider(None)
+    print(f"数据: {len(df['symbol'].unique())} 只股票, {len(df)} 条记录")
 
-    # ===== 3. 用 StockPickerBuilder 构建选股器 =====
-    #
-    # 方式 A — 直接在表达式里组合所有 Signal（推荐）
-    #   表达式: "HeavyDrop() & BoxConsolidation() & VolumeBreakout() & PullbackConfirm()"
-    #
-    # 方式 B — 用多策略 OR/AND/VOTE 组合（每个条件单独一个 strategy）
-    #   这里演示方式 A
-
+    # ===== Filter Chain =====
+    # Stage1-3 独立计算, Stage4/5 自动通过 ref_values 引用 Stage3 的触发日数据
     picker = (
-        StockPickerBuilder.new("箱体突破选股")
-        .add_pick_strategy("box_breakout")
-        .set_strategy_signal(
-            "HeavyDrop() & BoxConsolidation() & VolumeBreakout() & PullbackConfirm()"
-        )
-        .end_strategy()
-        .set_pick_op("and")
+        StockPickerBuilder.new("箱体突破 5 阶段")
+        .add_stage("筑底", "HeavyDrop()")
+        .add_stage("盘整", "BoxConsolidation()", time_scope="from_last")
+        # VolumeBreakout 需要 20 日均量 + 20 日窗口 → 保留 40 天回溯数据
+        .add_stage("放量突破", "VolumeBreakout()",  time_scope="from_last", lookback_buffer=40)
+        .add_stage("回踩", "ShortBoxConsolidation()", time_scope="from_last")
+        .add_stage("确认", "PullbackConfirm()", time_scope="from_last")
         .build()
     )
 
-    # ===== 4. 执行选股并打印结果 =====
     result = picker.run_and_print(data_provider, df, top_n=10, kline_days=60)
-    _ = result  # PickResult 可用于后续分析
-
-    # 也可以通过 PickResult API 获取数据:
-    # symbols = result.get_selected_at(-1)          # 最新一天
-    # dates   = result.get_selected_dates()         # 所有触发日期
-    # all_sym = result.get_all_selected_symbols()   # 所有被选中过的股票
-    # print(result.summary())                       # 可读摘要
 
 
 if __name__ == "__main__":

@@ -1,133 +1,91 @@
 """
-选股器 Builder — 流式 API，与 PortfolioBuilder 风格一致。
+选股器 Builder — Filter Chain 流式 API，支持跨阶段上下文引用。
 
 用法:
+    # 基本用法
     picker = (
-        StockPickerBuilder
-        .new("箱体突破选股")
-        .add_pick_strategy("box_breakout")
-            .set_strategy_signal("HeavyDrop() & BoxConsolidation() & VolumeBreakout() & PullbackConfirm()")
-        .end_strategy()
-        .set_pick_op("and")
+        StockPickerBuilder.new("箱体突破选股")
+        .add_stage("大跌筑底", "HeavyDrop() & BoxConsolidation()")
+        .add_stage("放量突破", "VolumeBreakout()", time_scope="from_last")
         .build()
     )
-    result = picker.run(data_provider, df)
-    symbols = result.get_selected_at(-1)
+
+    # 引用上一阶段计算值
+    picker = (
+        StockPickerBuilder.new("高级选股")
+        .add_stage("大跌", "HeavyDrop() & BoxConsolidation()")
+        .add_stage("突破",
+            "VolumeBreakout(from_date={ctx.大跌.trigger_date})",
+            time_scope="from_last")
+        .build()
+    )
 """
 
 from __future__ import annotations
 
-from typing import List, Dict, Any
-from vectorbt_test.core.signals import Signal
-from vectorbt_test.core.factors import Factor
+from typing import List, Dict
+from vectorbt_test.picker.pick import FilterStage
 from vectorbt_test.picker.picker_strategy import PickStrategy
-from vectorbt_test.picker.picker_portfolio import PickStrategyPortfolio, PickOp
+from vectorbt_test.picker.picker_portfolio import PickStrategyPortfolio
 
 
 class StockPickerBuilder:
     """
-    选股器 Builder — 流式 API。
+    选股器 Builder — Filter Chain 流式 API。
 
-    支持：
-      - 多策略组合（AND / OR / VOTE）
-      - 每个策略可设独立信号和因子
-      - 可选的全局调仓信号（schedule_signal）
+    通过 add_stage() 添加筛选节点，形成 filter chain。
+    支持 {ctx.阶段名.key} 占位符引用上一阶段的计算值。
     """
-
-    strategies: List[Dict[str, Any]]
-    pick_op: PickOp
-    vote_threshold: float
-    schedule_signal: str | Signal | Dict[str, str] | None
-    _current_strategy: Dict[str, Any] | None
 
     def __init__(self, name: str):
         self.name = name
-        self.strategies = []
-        self.pick_op = PickOp.AND
-        self.vote_threshold = 0.6
-        self.schedule_signal = None
-        self._current_strategy = None
+        self.stages: List[FilterStage] = []
 
     @classmethod
     def new(cls, name: str):
         """创建新的选股器 Builder。"""
         return cls(name)
 
-    # ── 策略管理 ──────────────────────────────────────────────
+    def add_stage(self, name: str, signal_expr: str,
+                  time_scope: str = "full",
+                  lookback_buffer: int = 0,
+                  params: Dict[str, str] | None = None):
+        """
+        添加一个筛选节点。
 
-    def add_pick_strategy(self, name: str):
-        """添加一个选股策略。"""
-        strategy = {
-            "name": name,
-            "signal": None,
-            "factors": [],
-            "threshold": 0.0,
-        }
-        self.strategies.append(strategy)
-        self._current_strategy = strategy
+        Args:
+            name: 节点名称（如 "大跌筑底"），也是 ctx 中的 key
+            signal_expr: 信号表达式。
+                可含 {ctx.上阶段名.key} 占位符，运行时替换为实际值。
+                如 "VolumeBreakout(from_date={ctx.大跌.trigger_date})"
+            time_scope: 时间范围
+                "full"       — 全量时间范围
+                "from_last"  — 从上个节点首次触发的时间点开始
+            lookback_buffer: time_scope="from_last" 时，在触发日期前额外保留的数据天数。
+                用于需要回溯窗口的信号（如均量计算、移动均线等）。
+                例如 VolumeBreakout 需要 20 日均量 + 20 日检测窗口 = 40。
+            params: 额外占位符映射
+                {"from_date": "{ctx.大跌.trigger_date}"}
+
+        Returns:
+            self
+        """
+        self.stages.append(FilterStage(
+            name=name,
+            signal_expr=signal_expr,
+            time_scope=time_scope,
+            lookback_buffer=lookback_buffer,
+            params=params,
+        ))
         return self
-
-    def end_strategy(self):
-        """结束当前策略的配置。"""
-        self._current_strategy = None
-        return self
-
-    # ── 当前策略配置 ──────────────────────────────────────────
-
-    def set_strategy_signal(self, signal: str | Signal | Dict[str, str]):
-        """设置当前策略的选股信号表达式。"""
-        if self._current_strategy:
-            self._current_strategy["signal"] = signal
-        return self
-
-    def add_factor(self, factor: Factor | str | Dict[str, str]):
-        """为当前策略添加排分因子。"""
-        if self._current_strategy:
-            self._current_strategy["factors"].append(factor)
-        return self
-
-    def set_strategy_threshold(self, threshold: float):
-        """设置当前策略的阈值（纯因子模式下用）。"""
-        if self._current_strategy:
-            self._current_strategy["threshold"] = threshold
-        return self
-
-    # ── 全局配置 ──────────────────────────────────────────────
-
-    def set_pick_op(self, op: str):
-        """设置策略组合方式: 'and' / 'or' / 'vote'。"""
-        self.pick_op = PickOp(op.lower() if op else "and")
-        return self
-
-    def set_vote_threshold(self, threshold: float):
-        """VOTE 模式下，设置通过比例阈值（默认 0.6）。"""
-        self.vote_threshold = threshold
-        return self
-
-    def set_schedule_signal(self, signal: str | Signal | Dict[str, str]):
-        """设置全局调仓信号（仅在这些日期执行选股）。"""
-        self.schedule_signal = signal
-        return self
-
-    # ── 构建 ──────────────────────────────────────────────────
 
     def build(self) -> PickStrategyPortfolio:
         """构建选股器。"""
-        strategies_obj = []
-
-        for s in self.strategies:
-            pick_strat = PickStrategy(
-                name=s["name"],
-                signal=s["signal"],
-                factors=s["factors"] if s["factors"] else None,
-                threshold=s["threshold"],
-            )
-            strategies_obj.append(pick_strat)
-
+        strategy = PickStrategy(
+            name=self.name,
+            stages=self.stages,
+        )
         return PickStrategyPortfolio(
-            strategies=strategies_obj,
-            strategy_op=self.pick_op,
-            vote_threshold=self.vote_threshold,
-            schedule_signal=self.schedule_signal,
+            strategy=strategy,
             name=self.name,
         )
