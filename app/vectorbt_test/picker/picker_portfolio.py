@@ -49,6 +49,7 @@ class PickStrategyPortfolio:
         df: pd.DataFrame,
         top_n: int = 10,
         kline_days: int = 60,
+        verbose: bool = False,
     ) -> PickResult:
         """
         执行选股并打印完整结果。
@@ -58,15 +59,16 @@ class PickStrategyPortfolio:
             df: 原始数据
             top_n: 显示排分前 N 的股票（0 为全部）
             kline_days: K线显示的近期天数
+            verbose: 为 True 时每阶段打印剩余股票列表
 
         Returns:
             PickResult
         """
         result = self.run(data_provider, df)
 
-        return self.print_result(df, top_n, kline_days, result)
+        return self.print_result(df, top_n, kline_days, result, verbose=verbose)
 
-    def print_result(self, df, top_n, kline_days, result):
+    def print_result(self, df, top_n, kline_days, result, verbose=False):
         print("=" * 80)
         print(f"📊 Filter Chain 选股策略: {self.name}")
         print("=" * 80)
@@ -74,12 +76,27 @@ class PickStrategyPortfolio:
         # ── 每阶段摘要 ─────────────────────────────────────
         if result.stage_results:
             for i, sr in enumerate(result.stage_results):
-                n_before = len(sr.signals.columns) if sr.signals is not None and not sr.signals.empty else 0
+                # 用 computed.stock_count_before 作为"之前"数量
+                # （不能直接用 signals.columns 计数，因为 from_last 裁剪可能使部分股票在信号矩阵中消失）
+                n_before = sr.computed.get("stock_count_before", 0) if sr.computed else 0
                 n_after = len(sr.remaining_symbols) if sr.remaining_symbols else 0
                 scope = sr.stage.time_scope
                 trigger = f"触发@{sr.trigger_date.date()}" if sr.trigger_date else "未触发"
+                cutoff = sr.computed.get("stage_cutoff") if sr.computed else None
+                cutoff_str = ""
+                if cutoff is not None:
+                    try:
+                        cutoff_str = f"  截断@{cutoff.date()}"
+                    except AttributeError:
+                        cutoff_str = f"  截断@{pd.Timestamp(cutoff).date()}"
                 print(f"\n  Stage {i+1}: [{sr.stage.name}] {sr.stage.signal_expr}")
-                print(f"    时间范围: {scope}  |  之前 {n_before} 只 → 之后 {n_after} 只  |  {trigger}")
+                print(f"    时间范围: {scope}{cutoff_str}  |  之前 {n_before} 只 → 之后 {n_after} 只  |  {trigger}")
+                if verbose and sr.remaining_symbols:
+                    # 每行 10 只分列打印
+                    syms = sr.remaining_symbols
+                    for chunk_start in range(0, len(syms), 10):
+                        chunk = syms[chunk_start:chunk_start + 10]
+                        print(f"      {'  '.join(chunk)}")
 
         # ── 最终结果 ─────────────────────────────────────────
         final = result.remaining_symbols or []

@@ -295,20 +295,43 @@ class PickStrategy(Strategy):
             selected = row[row].index.tolist()
 
             # ═══════════════════════════════════════════════════
-            #  Step 6: 查找首次触发日期
-            #  从最新日期往回扫描，找到第一个有任一只股票触发的日期
-            #  该日期用于:
-            #    - 下一阶段的 from_last 时间裁剪
-            #    - 提取触发日的 OHLCV 作为 ref_data
+            #  Step 6: 查找首次触发日期（从前往后扫 → 最早触发日）
+            #  用于 {ctx.阶段名.trigger_date} 引用和 ref_data 提取。
+            #
+            #  注意: 由于信号输出通常带 cummax (一旦触发永久 True)，
+            #  必须从前往后扫才能找到真正的首次触发日期。
+            #  从后往前扫会因 cummax 特性而永远返回最后一天。
             # ═══════════════════════════════════════════════════
             first_trigger = None
-            for dt in reversed(signals.index):
+            for dt in signals.index:
                 if signals.loc[dt].any():
                     first_trigger = dt
                     break
 
             # ═══════════════════════════════════════════════════
-            #  Step 7: 提取计算值与 per-stock ref_data
+            #  Step 7: 计算阶段截断日期（stage_cutoff）
+            #  该日期是当前阶段的有效终点，下一阶段 from_last 以此为起点。
+            #
+            #  规则:
+            #    如果信号有 recent_days 属性（如 BoxConsolidation、VolumeBreakout），
+            #      cutoff = 最后一天 - recent_days + 1 个交易日
+            #      因为信号在最后一天 i=n-1 时，实际只处理到 i - recent_days 位置。
+            #    否则（如 HeavyDrop 无窗口末尾参数），
+            #      cutoff = first_trigger（最早触发日）
+            # ═══════════════════════════════════════════════════
+            signal_recent = getattr(signal, 'recent_days', None)
+            if signal_recent and not stage_df.empty:
+                last_dt = stage_df["date"].max()
+                # 找到 last_dt 前第 (recent_days - 1) 个交易日
+                sorted_dates = sorted(stage_df["date"].unique())
+                last_idx = sorted_dates.index(last_dt)
+                cutoff_idx = max(0, last_idx - (signal_recent - 1))
+                stage_cutoff = pd.Timestamp(sorted_dates[cutoff_idx])
+            else:
+                stage_cutoff = first_trigger
+
+            # ═══════════════════════════════════════════════════
+            #  Step 8: 提取计算值与 per-stock ref_data
             #  computed: 全局统计（均值），用于 {ctx} 占位符
             #  ref_data: 每只股票触发日的 OHLCV，供后续 PickerSignal 子类使用
             # ═══════════════════════════════════════════════════
@@ -317,6 +340,7 @@ class PickStrategy(Strategy):
             )
             ref_data = self._extract_ref_data(stage_df, signals, first_trigger)
             computed["ref_data"] = ref_data
+            computed["stage_cutoff"] = stage_cutoff
 
             # ── 保存阶段执行结果 ──────────────────────────────
             stage_results.append(
@@ -336,9 +360,11 @@ class PickStrategy(Strategy):
             last_stage_name = stage.name
             # 更新剩余股票列表，传给下一阶段
             remaining_symbols = selected
-            # 更新最后触发日期，用于下一阶段的 from_last 时间裁剪
-            if first_trigger is not None:
-                last_trigger_date = first_trigger
+            # 更新阶段截断日期，用于下一阶段的 from_last 时间裁剪
+            # from_last = 本阶段的 stage_cutoff（信号处理窗口的终点 + 1 个交易日）
+            # 这样下一阶段的数据从 stage_cutoff 开始，不会重复处理已覆盖的时间段
+            if stage_cutoff is not None:
+                last_trigger_date = stage_cutoff
 
             # ── 终止条件 ──────────────────────────────────────
             # 若当前阶段没有股票通过筛选，后续阶段无数据可算，终止链

@@ -12,8 +12,10 @@ Stage4/5 通过 ref_values 自动获取 Stage3 触发日的 OHLCV 作为参考�
 
 使用方式：
   python -m app.vectorbt_test.example.picker_box_strategy_ex
+  python -m app.vectorbt_test.example.picker_box_strategy_ex --verbose
 """
 
+import argparse
 from db.duckdb import DuckDBController
 from db.db_common import DB
 from db.stock_daily_util import get_CN_symbols, get_symbols_data
@@ -24,6 +26,11 @@ from vectorbt_test.picker import StockPickerBuilder
 
 
 def main():
+    parser = argparse.ArgumentParser(description="箱体突破选股策略")
+    parser.add_argument("--verbose", "-v", action="store_true",
+                        help="打印每阶段剩余股票列表")
+    args = parser.parse_args()
+
     load_register_nodes()
     db_controller = DuckDBController(DB)
 
@@ -49,14 +56,14 @@ def main():
         StockPickerBuilder.new("箱体突破 5 阶段")
         .add_stage("筑底", "HeavyDrop()")
         .add_stage("盘整", "BoxConsolidation()", time_scope="from_last")
-        # VolumeBreakout 需要 20 日均量 + 20 日窗口 → 保留 40 天回溯数据
-        .add_stage("放量突破", "VolumeBreakout()",  time_scope="from_last", lookback_buffer=40)
+        .add_stage("放量突破", "VolumeBreakout()",  time_scope="from_last")
         .add_stage("回踩", "ShortBoxConsolidation()", time_scope="from_last")
         .add_stage("确认", "PullbackConfirm()", time_scope="from_last")
         .build()
     )
 
-    result = picker.run_and_print(data_provider, df, top_n=10, kline_days=60)
+    result = picker.run_and_print(data_provider, df, top_n=10, kline_days=60,
+                                  verbose=args.verbose)
 
 
 if __name__ == "__main__":
